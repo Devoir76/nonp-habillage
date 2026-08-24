@@ -1,0 +1,25 @@
+# Compilation Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Application construite
+dist/
+*.app/
+
+# Médias et sous-titres de test (jamais versionnés)
+*.mp4
+*.mov
+*.m4v
+*.srt
+*.vtt
+
+# Profil personnel (réglage local, pas réglage du projet)
+profil.json
+
+# macOS
+.DS_Store
+._*
+
+# Config locale de l'assistant
+.claude/

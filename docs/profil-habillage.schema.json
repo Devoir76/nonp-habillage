@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nonp.fr/schemas/profil-habillage.v1.schema.json",
+  "title": "Profil d'habillage NONP",
+  "description": "AMENDEMENT PROPOSÉ le 2026-08-23 (ADR-0001) — reste en version 1 : les champs ajoutés sont FACULTATIFS et leurs valeurs par défaut reproduisent exactement le comportement actuel. Un profil écrit avant cet amendement reste valide et rend à l'identique. Ajouts : bandeau.mode (pleine-largeur / ajuste), bandeau.hauteur_fixe_lignes, bandeau.marge_interieure_pct_largeur. Toutes les tailles sont relatives à la HAUTEUR vidéo, sauf les marges latérales (largeur).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "nom", "sous_titre"],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Version du schéma. Obligatoire — permet les migrations futures."
+    },
+    "nom": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Nom affiché du profil (ex. « NONP », « Neutre », « Association X »)."
+    },
+    "logo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actif"],
+      "description": "Incrustation d'un logo. Section entière optionnelle ; « actif: false » (ou section absente) = pas de logo. Le profil neutre livré par défaut a actif: false.",
+      "properties": {
+        "actif": { "type": "boolean", "default": false },
+        "fichier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Chemin du fichier image (absolu, ou relatif au fichier de profil). PNG à fond transparent conseillé."
+        },
+        "position": {
+          "description": "Préréglage 4 coins, OU coordonnées libres où x_pct/y_pct désignent le CENTRE du logo en % de la largeur/hauteur. Dans l'app native, le placement libre se fait à la souris sur l'aperçu et s'enregistre sous cette forme relative.",
+          "default": { "preset": "haut-gauche" },
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["preset"],
+              "properties": {
+                "preset": { "enum": ["haut-gauche", "haut-droit", "bas-gauche", "bas-droit"] }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x_pct", "y_pct"],
+              "properties": {
+                "x_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+                "y_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+              }
+            }
+          ]
+        },
+        "taille_pct_hauteur": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Plus grande dimension du logo en % de la HAUTEUR vidéo, ratio préservé. NONP : 11.5."
+        },
+        "marge_pct_hauteur": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "Marge aux bords, en % de la hauteur. Ne s'applique qu'aux préréglages de coin. NONP : 4.0."
+        },
+        "opacite": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1,
+          "description": "1.0 = aucun filtre d'opacité ajouté (garantit l'iso-rendu du profil historique)."
+        }
+      }
+    },
+    "sous_titre": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["police", "taille_pct_hauteur", "couleur_texte"],
+      "description": "Mise en forme des sous-titres incrustés. Ne modifie JAMAIS le texte : la resegmentation à la ponctuation reste confinée à l'incrustation.",
+      "properties": {
+        "police": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nom d'une police installée. Absente = ERREUR EXPLICITE, jamais de substitution silencieuse. L'app native propose une liste courte de familles présentes sur tout Mac, pour qu'un profil partagé rende à l'identique chez le destinataire."
+        },
+        "taille_pct_hauteur": {
+          "type": "number",
+          "minimum": 1.5,
+          "maximum": 12,
+          "description": "Taille de police en % de la hauteur vidéo. Sous ~2,8 : avertissement lisibilité. NONP : 7.2."
+        },
+        "couleur_texte": { "$ref": "#/$defs/couleur" },
+        "contour": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["couleur", "epaisseur_pct_hauteur"],
+          "properties": {
+            "couleur": { "$ref": "#/$defs/couleur" },
+            "epaisseur_pct_hauteur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3,
+              "description": "Épaisseur du contour en % de la hauteur vidéo. 0 = pas de contour. NONP : 0.6."
+            }
+          }
+        },
+        "bandeau": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["actif"],
+          "description": "Fond plein derrière le texte.",
+          "properties": {
+            "actif": { "type": "boolean", "default": false },
+            "mode": {
+              "enum": ["ajuste", "pleine-largeur"],
+              "default": "ajuste",
+              "description": "AJOUT 2026-08-23. « ajuste » : le fond épouse la longueur de chaque ligne (comportement historique, conservé par défaut — préréglage NONP). « pleine-largeur » : bande de largeur constante sur toute la vidéo, texte centré ; masque un sous-titre déjà incrusté dans la source et évite que la largeur saute d'une réplique à l'autre. Défaut du profil neutre livré avec l'app native."
+            },
+            "couleur": { "$ref": "#/$defs/couleur", "default": "#000000" },
+            "opacite": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+            "padding_pct_hauteur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 1.9,
+              "description": "Marge intérieure verticale du fond, en % de la hauteur. NONP : 1.9."
+            },
+            "espaces_lateraux": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 12,
+              "default": 4,
+              "description": "Espaces durs ajoutés de chaque côté de chaque ligne — élargit le fond. N'a de sens qu'en mode « ajuste ». NONP : 4."
+            },
+            "marge_interieure_pct_largeur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 25,
+              "default": 3.0,
+              "description": "AJOUT 2026-08-23. En mode « pleine-largeur » : retrait du texte par rapport aux bords de la bande, en % de la largeur vidéo. Ignoré en mode « ajuste »."
+            },
+            "hauteur_fixe_lignes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4,
+              "default": 0,
+              "description": "AJOUT 2026-08-23. 0 = hauteur automatique (le fond s'adapte au nombre de lignes affichées, comportement historique). 1 à 4 = hauteur constante correspondant à ce nombre de lignes, pour que la bande ne saute pas entre une réplique d'une ligne et une réplique de deux. Recommandé : même valeur que lignes_max."
+            }
+          }
+        },
+        "marge_basse_pct_hauteur": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30,
+          "description": "Distance entre le bas de la vidéo et les sous-titres, en % de la hauteur. NONP : 7.2."
+        },
+        "marge_laterale_pct_largeur": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20,
+          "default": 3.0,
+          "description": "Marges gauche/droite du TEXTE, en % de la largeur vidéo. Sert aussi au calcul de la largeur de ligne pour la resegmentation. NONP : 3.0."
+        },
+        "lignes_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 2,
+          "description": "Nombre maximal de lignes affichées simultanément. 2 = norme de sous-titrage. La resegmentation réaffecte les minutages au prorata SANS toucher aucun mot."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "couleur": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Couleur #RRGGBB. L'opacité est toujours un champ séparé — pas d'alpha hexadécimal."
+    }
+  }
+}
