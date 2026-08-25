@@ -54,6 +54,26 @@ struct CouleurProfil: Equatable {
     static let bleuNONP = CouleurProfil(hex: "#0067F6")
 }
 
+/// Un des quatre coins où poser le logo (schéma : `logo.position.preset`).
+enum CoinLogo: String, Equatable, CaseIterable {
+    case hautGauche = "haut-gauche"
+    case hautDroit = "haut-droit"
+    case basGauche = "bas-gauche"
+    case basDroit = "bas-droit"
+}
+
+/// Où poser le logo (schéma : `logo.position`).
+enum PositionLogo: Equatable {
+    /// Un des quatre coins, à la marge du profil.
+    case coin(CoinLogo)
+    /// Coordonnées libres. `x` et `y` désignent le **CENTRE** du logo, en
+    /// pourcentage de la largeur et de la hauteur — c'est la définition du
+    /// schéma, et c'est ce qui rend un profil valable quel que soit le format.
+    /// L'interface du lot 5 posera le logo à la souris et enregistrera cette
+    /// forme relative.
+    case libre(xPct: Double, yPct: Double)
+}
+
 /// Comportement du fond derrière le texte (schéma : `sous_titre.bandeau.mode`).
 enum ModeBandeau: String, Equatable {
     /// Le fond épouse la longueur de chaque ligne. Comportement historique,
@@ -73,11 +93,22 @@ struct ProfilHabillage: Equatable {
     // MARK: - Logo (géométrie seule — l'incrustation arrive au lot 4)
 
     /// Le profil pose-t-il un logo ?
+    ///
+    /// Logo et sous-titres sont deux options INDÉPENDANTES (ADR §Décision) :
+    /// une vidéo peut n'avoir que le logo, que les sous-titres, ou les deux.
     var logoActif: Bool
-    /// Diamètre du logo rapporté à la hauteur vidéo. Prototype : `DIAM_RATIO`.
+    /// Fichier image du logo. Sans lui, aucun logo n'est posé même si
+    /// `logoActif` vaut vrai — l'utilisateur n'en a pas forcément fourni.
+    var logoFichier: URL?
+    /// Plus grande dimension du logo rapportée à la hauteur vidéo, **ratio
+    /// préservé**. Prototype : `DIAM_RATIO`.
     var logoTailleRatio: Double
     /// Marge de coin du logo rapportée à la hauteur. Prototype : `MARGIN_RATIO`.
     var logoMargeRatio: Double
+    /// Où poser le logo.
+    var logoPosition: PositionLogo
+    /// Opacité du logo, de 0 (invisible) à 1 (opaque).
+    var logoOpacite: Double
 
     // MARK: - Sous-titres, géométrie
 
@@ -131,8 +162,11 @@ struct ProfilHabillage: Equatable {
     static let nonpHistorique = ProfilHabillage(
         nom: "NONP",
         logoActif: true,
+        logoFichier: nil,                // fourni à l'usage (--logo)
         logoTailleRatio: 0.115,          // DIAM_RATIO
         logoMargeRatio: 0.04,            // MARGIN_RATIO
+        logoPosition: .coin(.hautGauche),
+        logoOpacite: 1.0,
         police: "Arial",                 // DEFAULT_FONT
         tailleRatio: 0.072,              // FONT_RATIO
         margeBasseRatio: 0.072,          // MARGINV_RATIO
@@ -160,8 +194,11 @@ struct ProfilHabillage: Equatable {
     static let neutre = ProfilHabillage(
         nom: "Neutre",
         logoActif: false,
+        logoFichier: nil,
         logoTailleRatio: 0.115,
         logoMargeRatio: 0.04,
+        logoPosition: .coin(.hautGauche),
+        logoOpacite: 1.0,
         police: "Helvetica Neue",
         tailleRatio: 0.072,
         margeBasseRatio: 0.072,

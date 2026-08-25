@@ -15,8 +15,17 @@ import Foundation
 
 enum CommandeExport {
 
-    /// `--exporter <vidéo> [<sous-titres>] <sortie> [--profil neutre|nonp]
-    ///  [--annuler-apres <secondes>]`
+    /// `--exporter <vidéo> [<sous-titres>] <sortie> [--profil neutre|nonp]`
+    ///
+    /// Logo : `--logo <image>` `--logo-position haut-gauche|haut-droit|
+    /// bas-gauche|bas-droit|<x>,<y>` `--logo-taille <% hauteur>`
+    /// `--logo-marge <% hauteur>` `--logo-opacite <0–1>`
+    ///
+    /// Les trois usages de l'ADR s'obtiennent par la présence ou l'absence des
+    /// deux options, qui sont indépendantes :
+    ///   sous-titres seuls  : donner le .srt, pas de --logo
+    ///   logo seul          : donner --logo, pas de .srt
+    ///   les deux           : donner les deux
     static func executer(arguments args: [String]) -> Int32 {
         guard let i = args.firstIndex(of: "--exporter") else { return 2 }
 
@@ -47,10 +56,50 @@ enum CommandeExport {
             annulerApres = Double(args[a + 1])
         }
 
+        // --- Logo ---------------------------------------------------------
+        // Sans --logo, aucun logo n'est posé, quel que soit le profil : c'est
+        // l'utilisateur qui fournit son image, jamais l'application.
+        if let l = args.firstIndex(of: "--logo"), l + 1 < args.count {
+            profil.logoFichier = URL(fileURLWithPath: args[l + 1])
+            profil.logoActif = true
+        } else {
+            profil.logoActif = false
+        }
+        if let p = args.firstIndex(of: "--logo-position"), p + 1 < args.count {
+            guard let position = lirePosition(args[p + 1]) else {
+                print("Position de logo inconnue : « \(args[p + 1]) ».")
+                print("Attendu : haut-gauche, haut-droit, bas-gauche, bas-droit, "
+                      + "ou deux pourcentages « x,y » désignant le centre du logo.")
+                return 2
+            }
+            profil.logoPosition = position
+        }
+        if let t = args.firstIndex(of: "--logo-taille"), t + 1 < args.count,
+           let v = Double(args[t + 1]) {
+            profil.logoTailleRatio = v / 100.0
+        }
+        if let m = args.firstIndex(of: "--logo-marge"), m + 1 < args.count,
+           let v = Double(args[m + 1]) {
+            profil.logoMargeRatio = v / 100.0
+        }
+        if let o = args.firstIndex(of: "--logo-opacite"), o + 1 < args.count,
+           let v = Double(args[o + 1]) {
+            profil.logoOpacite = v
+        }
+
         print("Habillage — export")
         print(String(repeating: "─", count: 66))
         print("  vidéo       : \(video.lastPathComponent)")
-        print("  sous-titres : \(sousTitres?.lastPathComponent ?? "aucun (logo seul)")")
+        print("  sous-titres : \(sousTitres?.lastPathComponent ?? "aucun")")
+        var descriptionLogo = "aucun"
+        if profil.logoActif {
+            descriptionLogo = (profil.logoFichier?.lastPathComponent ?? "?")
+                + " — " + descriptionPosition(profil.logoPosition)
+                + ", " + arrondi(profil.logoTailleRatio * 100) + " % de la hauteur"
+                + ", opacité " + arrondi(profil.logoOpacite * 100) + " %"
+        }
+        print("  logo        : \(descriptionLogo)")
+        print("  usage       : \(usage(sousTitres: sousTitres, profil: profil))")
         print("  profil      : \(profil.nom)")
         print("  sortie      : \(sortie.path)")
         print("")
@@ -78,6 +127,7 @@ enum CommandeExport {
                       + "\(duree(bilan.dureeVideo)) de vidéo")
                 print("  vitesse   : ×\(String(format: "%.1f", bilan.facteurTempsReel)) "
                       + "par rapport au temps réel")
+                print("  logo      : \(bilan.logoIncruste ? "incrusté" : "aucun")")
                 print("  audio     : \(bilan.audioRecopie ? "recopié sans réencodage" : "aucune piste")")
             } catch ErreurExport.annule {
                 effacerLigne()
@@ -96,6 +146,41 @@ enum CommandeExport {
         }
         verrou.wait()
         return code
+    }
+
+    // MARK: - Options du logo
+
+    /// « haut-gauche »… ou « 50,80 » : deux pourcentages désignant le CENTRE.
+    static func lirePosition(_ texte: String) -> PositionLogo? {
+        if let coin = CoinLogo(rawValue: texte) { return .coin(coin) }
+        let parts = texte.split(separator: ",")
+        guard parts.count == 2,
+              let x = Double(parts[0].trimmingCharacters(in: .whitespaces)),
+              let y = Double(parts[1].trimmingCharacters(in: .whitespaces)),
+              (0...100).contains(x), (0...100).contains(y) else { return nil }
+        return .libre(xPct: x, yPct: y)
+    }
+
+    static func descriptionPosition(_ p: PositionLogo) -> String {
+        switch p {
+        case .coin(let c): return c.rawValue
+        case .libre(let x, let y):
+            return "centre à \(arrondi(x)) % × \(arrondi(y)) %"
+        }
+    }
+
+    /// Lequel des trois usages de l'ADR est en train de s'exécuter.
+    static func usage(sousTitres: URL?, profil: ProfilHabillage) -> String {
+        switch (sousTitres != nil, profil.logoActif) {
+        case (true, true): return "sous-titres + logo"
+        case (true, false): return "sous-titres seuls"
+        case (false, true): return "logo seul"
+        case (false, false): return "ni sous-titres ni logo — rien à graver"
+        }
+    }
+
+    private static func arrondi(_ v: Double) -> String {
+        v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
     }
 
     // MARK: - Affichage
@@ -136,6 +221,7 @@ enum CommandeExport {
         case let e as ErreurPolice: return Textes.Rendu.message(pour: e)
         case let e as ErreurSousTitres: return Textes.SousTitres.message(pour: e)
         case let e as ErreurExport: return Textes.Export.message(pour: e)
+        case let e as ErreurLogo: return Textes.Logo.message(pour: e)
         default: return "\(erreur)"
         }
     }

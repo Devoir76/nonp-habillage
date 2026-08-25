@@ -172,6 +172,28 @@ contrôle « le fond d'une ligne pleine reste dans le cadre ».
 
 ---
 
+## D-6 — Le ratio du logo est préservé (lot 4bis)
+
+**Ce que fait le prototype** : `scale=diam:diam`. Un logo rectangulaire est
+**écrasé en carré**, sans avertissement.
+
+**Ce que fait l'app native** : la plus grande dimension vaut le diamètre, la
+plus petite suit le ratio de l'image.
+
+**Pourquoi** : le schéma partagé dit « plus grande dimension du logo en % de la
+HAUTEUR vidéo, **ratio préservé** ». C'est le contrat (invariant nº6), et c'est
+lui qui fait foi.
+
+**Portée** : nulle sur un logo carré. Le logo NONP est un disque dans une image
+carrée : les deux implémentations le posent au pixel près au même endroit, ce
+que le contrôle de parité vérifie sur les quatre coins et sur des coordonnées
+libres, en 16:9, 9:16 et 1:1.
+
+**Vérifié par** : `ControlesLogo`, rubriques « taille, marge, ratio » et
+« parité avec le prototype ».
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le
@@ -181,5 +203,8 @@ contrôle « le fond d'une ligne pleine reste dans le cadre ».
   quel : un bloc sans mot n'a rien à afficher.
 - **Un mot plus long que la ligne déborde.** Comportement du prototype, et le
   bon : l'invariant nº1 interdit de couper un mot.
+- **Le logo est posé sous les sous-titres.** Ordre du prototype (`overlay`
+  puis `ass`), repris tel quel : un logo mal placé ne doit jamais masquer une
+  réplique.
 - **Le BOM est conservé.** `open(encoding="utf-8")` ne le retire pas non plus.
   Il reste collé au numéro de bloc, qui est ignoré de toute façon.

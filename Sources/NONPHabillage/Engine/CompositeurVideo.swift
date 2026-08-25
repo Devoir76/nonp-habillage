@@ -36,11 +36,15 @@ enum CompositeurVideo {
         cues: [CueGravee],
         profil: ProfilHabillage,
         miseEnPage: MiseEnPageRendu,
+        calqueLogo: CGImage?,
         taille: CGSize
     ) -> AVMutableVideoComposition {
 
         let largeur = Int(taille.width)
         let hauteur = Int(taille.height)
+
+        // Le logo ne bouge pas : son calque est converti une fois pour toutes.
+        let ciLogo = calqueLogo.map { CIImage(cgImage: $0) }
 
         // Les calques, calculés à la demande et gardés : un par réplique.
         let cache = CacheCalques(
@@ -51,19 +55,25 @@ enum CompositeurVideo {
             asset: asset,
             applyingCIFiltersWithHandler: { requete in
                 let source = requete.sourceImage
-                guard let calque = cache.calque(
-                    aSecondes: requete.compositionTime.seconds) else {
-                    requete.finish(with: source, context: nil)
-                    return
-                }
-                // Le calque est fabriqué aux dimensions de rendu ; l'image
+                // Les calques sont fabriqués aux dimensions de rendu ; l'image
                 // source peut avoir une autre origine selon la piste. On aligne
                 // sur son étendue réelle plutôt que de supposer (0, 0).
-                let ciCalque = CIImage(cgImage: calque)
-                    .transformed(by: CGAffineTransform(
-                        translationX: source.extent.origin.x,
-                        y: source.extent.origin.y))
-                requete.finish(with: ciCalque.composited(over: source), context: nil)
+                let decalage = CGAffineTransform(
+                    translationX: source.extent.origin.x,
+                    y: source.extent.origin.y)
+
+                var image = source
+                // ORDRE : le logo d'abord, les sous-titres par-dessus. C'est
+                // celui du prototype (`overlay` puis `ass`), et c'est le bon :
+                // un logo mal placé ne doit jamais masquer une réplique.
+                if let ciLogo {
+                    image = ciLogo.transformed(by: decalage).composited(over: image)
+                }
+                if let calque = cache.calque(aSecondes: requete.compositionTime.seconds) {
+                    image = CIImage(cgImage: calque)
+                        .transformed(by: decalage).composited(over: image)
+                }
+                requete.finish(with: image, context: nil)
             })
 
         composition.renderSize = taille

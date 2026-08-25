@@ -58,6 +58,34 @@ estimée, annulation possible.
 avec une progression qui avance ; l'annulation laisse le disque propre ; le
 fichier produit se lit dans QuickTime et VLC ; temps mesuré et consigné.
 
+## Lot 4bis — Incrustation du logo (0,5 j)
+
+**Pourquoi ce lot existe.** Il comble un trou constaté à la fin du lot 4 :
+l'incrustation du logo n'appartenait à aucun lot. Or l'ADR en fait un usage de
+**premier rang** — « vidéo + logo seul, le gain de temps le plus immédiat face
+à un éditeur vidéo, et pas une option secondaire ». Le lot 4 ne le mentionnait
+pas, le lot 5 ne couvre que son placement à la souris dans l'aperçu, et le
+lot 7 est la finition. Le logo n'aurait donc jamais été gravé.
+
+Incrustation du logo dans la composition : préréglages **4 coins** et
+**coordonnées libres** — où `x_pct` / `y_pct` désignent le **centre** du logo,
+comme le veut le schéma —, **taille** et **marge** relatives à la hauteur,
+**opacité**. Le logo est posé SOUS les sous-titres, comme dans le prototype :
+un logo mal placé ne doit jamais masquer une réplique.
+
+Le ratio du logo est **préservé**, conformément au schéma partagé (« plus
+grande dimension en % de la hauteur, ratio préservé »), là où le prototype
+écrasait toute image en carré. Sur un logo carré — celui de NONP — les deux
+donnent le même résultat.
+
+**Acceptation** — les **trois usages** de l'ADR fonctionnent en ligne de
+commande : sous-titres seuls, logo seul, les deux. Les quatre coins et les
+coordonnées libres placent le logo là où ils l'annoncent, à la marge du profil,
+sans jamais sortir de l'image, en 16:9 comme en 9:16 et en 1:1. La position
+d'un logo carré est **identique à celle du prototype**, contrôlée. Un fichier
+de logo introuvable produit une erreur explicite et **aucun rendu** — jamais un
+habillage silencieusement amputé de son logo.
+
 ## Lot 5 — Interface (2,5 j)
 
 Zone de dépôt (vidéo seule, ou vidéo + sous-titres), bouton **Habiller**,

@@ -68,6 +68,8 @@ final class ExportateurVideo: @unchecked Sendable {
         /// Durée de la vidéo traitée.
         let dureeVideo: Double
         let octets: Int64
+        /// Vrai si un logo a été incrusté.
+        var logoIncruste: Bool = false
         /// Rapport durée vidéo / durée de traitement. Au-dessus de 1, l'export
         /// va plus vite que le temps réel.
         var facteurTempsReel: Double { duree > 0 ? dureeVideo / duree : 0 }
@@ -144,9 +146,14 @@ final class ExportateurVideo: @unchecked Sendable {
             cues = miseEnPage.segmenter(lues, lignesMax: profil.lignesMax)
         }
 
+        // Le logo, s'il y en a un : un seul calque pour toute la vidéo.
+        let calqueLogo = try RenduLogo.calque(
+            profil: profil, parametres: miseEnPage.parametres,
+            largeur: Int(taille.width), hauteur: Int(taille.height))
+
         let composition = CompositeurVideo.composition(
             pour: asset, cues: cues, profil: profil,
-            miseEnPage: miseEnPage, taille: taille)
+            miseEnPage: miseEnPage, calqueLogo: calqueLogo, taille: taille)
 
         // --- Lecture ------------------------------------------------------
         let lecteur: AVAssetReader
@@ -267,6 +274,7 @@ final class ExportateurVideo: @unchecked Sendable {
             duree: Date().timeIntervalSince(debut),
             dureeVideo: dureeTotale.seconds,
             octets: octets ?? 0,
+            logoIncruste: calqueLogo != nil,
             audioRecopie: entreeAudio != nil)
     }
 

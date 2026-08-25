@@ -68,6 +68,7 @@ enum Verification {
         ControlesMiseEnPage.executer(r)
         ControlesFidelite.executer(r, corpus: corpus)
         ControlesRendu.executer(r, corpus: corpus)
+        ControlesLogo.executer(r)
         ControlesExport.executer(r, videoReelle: videoReelle)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()

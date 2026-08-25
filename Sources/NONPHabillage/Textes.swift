@@ -90,6 +90,31 @@ enum Textes {
         }
     }
 
+    // MARK: - Logo (lot 4bis)
+
+    enum Logo {
+
+        /// Même exigence que pour la police (invariant nº4) : rien ne se fait
+        /// en silence. Un logo demandé et absent doit arrêter l'export, pas
+        /// produire une vidéo sans logo qu'on découvrirait après diffusion.
+        static func fichierIntrouvable(_ chemin: String) -> String {
+            "Le fichier du logo est introuvable : « \(chemin) ». "
+            + "Aucun habillage n'a été gravé — vérifiez le chemin, puis réessayez."
+        }
+
+        static func imageIllisible(_ nom: String) -> String {
+            "Le fichier « \(nom) » n'a pas pu être lu comme une image. "
+            + "Utilisez un PNG (fond transparent conseillé), un JPEG ou un HEIC."
+        }
+
+        static func message(pour erreur: ErreurLogo) -> String {
+            switch erreur {
+            case .fichierIntrouvable(let url): return fichierIntrouvable(url.path)
+            case .imageIllisible(let url): return imageIllisible(url.lastPathComponent)
+            }
+        }
+    }
+
     // MARK: - Export vidéo (lot 4)
 
     enum Export {
