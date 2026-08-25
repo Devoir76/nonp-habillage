@@ -24,6 +24,14 @@ enum Verification {
     /// À appeler au tout début du lancement. Sans effet en usage normal.
     static func maybeRun() {
         let args = CommandLine.arguments
+
+        // Production des images de référence du lot 3.
+        if let i = args.firstIndex(of: "--images"), i + 1 < args.count {
+            exit(ProductionImages.executer(
+                sorties: URL(fileURLWithPath: args[i + 1], isDirectory: true),
+                sources: sources(depuis: args)))
+        }
+
         guard args.contains("--verifier") else { return }
 
         var corpus: [URL] = []
@@ -47,8 +55,41 @@ enum Verification {
         ControlesSegmenteur.executer(r)
         ControlesMiseEnPage.executer(r)
         ControlesFidelite.executer(r, corpus: corpus)
+        ControlesRendu.executer(r, corpus: corpus)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()
+    }
+
+    /// Lit les sources d'images de la ligne de commande.
+    ///
+    /// Chaque source s'écrit `--source <étiquette> <vidéo> <sous-titres>`, et
+    /// se complète éventuellement de `--prototype-rendu <vidéo habillée>`, qui
+    /// s'applique à la source qui précède.
+    private static func sources(depuis args: [String]) -> [ProductionImages.Source] {
+        var sources: [ProductionImages.Source] = []
+        var i = 0
+        while i < args.count {
+            if args[i] == "--source", i + 3 < args.count {
+                sources.append(ProductionImages.Source(
+                    etiquette: args[i + 1],
+                    video: URL(fileURLWithPath: args[i + 2]),
+                    sousTitres: URL(fileURLWithPath: args[i + 3]),
+                    rendueParLePrototype: nil))
+                i += 4
+                continue
+            }
+            if args[i] == "--prototype-rendu", i + 1 < args.count, let derniere = sources.last {
+                sources[sources.count - 1] = ProductionImages.Source(
+                    etiquette: derniere.etiquette,
+                    video: derniere.video,
+                    sousTitres: derniere.sousTitres,
+                    rendueParLePrototype: URL(fileURLWithPath: args[i + 1]))
+                i += 2
+                continue
+            }
+            i += 1
+        }
+        return sources
     }
 
     /// Liste les `.srt` et `.vtt` d'un dossier, triés pour que deux exécutions

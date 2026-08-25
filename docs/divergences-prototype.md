@@ -84,6 +84,78 @@ divergence ne concerne que le cas où il s'arrêtait.
 
 ---
 
+## D-3 — La césure suit la largeur mesurée, pas un nombre de caractères (lot 3)
+
+**Origine** : ADR-0001 §5, « Mesure exacte du texte par Core Text, au lieu de
+l'estimation *0,72 × taille* du prototype — approximation grossière, cause
+directe du recoupage incontrôlé. »
+
+**Ce que fait le prototype** : `wrap()` compare un nombre de CARACTÈRES à une
+limite. Toutes les lettres y valent pareil : un `l` compte comme un `W`.
+Mesuré sur Arial 78 px, l'écart est brutal — « lililililil » fait 217 px,
+« WMWMWMWMWMW » en fait 866, pour le même nombre de caractères. Une réplique en
+capitales dépassait donc la largeur utile sans que le calcul s'en aperçoive, et
+libass la recoupait lui-même, hors de toute logique de ponctuation.
+
+**Ce que fait l'app native** : la césure mesure chaque ligne candidate avec
+Core Text, dans la police réelle, à la taille réelle.
+
+**L'algorithme, lui, ne change pas.** `Segmenteur.envelopper` prend désormais
+un critère de tenue de ligne en paramètre : le remplissage, la coupure à la
+ponctuation, le refus des fragments orphelins sont exactement ceux du
+prototype. Seul le critère diffère — nombre de caractères pour la parité,
+largeur mesurée pour le rendu. Écrire deux fois le remplissage aurait laissé
+les deux versions diverger en silence, et la parité n'aurait plus rien prouvé
+du code réellement employé au rendu.
+
+**Portée** : la parité du lot 2 se mesure toujours avec le critère par
+caractères — le seul que le Python connaisse — et reste intacte, 234 contrôles
+au vert.
+
+**Vérifié par** : `ControlesRendu`, rubriques « mesure exacte plutôt
+qu'estimation » et « aucune ligne ne déborde, quel que soit le format » (deux
+profils × cinq formats, sur le corpus réel).
+
+---
+
+## D-4 — Les espaces latéraux du bandeau élargissent le fond, pas le texte (lot 3)
+
+**Ce que fait le prototype** : pour élargir la boîte bleue sous une ligne
+courte — et couvrir un sous-titre déjà incrusté dans la source — il colle
+`espaces_lateraux` espaces durs `\h` **de chaque côté du texte** avant de
+l'écrire dans l'ASS.
+
+**Ce que fait l'app native** : c'est le RECTANGLE qui s'élargit d'autant. La
+chaîne gravée reste celle du fichier source.
+
+**Pourquoi** : l'invariant nº1 dit qu'aucun mot n'est jamais modifié. Ajouter
+des espaces au texte pour obtenir un effet de fond revient à altérer la chaîne
+pour des raisons de décor. Le résultat visuel est le même — l'élargissement
+vaut `espaces_lateraux × largeur d'une espace dans la police` — mais le texte
+n'est plus touché.
+
+---
+
+## D-5 — En mode `ajuste`, le fond reste dans le cadre (lot 3)
+
+**Ce que fait le prototype** : le fond épouse la ligne, plus les espaces durs.
+Sur une ligne remplissant la largeur utile, l'ensemble sort de l'image —
+mesuré à **2 002 px de fond pour une vidéo de 1 920**. Le défaut lui était
+invisible : il élargissait le fond APRÈS le découpage, quand plus rien ne
+pouvait le rattraper.
+
+**Ce que fait l'app native** : le débord du fond est déduit de la largeur utile
+**avant** la césure. Le texte se coupe un mot plus tôt et le fond reste dans
+les marges du profil.
+
+**Portée** : ne se manifeste que sur les lignes proches de la largeur maximale.
+Sur les lignes courantes, le découpage est inchangé.
+
+**Vérifié par** : `ControlesRendu`, rubrique « bandeau pleine largeur »,
+contrôle « le fond d'une ligne pleine reste dans le cadre ».
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le

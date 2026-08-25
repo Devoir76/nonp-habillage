@@ -61,4 +61,32 @@ enum Textes {
             }
         }
     }
+
+    // MARK: - Rendu (lot 3)
+
+    enum Rendu {
+
+        /// Invariant nº4. Le message doit dire clairement que RIEN n'a été
+        /// substitué : c'est tout l'objet de l'invariant. libass remplaçait la
+        /// police en silence et le rendu partait chez le destinataire sans que
+        /// personne ne s'en aperçoive.
+        static func policeIntrouvable(_ demandee: String, proches: [String]) -> String {
+            var message = "La police « \(demandee) » n'est pas installée sur ce Mac. "
+                + "Aucune police de substitution n'a été employée à sa place : le "
+                + "rendu aurait été différent de celui que vous avez réglé, sans "
+                + "que rien ne vous le signale."
+            if !proches.isEmpty {
+                message += " Polices proches disponibles : "
+                    + proches.map { "« \($0) »" }.joined(separator: ", ") + "."
+            }
+            return message
+        }
+
+        static func message(pour erreur: ErreurPolice) -> String {
+            switch erreur {
+            case .familleIntrouvable(let demandee, let proches):
+                return policeIntrouvable(demandee, proches: proches)
+            }
+        }
+    }
 }

@@ -40,12 +40,32 @@ enum Segmenteur {
     /// le comportement du prototype, et c'est le bon — mieux vaut une ligne qui
     /// dépasse qu'un mot mutilé (invariant nº1).
     static func envelopper(mots: [String], maxCaracteres: Int) -> [String] {
+        envelopper(mots: mots) { ligne, mot in
+            TextePython.longueur(ligne) + 1 + TextePython.longueur(mot) <= maxCaracteres
+        }
+    }
+
+    /// La même mécanique, mais c'est l'appelant qui décide si un mot tient
+    /// encore sur la ligne courante.
+    ///
+    /// Deux critères coexistent dans l'application, et il FAUT qu'ils partagent
+    /// cet algorithme :
+    ///
+    /// - **par nombre de caractères** — celui du prototype, seul comparable à
+    ///   la sortie Python, donc seul utilisable pour la parité (lot 2) ;
+    /// - **par largeur mesurée** — la césure exacte réclamée par l'ADR §5, où
+    ///   Core Text mesure le texte réel dans la police réelle (lot 3).
+    ///
+    /// Écrire deux fois le remplissage aurait laissé les deux versions dériver
+    /// l'une de l'autre en silence, et la parité n'aurait plus rien prouvé du
+    /// code réellement employé au rendu. Ici, seul le critère change.
+    static func envelopper(
+        mots: [String], tient: (_ ligne: String, _ mot: String) -> Bool
+    ) -> [String] {
         var lignes: [String] = []
         var courante = ""
         for mot in mots {
-            let debordement = TextePython.longueur(courante) + 1
-                + TextePython.longueur(mot) > maxCaracteres
-            if !courante.isEmpty && debordement {
+            if !courante.isEmpty && !tient(courante, mot) {
                 lignes.append(courante)
                 courante = mot
             } else {
@@ -70,12 +90,22 @@ enum Segmenteur {
     static func segmenter(
         _ cues: [Cue], maxCaracteres: Int, lignesMax: Int
     ) -> [CueGravee] {
+        segmenter(cues, lignesMax: lignesMax) { ligne, mot in
+            TextePython.longueur(ligne) + 1 + TextePython.longueur(mot) <= maxCaracteres
+        }
+    }
+
+    /// La même resegmentation, avec un critère de tenue de ligne fourni par
+    /// l'appelant. Voir `envelopper(mots:tient:)` pour le pourquoi.
+    static func segmenter(
+        _ cues: [Cue], lignesMax: Int, tient: (_ ligne: String, _ mot: String) -> Bool
+    ) -> [CueGravee] {
         var resultat: [CueGravee] = []
 
         for cue in cues {
             let mots = TextePython.decouperEnMots(cue.texte)
             let morceaux = decouperEnMorceaux(
-                mots: mots, maxCaracteres: maxCaracteres, lignesMax: lignesMax)
+                mots: mots, lignesMax: lignesMax, tient: tient)
 
             // Longueur de référence pour le prorata : le morceau relu d'un
             // trait, les sauts de ligne comptant pour une espace.
@@ -107,7 +137,7 @@ enum Segmenteur {
     /// Découpe une suite de mots en morceaux tenant chacun en `lignesMax`
     /// lignes, en reculant jusqu'à une ponctuation quand c'est possible.
     private static func decouperEnMorceaux(
-        mots: [String], maxCaracteres: Int, lignesMax: Int
+        mots: [String], lignesMax: Int, tient: (_ ligne: String, _ mot: String) -> Bool
     ) -> [[String]] {
         var morceaux: [[String]] = []
         let n = mots.count
@@ -118,7 +148,7 @@ enum Segmenteur {
             var dernier = i
             var j = i
             while j < n,
-                  envelopper(mots: Array(mots[i...j]), maxCaracteres: maxCaracteres).count <= lignesMax {
+                  envelopper(mots: Array(mots[i...j]), tient: tient).count <= lignesMax {
                 dernier = j
                 j += 1
             }
@@ -140,8 +170,7 @@ enum Segmenteur {
                 }
             }
 
-            morceaux.append(envelopper(
-                mots: Array(mots[i...dernier]), maxCaracteres: maxCaracteres))
+            morceaux.append(envelopper(mots: Array(mots[i...dernier]), tient: tient))
             i = dernier + 1
         }
         return morceaux
