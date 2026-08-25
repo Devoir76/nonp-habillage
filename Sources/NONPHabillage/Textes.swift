@@ -19,8 +19,7 @@ enum Textes {
 
     // MARK: - Identité de l'application
 
-    /// Nom affiché — titre de la fenêtre. Nom de travail : le nom définitif
-    /// sera tranché par Éric avant la première publication (ADR-0001,
-    /// « Décisions restant ouvertes » nº1).
+    /// Nom affiché — titre de la fenêtre. Nom définitif, arrêté le 24/08
+    /// (ADR-0001, décision nº1).
     static let nomApplication = "NONP Habillage"
 }

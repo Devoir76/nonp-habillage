@@ -313,12 +313,21 @@ app compagnon distincte, interface simple + volet repliable, profil par défaut
 neutre avec NONP en préréglage, bandeau pleine largeur par défaut, liste de
 polices sûres, interface en français, entrées MP4/MOV/M4V.
 
+## Tranché le 24/08
+
+**Décision nº1 — nom et identifiant.** Le nom définitif est **NONP Habillage**,
+l'identifiant de bundle **`com.nonp.habillage`** (builds de test :
+`com.nonp.habillage.test`). Le nom de travail devient le nom tout court : plus
+aucune mention « provisoire » dans le code. Reste à produire l'**icône**, qui
+n'a jamais dépendu du nom et suit sa propre échéance.
+
 ## Décisions restant ouvertes
 
-1. **Nom et identifiant** de l'app (`com.nonp.habillage` ?), icône à produire.
-   Le nom « NONP Habillage » convient-il pour un outil destiné à tout public ?
-2. **Dépôt public dès le départ**, ou après une première version utilisable ?
+1. **Dépôt public dès le départ**, ou après une première version utilisable ?
    (La leçon du 12/08 : réécrire un historique coûte moins cher avant publication.)
+2. **Icône** de l'application, à produire (`logo_circle.png` du prototype n'en
+   est pas une). Son absence ne bloque rien : la build le signale et macOS
+   affiche l'icône générique.
 3. **Sortie HEVC** en plus de H.264 : fichiers plus légers, compatibilité moindre.
 4. **Aperçu animé** (lecture avec habillage) : confortable, mais coûteux — à
    trancher au lot 5, l'aperçu sur image fixe étant le minimum retenu.
