@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Info.plist — carte d'identité du bundle .app.
+     Copiée telle quelle dans « NONP Habillage.app/Contents/ » par
+     Scripts/build_app.sh, qui y remplace ensuite le seul CFBundleIdentifier
+     selon le type de build (test ou production). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Nom de travail. Le nom définitif est une décision d'Éric, à trancher
+         avant la première publication (ADR-0001, décisions restant ouvertes). -->
+    <key>CFBundleName</key>
+    <string>NONP Habillage</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>NONP Habillage</string>
+
+    <!-- Nom du binaire dans Contents/MacOS/ -->
+    <key>CFBundleExecutable</key>
+    <string>NONPHabillage</string>
+
+    <!-- Identifiant de PRODUCTION, provisoire lui aussi (ADR-0001 : « com.nonp.habillage ? »).
+         Les builds de test reçoivent « com.nonp.habillage.test », appliqué par
+         Scripts/build_app.sh, afin que macOS ne confonde jamais une build de
+         test avec une version installée dans /Applications. -->
+    <key>CFBundleIdentifier</key>
+    <string>com.nonp.habillage</string>
+
+    <!-- Icône de l'application. Resources/AppIcon.icns n'existe pas encore :
+         l'icône reste à produire (décision d'Éric). Le build s'en passe sans
+         erreur ; macOS affiche l'icône générique en attendant. -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- Version : socle. Rien n'est publié. -->
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- macOS 14 minimum, cohérent avec Package.swift -->
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+
+    <!-- Rendu Retina net -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <!-- Application avec fenêtre normale (icône dans le Dock) -->
+    <key>LSUIElement</key>
+    <false/>
+</dict>
+</plist>
