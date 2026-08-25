@@ -89,4 +89,51 @@ enum Textes {
             }
         }
     }
+
+    // MARK: - Export vidéo (lot 4)
+
+    enum Export {
+
+        /// Formats d'entrée : MP4, MOV, M4V (ADR §3). Un fichier refusé doit
+        /// produire un message explicite assorti d'une marche à suivre — jamais
+        /// un échec silencieux ni un plantage.
+        static func formatNonPrisEnCharge(_ nom: String) -> String {
+            "Le fichier « \(nom) » n'est pas pris en charge par le moteur vidéo de "
+            + "macOS. Les formats acceptés sont MP4, MOV et M4V. Convertissez la "
+            + "vidéo dans l'un de ces formats, puis réessayez."
+        }
+
+        static func pisteVideoAbsente(_ nom: String) -> String {
+            "Le fichier « \(nom) » ne contient aucune piste vidéo. "
+            + "S'il s'agit d'un fichier audio, il n'y a rien à habiller."
+        }
+
+        static func lectureImpossible(_ raison: String) -> String {
+            "La vidéo n'a pas pu être lue jusqu'au bout (\(raison)). "
+            + "Le fichier est peut-être incomplet ou endommagé."
+        }
+
+        static func ecritureImpossible(_ raison: String) -> String {
+            "L'export n'a pas pu être écrit (\(raison)). "
+            + "Vérifiez l'espace disque disponible et les droits du dossier de sortie."
+        }
+
+        static let annule =
+            "Export annulé. Aucun fichier n'a été laissé sur le disque."
+
+        static func message(pour erreur: ErreurExport) -> String {
+            switch erreur {
+            case .videoIllisible(let url):
+                return formatNonPrisEnCharge(url.lastPathComponent)
+            case .pisteVideoAbsente(let url):
+                return pisteVideoAbsente(url.lastPathComponent)
+            case .lectureImpossible(let raison):
+                return lectureImpossible(raison)
+            case .ecritureImpossible(let raison):
+                return ecritureImpossible(raison)
+            case .annule:
+                return annule
+            }
+        }
+    }
 }

@@ -13,6 +13,7 @@
 #   ./Scripts/verifier.sh                       contrôles internes seuls
 #   ./Scripts/verifier.sh --corpus <dossier>    + fidélité et parité sur un
 #                                               corpus de sous-titres réels
+#   ./Scripts/verifier.sh --video <fichier.mp4> + recopie de l'audio à l'export
 #   ./Scripts/verifier.sh --corpus <d> --prototype <nonp_habille.py>
 #
 # La parité exige les deux : un corpus ET le prototype Python. Sans corpus, les
@@ -26,6 +27,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 CORPUS=""
+VIDEO=""
 PROTOTYPE="$HOME/Developer/NONP-Habillage/nonp_habille.py"
 LARGEUR=1920
 HAUTEUR=1080
@@ -33,6 +35,7 @@ HAUTEUR=1080
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --corpus)    CORPUS="$2"; shift 2 ;;
+        --video)     VIDEO="$2"; shift 2 ;;
         --prototype) PROTOTYPE="$2"; shift 2 ;;
         --largeur)   LARGEUR="$2"; shift 2 ;;
         --hauteur)   HAUTEUR="$2"; shift 2 ;;
@@ -51,6 +54,14 @@ swift build -c debug
 BINAIRE="$(swift build -c debug --show-bin-path)/NONPHabillage"
 
 ARGS=(--verifier)
+
+# La recopie de l'audio ne se contrôle que sur une vraie piste : sans vidéo
+# fournie, la rubrique s'annonce « non exécutée ».
+if [[ -n "$VIDEO" ]]; then
+    ARGS+=(--video "$VIDEO")
+else
+    echo "  ⚠️  Aucune vidéo — recopie de l'audio non contrôlée (--video <fichier>)."
+fi
 
 if [[ -n "$CORPUS" ]]; then
     ARGS+=(--corpus "$CORPUS")

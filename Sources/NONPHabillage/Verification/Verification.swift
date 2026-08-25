@@ -13,6 +13,7 @@
 //   NONPHabillage --verifier
 //   NONPHabillage --verifier --corpus <dossier>
 //   NONPHabillage --verifier --or-python <fichier.json>
+//   NONPHabillage --verifier --video <fichier.mp4>
 //
 // En pratique on passe par `./Scripts/verifier.sh`, qui compile, fabrique la
 // référence Python et enchaîne le tout.
@@ -24,6 +25,11 @@ enum Verification {
     /// À appeler au tout début du lancement. Sans effet en usage normal.
     static func maybeRun() {
         let args = CommandLine.arguments
+
+        // Export vidéo en ligne de commande (lot 4).
+        if args.contains("--exporter") {
+            exit(CommandeExport.executer(arguments: args))
+        }
 
         // Production des images de référence du lot 3.
         if let i = args.firstIndex(of: "--images"), i + 1 < args.count {
@@ -42,12 +48,18 @@ enum Verification {
         if let i = args.firstIndex(of: "--or-python"), i + 1 < args.count {
             reference = URL(fileURLWithPath: args[i + 1])
         }
+        var videoReelle: URL? = nil
+        if let i = args.firstIndex(of: "--video"), i + 1 < args.count {
+            videoReelle = URL(fileURLWithPath: args[i + 1])
+        }
 
-        exit(executer(corpus: corpus, referenceJSON: reference))
+        exit(executer(corpus: corpus, referenceJSON: reference, videoReelle: videoReelle))
     }
 
-    static func executer(corpus: [URL], referenceJSON: URL?) -> Int32 {
-        print("Vérification du lot 2 — parseur, segmenteur, mise en page")
+    static func executer(
+        corpus: [URL], referenceJSON: URL?, videoReelle: URL? = nil
+    ) -> Int32 {
+        print("Vérification — parseur, segmenteur, mise en page, rendu, export")
         print(String(repeating: "─", count: 66))
 
         let r = Rapport()
@@ -56,6 +68,7 @@ enum Verification {
         ControlesMiseEnPage.executer(r)
         ControlesFidelite.executer(r, corpus: corpus)
         ControlesRendu.executer(r, corpus: corpus)
+        ControlesExport.executer(r, videoReelle: videoReelle)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()
     }

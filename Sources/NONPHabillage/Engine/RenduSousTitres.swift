@@ -92,20 +92,10 @@ enum RenduSousTitres {
             lignes: lignesFinales, profil: profil, parametres: parametres,
             police: police, largeurVideo: largeur, hauteurVideo: hauteur)
 
-        let couche = CoucheSousTitres()
-        couche.frame = CGRect(x: 0, y: 0, width: largeur, height: hauteur)
-        couche.contentsScale = 1
-        couche.isGeometryFlipped = false
-        couche.replique = replique
-        couche.police = police
-        couche.profil = profil
-        couche.epaisseurContour = Double(parametres.contour)
+        let couche = coucheDe(replique: replique, police: police, profil: profil,
+                              parametres: parametres, largeur: largeur, hauteur: hauteur)
 
-        guard let ctx = CGContext(
-            data: nil, width: largeur, height: hauteur,
-            bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        guard let ctx = contexte(largeur: largeur, hauteur: hauteur)
         else { throw ErreurRendu.contexteIndisponible }
 
         ctx.draw(fond, in: CGRect(x: 0, y: 0, width: largeur, height: hauteur))
@@ -114,6 +104,62 @@ enum RenduSousTitres {
 
         guard let image = ctx.makeImage() else { throw ErreurRendu.contexteIndisponible }
         return image
+    }
+
+    /// Peint l'habillage seul, sur fond TRANSPARENT.
+    ///
+    /// C'est cette forme qu'attend la composition vidéo du lot 4 : elle superpose
+    /// l'habillage à chaque image de la vidéo, sans jamais la redessiner. Une
+    /// réplique ne changeant pas pendant qu'elle est à l'écran, l'image produite
+    /// ici se calcule UNE fois et sert pour toutes les images de la réplique —
+    /// autrement Core Text retracerait les mêmes glyphes trente fois par seconde.
+    static func calque(
+        lignes: [String],
+        profil: ProfilHabillage,
+        miseEnPage: MiseEnPageRendu,
+        largeur: Int,
+        hauteur: Int
+    ) throws -> CGImage {
+        let replique = GeometrieSousTitres.poser(
+            lignes: lignes, profil: profil, parametres: miseEnPage.parametres,
+            police: miseEnPage.police, largeurVideo: largeur, hauteurVideo: hauteur)
+
+        let couche = coucheDe(replique: replique, police: miseEnPage.police,
+                              profil: profil, parametres: miseEnPage.parametres,
+                              largeur: largeur, hauteur: hauteur)
+
+        guard let ctx = contexte(largeur: largeur, hauteur: hauteur)
+        else { throw ErreurRendu.contexteIndisponible }
+        couche.setNeedsDisplay()
+        couche.render(in: ctx)
+
+        guard let image = ctx.makeImage() else { throw ErreurRendu.contexteIndisponible }
+        return image
+    }
+
+    // MARK: - Fabrique
+
+    private static func coucheDe(
+        replique: RepliquePosee, police: PoliceSousTitre, profil: ProfilHabillage,
+        parametres: ParametresMiseEnPage, largeur: Int, hauteur: Int
+    ) -> CoucheSousTitres {
+        let couche = CoucheSousTitres()
+        couche.frame = CGRect(x: 0, y: 0, width: largeur, height: hauteur)
+        couche.contentsScale = 1
+        couche.isGeometryFlipped = false
+        couche.replique = replique
+        couche.police = police
+        couche.profil = profil
+        couche.epaisseurContour = Double(parametres.contour)
+        return couche
+    }
+
+    private static func contexte(largeur: Int, hauteur: Int) -> CGContext? {
+        CGContext(
+            data: nil, width: largeur, height: hauteur,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
     }
 }
 
