@@ -126,30 +126,27 @@ enum ControlesRendu {
 
         for (nomProfil, profil) in profils {
             for (nomFormat, w, h) in formats {
-                let params = MoteurMiseEnPage.calculer(
-                    profil: profil, largeur: w, hauteur: h,
-                    mesureur: MesureurCoreText(famille: profil.police))
-                guard let police = try? PoliceSousTitre(
-                    famille: profil.police, taille: params.taille) else {
-                    r.verifier("\(nomProfil) \(nomFormat) : police", false)
+                guard let mep = try? MiseEnPageRendu.calculer(
+                    profil: profil, largeurVideo: w, hauteurVideo: h) else {
+                    r.verifier("\(nomProfil) \(nomFormat) : mise en page", false)
                     continue
                 }
-                let largeurUtile = GeometrieSousTitres.largeurUtile(
-                    profil: profil, parametres: params, largeurVideo: w, police: police)
 
                 var pireDebordement = 0.0
                 var texteFautif = ""
+                var pireLongueur = 0
                 for texte in textes {
-                    let lignes = GeometrieSousTitres.decouper(
-                        texte: texte, police: police, largeurUtile: largeurUtile)
-                    for ligne in lignes {
+                    for ligne in mep.decouper(texte) {
                         // Un mot seul plus large que la ligne est le seul cas
                         // toléré : le couper violerait l'invariant nº1.
                         let motUnique = TextePython.decouperEnMots(ligne).count <= 1
-                        let debord = police.largeur(de: ligne) - largeurUtile
+                        let debord = mep.police.largeur(de: ligne) - mep.largeurDisponible
                         if debord > 0.5 && !motUnique && debord > pireDebordement {
                             pireDebordement = debord
                             texteFautif = ligne
+                        }
+                        if !motUnique {
+                            pireLongueur = max(pireLongueur, TextePython.longueur(ligne))
                         }
                     }
                 }
@@ -158,6 +155,23 @@ enum ControlesRendu {
                               ? " — « \(texteFautif) » dépasse de \(Int(pireDebordement)) px"
                               : ""),
                            pireDebordement == 0)
+
+                // ADR §5, les deux moitiés de la règle.
+                //
+                // La PLACE doit suffire à la longueur de ligne cible : c'est ce
+                // qui commande la réduction de taille en vertical. Aucune borne
+                // haute ici — une vidéo large offre de la place en trop, ce
+                // n'est pas un défaut.
+                r.verifier("\(nomProfil) \(nomFormat) : la place atteint la cible "
+                           + "(\(mep.capacite) caractères tiennent, cible "
+                           + "\(mep.longueurLigneCible))",
+                           mep.capacite >= mep.longueurLigneCible)
+                // Et la LIGNE PRODUITE respecte la cible : c'est le rythme de
+                // lecture, la règle même du prototype. Sans elle, la place
+                // disponible serait remplie jusqu'à 55 caractères.
+                r.verifier("\(nomProfil) \(nomFormat) : aucune ligne au-delà de la cible "
+                           + "(la plus longue : \(pireLongueur))",
+                           pireLongueur <= mep.longueurLigneCible)
             }
         }
     }
@@ -167,14 +181,12 @@ enum ControlesRendu {
     private static func bandeauPleineLargeur(_ r: Rapport) {
         let profil = ProfilHabillage.neutre
         for (nomFormat, w, h) in formats {
-            let params = MoteurMiseEnPage.calculer(
-                profil: profil, largeur: w, hauteur: h,
-                mesureur: MesureurCoreText(famille: profil.police))
-            guard let police = try? PoliceSousTitre(
-                famille: profil.police, taille: params.taille) else { continue }
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: profil, largeurVideo: w, hauteurVideo: h) else { continue }
             let pose = GeometrieSousTitres.poser(
-                lignes: ["Une ligne courte."], profil: profil, parametres: params,
-                police: police, largeurVideo: w, hauteurVideo: h)
+                lignes: ["Une ligne courte."], profil: profil,
+                parametres: mep.parametres, police: mep.police,
+                largeurVideo: w, hauteurVideo: h)
             r.egal("\(nomFormat) : une seule bande", pose.bandeaux.count, 1)
             guard let bande = pose.bandeaux.first else { continue }
             r.egal("\(nomFormat) : la bande part du bord gauche", bande.minX, 0)
@@ -185,12 +197,12 @@ enum ControlesRendu {
         // En mode « ajuste », au contraire, le fond épouse chaque ligne : c'est
         // le comportement historique que le préréglage NONP conserve.
         let nonp = ProfilHabillage.nonpHistorique
-        let params = MoteurMiseEnPage.calculer(
-            profil: nonp, largeur: 1920, hauteur: 1080,
-            mesureur: MesureurCoreText(famille: nonp.police))
-        if let police = try? PoliceSousTitre(famille: nonp.police, taille: params.taille) {
+        if let mep = try? MiseEnPageRendu.calculer(
+            profil: nonp, largeurVideo: 1920, hauteurVideo: 1080) {
+            let params = mep.parametres
+            let police = mep.police
             let pose = GeometrieSousTitres.poser(
-                lignes: ["Courte.", "Une ligne nettement plus longue que la précédente."],
+                lignes: ["Courte.", "Une ligne nettement plus longue que ça."],
                 profil: nonp, parametres: params, police: police,
                 largeurVideo: 1920, hauteurVideo: 1080)
             r.egal("NONP « ajuste » : un fond par ligne", pose.bandeaux.count, 2)
@@ -201,11 +213,8 @@ enum ControlesRendu {
 
             // Le fond déborde de sa ligne : sur une ligne remplissant la
             // largeur utile, il doit malgré tout rester dans le cadre.
-            let largeurUtile = GeometrieSousTitres.largeurUtile(
-                profil: nonp, parametres: params, largeurVideo: 1920, police: police)
-            let longue = GeometrieSousTitres.decouper(
-                texte: String(repeating: "interminablement long ", count: 12),
-                police: police, largeurUtile: largeurUtile)
+            let longue = mep.decouper(
+                String(repeating: "interminablement long ", count: 12))
             let poseLongue = GeometrieSousTitres.poser(
                 lignes: [longue.first ?? ""], profil: nonp, parametres: params,
                 police: police, largeurVideo: 1920, hauteurVideo: 1080)
@@ -223,11 +232,10 @@ enum ControlesRendu {
                    profil.bandeauHauteurFixeLignes > 0)
 
         for (nomFormat, w, h) in formats {
-            let params = MoteurMiseEnPage.calculer(
-                profil: profil, largeur: w, hauteur: h,
-                mesureur: MesureurCoreText(famille: profil.police))
-            guard let police = try? PoliceSousTitre(
-                famille: profil.police, taille: params.taille) else { continue }
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: profil, largeurVideo: w, hauteurVideo: h) else { continue }
+            let params = mep.parametres
+            let police = mep.police
 
             let uneLigne = GeometrieSousTitres.poser(
                 lignes: ["Oui."], profil: profil, parametres: params,
@@ -247,10 +255,10 @@ enum ControlesRendu {
         // historique, conservé.
         var sansOption = ProfilHabillage.neutre
         sansOption.bandeauHauteurFixeLignes = 0
-        let params = MoteurMiseEnPage.calculer(
-            profil: sansOption, largeur: 1920, hauteur: 1080,
-            mesureur: MesureurCoreText(famille: sansOption.police))
-        if let police = try? PoliceSousTitre(famille: sansOption.police, taille: params.taille) {
+        if let mep = try? MiseEnPageRendu.calculer(
+            profil: sansOption, largeurVideo: 1920, hauteurVideo: 1080) {
+            let params = mep.parametres
+            let police = mep.police
             let une = GeometrieSousTitres.poser(
                 lignes: ["Oui."], profil: sansOption, parametres: params,
                 police: police, largeurVideo: 1920, hauteurVideo: 1080)
@@ -275,15 +283,14 @@ enum ControlesRendu {
                 r.verifier("\(nomProfil) : fond de contrôle", false)
                 continue
             }
-            let params = MoteurMiseEnPage.calculer(
-                profil: profil, largeur: w, hauteur: h,
-                mesureur: MesureurCoreText(famille: profil.police))
             do {
+                let mep = try MiseEnPageRendu.calculer(
+                    profil: profil, largeurVideo: w, hauteurVideo: h)
                 let image = try RenduSousTitres.rendre(
                     fond: fond,
                     texte: "Il m'a dit qu'il n'avait rien vu ce jour-là, "
                          + "vers quatre heures du matin.",
-                    profil: profil, parametres: params)
+                    profil: profil, miseEnPage: mep)
                 r.egal("\(nomProfil) : l'image rendue garde ses dimensions",
                        "\(image.width)×\(image.height)", "\(w)×\(h)")
                 r.verifier("\(nomProfil) : le rendu a modifié l'image",

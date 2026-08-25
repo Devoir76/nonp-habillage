@@ -97,8 +97,22 @@ Mesuré sur Arial 78 px, l'écart est brutal — « lililililil » fait 217 px,
 capitales dépassait donc la largeur utile sans que le calcul s'en aperçoive, et
 libass la recoupait lui-même, hors de toute logique de ponctuation.
 
-**Ce que fait l'app native** : la césure mesure chaque ligne candidate avec
-Core Text, dans la police réelle, à la taille réelle.
+**Ce que fait l'app native** : la césure retient **deux** conditions, et il
+faut les deux.
+
+1. **La longueur de ligne cible, en caractères** (32 par défaut) — c'est le
+   rythme de lecture, et c'est exactement la règle du prototype. La conserver,
+   c'est garder la césure aux mêmes endroits sur du texte ordinaire : le
+   préréglage NONP ne doit rien changer à l'existant.
+2. **La largeur mesurée par Core Text** — le filet de sécurité, et ce que le
+   prototype n'avait pas. Quand 32 caractères ne TIENNENT pas, la ligne se
+   coupe plus tôt au lieu de déborder et de se faire recouper par libass hors
+   de toute ponctuation.
+
+Chacune seule serait fausse. La première seule rouvrirait le défaut du 23/08.
+La seconde seule laisserait filer les lignes jusqu'à **55 caractères** sur une
+vidéo 16:9 — la mesure exacte est bien plus généreuse que l'estimation à 0,72 —
+soit deux fois la densité du rendu actuel.
 
 **L'algorithme, lui, ne change pas.** `Segmenteur.envelopper` prend désormais
 un critère de tenue de ligne en paramètre : le remplissage, la coupure à la
@@ -113,8 +127,10 @@ caractères — le seul que le Python connaisse — et reste intacte, 234 contr�
 au vert.
 
 **Vérifié par** : `ControlesRendu`, rubriques « mesure exacte plutôt
-qu'estimation » et « aucune ligne ne déborde, quel que soit le format » (deux
-profils × cinq formats, sur le corpus réel).
+qu'estimation » et « aucune ligne ne déborde, quel que soit le format » — deux
+profils × cinq formats, sur le corpus réel, avec les deux moitiés de la règle
+contrôlées séparément : la place atteint toujours la cible, et aucune ligne
+produite ne la dépasse.
 
 ---
 

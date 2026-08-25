@@ -84,8 +84,12 @@ enum ProductionImages {
         // minutages gravés, donc l'instant où extraire l'image des deux côtés.
         let paramsHistoriques = MoteurMiseEnPage.calculerCommeLePrototype(
             profil: .nonpHistorique, largeur: largeur, hauteur: hauteur)
+        // Une vidéo peut être un extrait : la réplique retenue doit tomber
+        // dedans, sinon l'image extraite ne montre pas ce qu'on croit.
+        let duree = try ImagesReference.duree(de: source.video)
         let choisie = try repliqueLaPlusDecoupee(
-            cues, maxCaracteres: paramsHistoriques.maxCaracteres)
+            cues, maxCaracteres: paramsHistoriques.maxCaracteres,
+            avantMs: Int(duree * 1000))
 
         let instant = Double(choisie.gravee.debutMs + choisie.gravee.finMs) / 2000.0
         print("  réplique retenue : \(choisie.morceaux) morceaux, "
@@ -98,23 +102,21 @@ enum ProductionImages {
         let instantMs = Int(instant * 1000)
 
         for (nomProfil, profil) in ControlesRendu.profils {
-            let params = MoteurMiseEnPage.calculer(
-                profil: profil, largeur: largeur, hauteur: hauteur,
-                mesureur: MesureurCoreText(famille: profil.police))
+            let mep = try MiseEnPageRendu.calculer(
+                profil: profil, largeurVideo: largeur, hauteurVideo: hauteur)
             // La réplique AFFICHÉE à cet instant, pas le bloc source entier :
             // la resegmentation le découpe en plusieurs répliques successives
             // d'au plus `lignesMax` lignes, et l'écran n'en montre qu'une.
-            let affichee = try repliqueAffichee(
-                cues, a: instantMs, profil: profil, parametres: params,
-                largeurVideo: largeur)
+            let affichee = repliqueAffichee(cues, a: instantMs, profil: profil, miseEnPage: mep)
             let image = try RenduSousTitres.rendre(
-                fond: fond, lignes: affichee, profil: profil, parametres: params)
+                fond: fond, lignes: affichee, profil: profil, miseEnPage: mep)
             let nom = "\(source.etiquette)--\(nomProfil).png"
             try ImagesReference.ecrire(image, vers: dossier.appendingPathComponent(nom))
             ecrites.append(nom)
-            print("  ✓ \(nom)  (police \(params.taille) px"
-                  + (params.reduitePourTenir
-                     ? ", réduite depuis \(params.tailleDemandee)" : "") + ")")
+            print("  ✓ \(nom)  (police \(mep.parametres.taille) px"
+                  + (mep.parametres.reduitePourTenir
+                     ? ", réduite depuis \(mep.parametres.tailleDemandee)" : "")
+                  + ", \(mep.capacite) caractères par ligne)")
 
             // Côte à côte avec le prototype, sur la même réplique, au même
             // instant. C'est la comparaison qui décide du lot.
@@ -139,7 +141,9 @@ enum ProductionImages {
         let (l, h) = try ImagesReference.dimensions(de: source.video)
         let params = MoteurMiseEnPage.calculerCommeLePrototype(
             profil: .nonpHistorique, largeur: l, hauteur: h)
-        let choisie = try repliqueLaPlusDecoupee(cues, maxCaracteres: params.maxCaracteres)
+        let duree = try ImagesReference.duree(de: source.video)
+        let choisie = try repliqueLaPlusDecoupee(
+            cues, maxCaracteres: params.maxCaracteres, avantMs: Int(duree * 1000))
         let instant = Double(choisie.gravee.debutMs + choisie.gravee.finMs) / 2000.0
         let source16x9 = try ImagesReference.image(de: source.video, a: instant)
 
@@ -149,18 +153,17 @@ enum ProductionImages {
         for (nomFormat, rapport) in [("1-1", 1.0), ("4-5", 4.0 / 5.0)] {
             let fond = ImagesReference.recadrer(source16x9, versRapport: rapport)
             for (nomProfil, profil) in ControlesRendu.profils {
-                let p = MoteurMiseEnPage.calculer(
-                    profil: profil, largeur: fond.width, hauteur: fond.height,
-                    mesureur: MesureurCoreText(famille: profil.police))
-                let affichee = try repliqueAffichee(
-                    cues, a: instantMs, profil: profil, parametres: p,
-                    largeurVideo: fond.width)
+                let mep = try MiseEnPageRendu.calculer(
+                    profil: profil, largeurVideo: fond.width, hauteurVideo: fond.height)
+                let affichee = repliqueAffichee(
+                    cues, a: instantMs, profil: profil, miseEnPage: mep)
                 let image = try RenduSousTitres.rendre(
-                    fond: fond, lignes: affichee, profil: profil, parametres: p)
+                    fond: fond, lignes: affichee, profil: profil, miseEnPage: mep)
                 let nom = "\(nomFormat)--\(nomProfil).png"
                 try ImagesReference.ecrire(image, vers: dossier.appendingPathComponent(nom))
                 ecrites.append(nom)
-                print("  ✓ \(nom)  (\(fond.width)×\(fond.height), police \(p.taille) px)")
+                print("  ✓ \(nom)  (\(fond.width)×\(fond.height), police "
+                      + "\(mep.parametres.taille) px, \(mep.capacite) caractères par ligne)")
             }
         }
         return ecrites
@@ -184,16 +187,9 @@ enum ProductionImages {
     /// Le découpage est ici piloté par la LARGEUR MESURÉE, comme au rendu réel.
     private static func repliqueAffichee(
         _ cues: [Cue], a instantMs: Int, profil: ProfilHabillage,
-        parametres: ParametresMiseEnPage, largeurVideo: Int
-    ) throws -> [String] {
-        let police = try PoliceSousTitre(famille: profil.police, taille: parametres.taille)
-        let largeurUtile = GeometrieSousTitres.largeurUtile(
-            profil: profil, parametres: parametres,
-            largeurVideo: largeurVideo, police: police)
-
-        let gravees = Segmenteur.segmenter(cues, lignesMax: profil.lignesMax) { ligne, mot in
-            police.largeur(de: ligne + " " + mot) <= largeurUtile
-        }
+        miseEnPage: MiseEnPageRendu
+    ) -> [String] {
+        let gravees = miseEnPage.segmenter(cues, lignesMax: profil.lignesMax)
         let courante = gravees.first { $0.debutMs <= instantMs && instantMs < $0.finMs }
             ?? gravees.min { abs($0.debutMs - instantMs) < abs($1.debutMs - instantMs) }
         return courante?.lignes ?? []
@@ -202,10 +198,10 @@ enum ProductionImages {
     /// La réplique que la resegmentation découpe le plus, à égalité la plus
     /// longue. C'est le pire cas, celui qui met la césure à l'épreuve.
     private static func repliqueLaPlusDecoupee(
-        _ cues: [Cue], maxCaracteres: Int
+        _ cues: [Cue], maxCaracteres: Int, avantMs: Int
     ) throws -> Choix {
         var meilleur: Choix? = nil
-        for cue in cues {
+        for cue in cues where cue.finMs <= avantMs {
             let morceaux = Segmenteur.segmenter(
                 [cue], maxCaracteres: maxCaracteres,
                 lignesMax: ProfilHabillage.nonpHistorique.lignesMax)
@@ -222,7 +218,7 @@ enum ProductionImages {
             }
         }
         guard let choix = meilleur else {
-            throw ErreurImages.videoIllisible(URL(fileURLWithPath: "/"))
+            throw ErreurImages.aucuneRepliqueDansLaVideo(secondes: Double(avantMs) / 1000)
         }
         return choix
     }
@@ -290,6 +286,10 @@ enum ProductionImages {
             return "Extraction impossible dans \(url.lastPathComponent) — \(raison)"
         case ErreurImages.ecritureImpossible(let url):
             return "Écriture impossible : \(url.path)"
+        case ErreurImages.aucuneRepliqueDansLaVideo(let secondes):
+            return "Aucune réplique du fichier de sous-titres ne tombe dans les "
+                + String(format: "%.0f", secondes) + " s de la vidéo — "
+                + "sous-titres et vidéo ne vont pas ensemble"
         default: return "\(erreur)"
         }
     }

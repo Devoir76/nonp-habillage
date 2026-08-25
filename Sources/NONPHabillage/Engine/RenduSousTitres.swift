@@ -78,20 +78,15 @@ enum RenduSousTitres {
         texte: String? = nil,
         lignes: [String]? = nil,
         profil: ProfilHabillage,
-        parametres: ParametresMiseEnPage
+        miseEnPage: MiseEnPageRendu
     ) throws -> CGImage {
 
         let largeur = fond.width
         let hauteur = fond.height
+        let parametres = miseEnPage.parametres
+        let police = miseEnPage.police
 
-        // Invariant nº4 : une famille absente arrête ici, avec un message.
-        let police = try PoliceSousTitre(famille: profil.police, taille: parametres.taille)
-
-        let largeurUtile = GeometrieSousTitres.largeurUtile(
-            profil: profil, parametres: parametres,
-            largeurVideo: largeur, police: police)
-        let lignesFinales = lignes ?? GeometrieSousTitres.decouper(
-            texte: texte ?? "", police: police, largeurUtile: largeurUtile)
+        let lignesFinales = lignes ?? miseEnPage.decouper(texte ?? "")
 
         let replique = GeometrieSousTitres.poser(
             lignes: lignesFinales, profil: profil, parametres: parametres,

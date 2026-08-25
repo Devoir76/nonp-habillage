@@ -70,7 +70,14 @@ if [[ "$AVEC_PROTOTYPE" == "oui" ]]; then
     # de graver un ASS. Le ffmpeg ordinaire de Homebrew ne suffit pas.
     FFMPEG=""
     for c in /opt/homebrew/opt/ffmpeg-full/bin/ffmpeg /usr/local/opt/ffmpeg-full/bin/ffmpeg; do
-        if [[ -x "$c" ]] && "$c" -hide_banner -filters 2>/dev/null | grep -q libass; then
+        [[ -x "$c" ]] || continue
+        # La sortie est capturée AVANT d'être filtrée, et non passée à un tube.
+        # Avec `set -o pipefail`, un « grep -q » qui s'arrête au premier
+        # résultat referme le tube, ffmpeg reçoit SIGPIPE, et le pipeline
+        # ressort en échec alors que libass était bien là : la détection
+        # échouait sur une installation parfaitement valide.
+        FILTRES="$("$c" -hide_banner -filters 2>/dev/null || true)"
+        if [[ "$FILTRES" == *libass* ]]; then
             FFMPEG="$c"; break
         fi
     done

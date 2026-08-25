@@ -27,6 +27,8 @@ enum ErreurImages: Error {
     case videoIllisible(URL)
     case extractionImpossible(URL, String)
     case ecritureImpossible(URL)
+    /// Aucune réplique du fichier de sous-titres ne tombe dans la vidéo.
+    case aucuneRepliqueDansLaVideo(secondes: Double)
 }
 
 enum ImagesReference {
@@ -68,6 +70,17 @@ enum ImagesReference {
             return naturelle.applying(transformation)
         }
         return (Int(abs(taille.width).rounded()), Int(abs(taille.height).rounded()))
+    }
+
+    /// Durée de la vidéo, en secondes.
+    ///
+    /// Nécessaire parce qu'un extrait ne porte pas les mêmes répliques que le
+    /// fichier complet : choisir une réplique au-delà de la fin donnerait une
+    /// image noire, ou la dernière image répétée — et une comparaison qui ne
+    /// compare rien.
+    static func duree(de video: URL) throws -> Double {
+        let asset = AVURLAsset(url: video)
+        return try bloquant { try await asset.load(.duration).seconds }
     }
 
     /// Extrait une image à un instant donné, orientation appliquée.
