@@ -47,7 +47,13 @@ final class AppState: ObservableObject {
     /// La taille nommée cochée dans l'interface, dérivée du profil.
     var tailleNommee: TailleNommee {
         get { TailleNommee.laPlusProche(de: profil.longueurLigneCible) }
-        set { profil.longueurLigneCible = newValue.longueurLigneCible }
+        set {
+            // LES DEUX : la longueur de ligne ET la taille de police. Ne poser
+            // que la première ne changeait rien à l'œil sur une vidéo 16:9,
+            // dont la largeur suffit toujours à tenir 42 caractères.
+            profil.longueurLigneCible = newValue.longueurLigneCible
+            profil.tailleRatio = newValue.tailleRatio
+        }
     }
 
     // MARK: - Aperçu

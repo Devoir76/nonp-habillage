@@ -33,6 +33,33 @@ enum TailleNommee: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Taille de police, en fraction de la hauteur vidéo.
+    ///
+    /// UNE TAILLE NOMMÉE DOIT CHANGER LA TAILLE DU TEXTE. Cela paraît évident ;
+    /// ce ne l'était pas dans la première version de ce lot, où les quatre
+    /// choix ne pilotaient que la longueur de ligne cible. Sur une vidéo 16:9,
+    /// la largeur suffit toujours à tenir 42 caractères : la taille n'était donc
+    /// jamais réduite, et les quatre réglages rendaient tous **78 px**. Seule la
+    /// césure bougeait — un utilisateur ne voyait rien.
+    ///
+    /// L'ADR §5 couplait les deux (« la taille du texte est contrainte par une
+    /// longueur de ligne cible »), mais son arithmétique reposait sur
+    /// l'estimation « 0,72 × taille » : elle calculait 32 caractères là où
+    /// Core Text en mesure 55. Une fois la mesure exacte en place, longueur de
+    /// ligne et taille de police redeviennent DEUX réglages distincts, et la
+    /// taille nommée doit porter les deux.
+    ///
+    /// « Grande » vaut exactement le 7,2 % du prototype : le préréglage NONP
+    /// tombe dessus sans rien changer à l'existant.
+    var tailleRatio: Double {
+        switch self {
+        case .petite: return 0.054
+        case .normale: return 0.063
+        case .grande: return 0.072
+        case .tresGrande: return 0.084
+        }
+    }
+
     /// La taille nommée la plus proche d'une longueur de ligne donnée.
     ///
     /// Sert à retrouver le bouton à cocher quand un profil arrive avec une
@@ -117,44 +144,32 @@ enum CouleursProposees {
 /// ponctuation — de quoi juger lisibilité, contraste et césure ».
 enum PhrasesDeReference {
 
-    /// Des phrases françaises ordinaires, de plus en plus longues.
+    /// LA phrase de référence. Une seule, et toujours la même.
     ///
-    /// Chacune porte ce qu'il faut pour juger : accents (é, è, à, ç), majuscules,
-    /// jambages descendants (p, q, g, j), apostrophes et ponctuation.
-    private static let phrases = [
-        "Ce jour-là, j'ai vu passer quinze camions.",
-        "Il m'a dit qu'il n'avait rien vu, ce jour-là, vers quatre heures.",
-        "Je me souviens qu'à l'aube du 16 juillet, PERSONNE n'osait bouger ; "
-            + "la place Georges-Pompidou était déjà vide.",
-        "Ma grand-mère répétait qu'il ne fallait jamais y retourner ; "
-            + "elle ajoutait, chaque fois : « on n'oublie pas, on apprend à vivre avec ».",
-    ]
+    /// La première version en choisissait une parmi plusieurs, « la plus longue
+    /// qui tient encore ». L'intention était bonne — remplir les lignes
+    /// disponibles — mais l'effet était pervers : en réduisant la taille du
+    /// texte, on faisait apparaître une phrase PLUS LONGUE, si bien que le bloc
+    /// occupait toujours la même place et que le réglage semblait sans effet.
+    /// On ne compare pas deux réglages si le texte change entre les deux.
+    ///
+    /// Longueur choisie pour tenir en deux lignes aux QUATRE tailles nommées :
+    /// au-delà de 2 × 28 caractères, elle déborderait à « Très grande ».
+    ///
+    /// Contenu : accents (é, à), majuscules, jambages descendants (j, g, p),
+    /// apostrophe et ponctuation — de quoi juger lisibilité, contraste et césure.
+    /// Elle ne porte de ponctuation forte qu'à la fin, et c'est délibéré : un
+    /// point-virgule au milieu ferait mordre la règle de coupure à la
+    /// ponctuation, qui scinderait la phrase en deux répliques dont l'aperçu ne
+    /// montrerait que la première — une seule ligne, là où l'on veut en voir
+    /// deux.
+    static let reference = "Ce jour-là, PERSONNE n'a bougé avant l'aube grise."
 
-    /// Une phrase calibrée pour remplir environ `lignes` lignes à la longueur
-    /// de ligne cible donnée.
+    /// La phrase de référence, quelle que soit la taille.
     ///
-    /// « Calibrée » veut dire ceci : on choisit la phrase dont la longueur
-    /// approche le mieux la place disponible. Une phrase trop courte ne
-    /// montrerait pas la césure, une phrase trop longue déborderait du nombre
-    /// de lignes affichables.
+    /// La signature garde ses paramètres pour rester lisible côté appelant, mais
+    /// le résultat ne dépend plus d'eux : c'est tout l'objet de la correction.
     static func phrase(pourLongueurLigne longueur: Int, lignes: Int) -> String {
-        let vise = longueur * max(1, lignes)
-        return phrases.min {
-            abs(TextePython.longueur($0) - vise) < abs(TextePython.longueur($1) - vise)
-        } ?? phrases[1]
-    }
-
-    /// La phrase la plus longue qui tient encore en `lignes` lignes.
-    ///
-    /// `mesure` compte les lignes qu'une phrase occuperait réellement, césure
-    /// comprise : c'est le seul moyen d'être calibré plutôt qu'approximatif.
-    /// Si aucune ne tient — cas d'une vidéo minuscule —, on rend la plus courte.
-    static func laPlusLongueTenantEn(
-        _ lignes: Int, mesure: (String) -> Int
-    ) -> String {
-        let triees = phrases.sorted {
-            TextePython.longueur($0) > TextePython.longueur($1)
-        }
-        return triees.first { mesure($0) <= max(1, lignes) } ?? (triees.last ?? phrases[0])
+        reference
     }
 }

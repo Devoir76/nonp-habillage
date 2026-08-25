@@ -66,6 +66,14 @@ enum CaptureInterface {
             print("  ✓ \(nom).png  (\(image.width / 2)×\(image.height / 2) points)")
         }
 
+        // Planche des quatre tailles nommées, sur la même image de fond : la
+        // seule façon de savoir si le changement se VOIT.
+        if args.contains("--tailles"), let v = args.firstIndex(of: "--video"),
+           v + 1 < args.count {
+            planchesTailles(URL(fileURLWithPath: args[v + 1]), dans: dossier)
+            return 0
+        }
+
         // 1. Accueil vide.
         capturer("1-accueil-vide", hauteur: 420)
 
@@ -135,6 +143,32 @@ enum CaptureInterface {
         print("     l'aperçu, les avertissements — est fidèle.")
         print("\n✓ \(ecrites.count) captures dans \(dossier.path)")
         return ecrites.isEmpty ? 1 : 0
+    }
+
+    /// Rend le même fond aux quatre tailles nommées, empilés, sans sous-titres
+    /// chargé — donc avec la phrase de référence.
+    @MainActor
+    private static func planchesTailles(_ video: URL, dans dossier: URL) {
+        guard let fond = try? ImagesReference.image(de: video, a: 5) else {
+            print("  ✗ image de fond illisible"); return
+        }
+        for taille in TailleNommee.allCases {
+            var profil = ProfilHabillage.neutre
+            profil.longueurLigneCible = taille.longueurLigneCible
+            profil.tailleRatio = taille.tailleRatio
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: profil, largeurVideo: fond.width, hauteurVideo: fond.height),
+                let resultat = try? Apercu.composer(
+                    fond: fond, profil: profil,
+                    texte: Apercu.texteDeReference(profil: profil, miseEnPage: mep),
+                    avecSousTitres: false) else { continue }
+            let nom = "taille-\(taille.rawValue)"
+            try? ImagesReference.ecrire(
+                resultat.image, vers: dossier.appendingPathComponent("\(nom).png"))
+            print("  ✓ \(nom).png — police \(mep.parametres.taille) px, "
+                  + "cible \(taille.longueurLigneCible) car.")
+            print("      phrase : « \(Apercu.texteDeReference(profil: profil, miseEnPage: mep)) »")
+        }
     }
 
     /// Laisse tourner la boucle d'exécution jusqu'à ce qu'une condition soit

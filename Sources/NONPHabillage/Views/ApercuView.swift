@@ -23,6 +23,13 @@ struct ApercuView: View {
             imageOuAttente
             avertissements
             barreDeChoix
+            if etat.fondsDisponibles.count > 1 {
+                Text(Textes.Interface.fondDeLApercuExplication)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
@@ -111,6 +118,7 @@ struct ApercuView: View {
                     Label(a.message, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,7 +137,8 @@ struct ApercuView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 210)
+                .frame(maxWidth: 260)
+                .help(Textes.Interface.fondDeLApercuExplication)
             }
 
             Spacer()

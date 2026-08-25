@@ -45,6 +45,27 @@ struct MiseEnPageRendu {
     let longueurLigneCible: Int
     /// Capacité effective d'une ligne, en caractères moyens.
     let capacite: Int
+    /// Largeur moyenne d'un caractère à la taille retenue.
+    let largeurMoyenneCaractere: Double
+
+    /// Largeur réellement occupée par une ligne pleine.
+    ///
+    /// C'est la PLUS SERRÉE des deux règles de césure : la largeur disponible,
+    /// ou la longueur de ligne cible traduite en pixels. Afficher la seule
+    /// largeur disponible tromperait — sur une 16:9, elle vaut 1804 px quand le
+    /// texte n'en occupe que 1031.
+    var largeurColonneTexte: Double {
+        min(largeurDisponible, Double(longueurLigneCible) * largeurMoyenneCaractere)
+    }
+
+    /// Vrai quand la largeur disponible ne borne RIEN : la longueur de ligne
+    /// cible coupe avant elle.
+    ///
+    /// Sur une vidéo 16:9, avec une cible de 32 caractères, la colonne de texte
+    /// ne fait déjà qu'un peu plus de la moitié de l'image : la marge intérieure
+    /// du bandeau doit dépasser 24 % pour changer quoi que ce soit. Mesuré, et
+    /// dit à l'utilisateur plutôt que laissé à deviner.
+    var margeInterieureSansEffet: Bool { capacite > longueurLigneCible }
 
     /// Calcule la mise en page de rendu pour une vidéo donnée.
     ///
@@ -116,7 +137,8 @@ struct MiseEnPageRendu {
             police: police,
             largeurDisponible: largeurDisponible,
             longueurLigneCible: cible,
-            capacite: capacite(largeurDisponible, taille))
+            capacite: capacite(largeurDisponible, taille),
+            largeurMoyenneCaractere: mesureur.largeurMoyenneCaractere(taillePolice: taille))
     }
 
     /// Le critère de tenue de ligne du rendu — DEUX conditions, et il faut les

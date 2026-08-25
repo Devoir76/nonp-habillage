@@ -100,20 +100,13 @@ enum Apercu {
     /// L'aperçu affiche du texte EN PERMANENCE (ADR §2) : sans cela, on
     /// règlerait la police et les couleurs sur une image vide.
     ///
-    /// « Calibrée sur la longueur de ligne cible » se mesure, plutôt que de
-    /// s'estimer au nombre de caractères : on retient la phrase la plus longue
-    /// qui remplit encore les lignes disponibles sans les déborder. Une phrase
-    /// trop courte ne montrerait pas la césure ; une trop longue serait coupée
-    /// à l'affichage et donnerait une fausse idée du réglage.
+    /// C'est TOUJOURS la même phrase : voir `PhrasesDeReference.reference` pour
+    /// le pourquoi. Une phrase qui changerait avec le réglage rendrait toute
+    /// comparaison impossible.
     static func texteDeReference(
         profil: ProfilHabillage, miseEnPage: MiseEnPageRendu? = nil
     ) -> String {
-        guard let miseEnPage else {
-            return PhrasesDeReference.phrase(
-                pourLongueurLigne: profil.longueurLigneCible, lignes: profil.lignesMax)
-        }
-        return PhrasesDeReference.laPlusLongueTenantEn(
-            profil.lignesMax, mesure: { miseEnPage.decouper($0).count })
+        PhrasesDeReference.reference
     }
 
     /// Taille d'affichage d'une image dans une zone donnée.

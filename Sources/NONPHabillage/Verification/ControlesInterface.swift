@@ -46,6 +46,63 @@ enum ControlesInterface {
 
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
+
+        r.section("Interface — marge intérieure du bandeau")
+        margeInterieure(r)
+    }
+
+    // MARK: - Marge intérieure
+
+    /// Elle s'applique en `pleine-largeur` — le schéma partagé dit
+    /// explicitement qu'elle est « ignorée en mode ajuste » —, et elle ne borne
+    /// le texte que lorsqu'elle est plus serrée que la longueur de ligne cible.
+    private static func margeInterieure(_ r: Rapport) {
+        var profil = ProfilHabillage.neutre
+        let (w, h) = (1920, 1080)
+
+        // Mode « ajuste » : sans effet, par définition du schéma.
+        profil.bandeauMode = .ajuste
+        let ajuste0 = largeurDecoupe(profil, marge: 0, w, h)
+        let ajuste20 = largeurDecoupe(profil, marge: 0.20, w, h)
+        r.egal("mode « ajuste » : la marge intérieure est ignorée (schéma v1)",
+               ajuste0, ajuste20)
+
+        // Mode « pleine-largeur » : elle borne le texte, mais seulement quand
+        // elle passe sous la longueur de ligne cible.
+        profil.bandeauMode = .pleineLargeur
+        let large = largeurDecoupe(profil, marge: 0.03, w, h)
+        let serree = largeurDecoupe(profil, marge: 0.25, w, h)
+        r.verifier("mode « pleine-largeur » : une marge serrée réduit la colonne "
+                   + "(\(Int(large)) → \(Int(serree)) px)", serree < large)
+
+        // Et le seuil est annoncé, plutôt que laissé à deviner.
+        profil.bandeauMargeInterieureRatioLargeur = 0.03
+        let faible = try? MiseEnPageRendu.calculer(
+            profil: profil, largeurVideo: w, hauteurVideo: h)
+        r.verifier("à 3 %, l'interface annonce que la marge est sans effet",
+                   faible?.margeInterieureSansEffet == true)
+
+        profil.bandeauMargeInterieureRatioLargeur = 0.25
+        let forte = try? MiseEnPageRendu.calculer(
+            profil: profil, largeurVideo: w, hauteurVideo: h)
+        r.verifier("à 25 %, la marge mord et l'interface ne le dit plus",
+                   forte?.margeInterieureSansEffet == false)
+
+        // Sur une vidéo étroite, elle mord bien plus tôt : c'est là qu'elle sert.
+        profil.bandeauMargeInterieureRatioLargeur = 0.10
+        let verticale = try? MiseEnPageRendu.calculer(
+            profil: profil, largeurVideo: 1080, hauteurVideo: 1920)
+        r.verifier("en 9:16, la marge agit dès 10 %",
+                   verticale?.margeInterieureSansEffet == false)
+    }
+
+    private static func largeurDecoupe(
+        _ profil: ProfilHabillage, marge: Double, _ w: Int, _ h: Int
+    ) -> Double {
+        var p = profil
+        p.bandeauMargeInterieureRatioLargeur = marge
+        return (try? MiseEnPageRendu.calculer(
+            profil: p, largeurVideo: w, hauteurVideo: h))?.largeurColonneTexte ?? 0
     }
 
     // MARK: - Deux colonnes
@@ -338,22 +395,43 @@ enum ControlesInterface {
 
     private static func textePermanent(_ r: Rapport) {
         // Sans fichier de sous-titres, l'aperçu montre quand même du texte.
+        var taillesDePolice: [Int] = []
         for taille in TailleNommee.allCases {
             var profil = ProfilHabillage.neutre
             profil.longueurLigneCible = taille.longueurLigneCible
-            let phrase = Apercu.texteDeReference(profil: profil)
-            r.verifier("\(Textes.Interface.nomTaille(taille)) : une phrase est proposée",
-                       !phrase.isEmpty)
+            profil.tailleRatio = taille.tailleRatio
 
-            // Calibrée : elle doit remplir les lignes disponibles sans les
-            // dépasser — sinon elle ne montre pas la césure, ou elle déborde.
+            // LA MÊME phrase pour les quatre tailles. Une phrase qui changerait
+            // avec le réglage rendrait la comparaison impossible : c'est ce qui
+            // faisait croire que changer de taille ne produisait aucun effet.
+            r.egal("\(Textes.Interface.nomTaille(taille)) : phrase de référence "
+                   + "identique",
+                   Apercu.texteDeReference(profil: profil),
+                   PhrasesDeReference.reference)
+
             guard let mep = try? MiseEnPageRendu.calculer(
                 profil: profil, largeurVideo: 1920, hauteurVideo: 1080) else { continue }
-            let phraseCalibree = Apercu.texteDeReference(profil: profil, miseEnPage: mep)
-            let lignes = mep.decouper(phraseCalibree)
-            r.verifier("\(Textes.Interface.nomTaille(taille)) : la phrase tient en "
-                       + "\(profil.lignesMax) lignes (\(lignes.count) produites)",
-                       lignes.count >= 1 && lignes.count <= profil.lignesMax)
+            taillesDePolice.append(mep.parametres.taille)
+
+            // Deux lignes exactement : une seule ne montrerait pas la césure,
+            // trois seraient tronquées par la resegmentation.
+            let lignes = Apercu.premiereReplique(
+                texte: PhrasesDeReference.reference, profil: profil, miseEnPage: mep)
+            r.egal("\(Textes.Interface.nomTaille(taille)) : la phrase occupe deux "
+                   + "lignes (police \(mep.parametres.taille) px)",
+                   lignes.count, 2)
+        }
+
+        // ET LA TAILLE DU TEXTE DOIT CHANGER. C'est le défaut qui a motivé la
+        // correction : les quatre réglages rendaient tous 78 px sur une 16:9.
+        r.egal("les quatre tailles donnent quatre polices distinctes",
+               Set(taillesDePolice).count, taillesDePolice.count)
+        r.verifier("les tailles vont croissant (\(taillesDePolice.map(String.init).joined(separator: ", ")) px)",
+                   zip(taillesDePolice, taillesDePolice.dropFirst()).allSatisfy { $0 < $1 })
+        if let plusPetite = taillesDePolice.first, let plusGrande = taillesDePolice.last {
+            r.verifier("l'écart est visible à l'œil (\(plusGrande - plusPetite) px, "
+                       + "soit \(Int(Double(plusGrande - plusPetite) / Double(plusPetite) * 100)) %)",
+                       Double(plusGrande) >= Double(plusPetite) * 1.4)
         }
 
         // La phrase doit porter de quoi juger : accents, majuscules, jambages,
@@ -404,12 +482,15 @@ enum ControlesInterface {
                               ("Très grande", TailleNommee.tresGrande)] {
             var profil = ProfilHabillage.neutre
             profil.longueurLigneCible = taille.longueurLigneCible
+            profil.tailleRatio = taille.tailleRatio
             guard let mep = try? MiseEnPageRendu.calculer(
                 profil: profil, largeurVideo: 1080, hauteurVideo: 1920) else { continue }
             if nom == "Petite" { petit = mep.parametres.taille } else { grand = mep.parametres.taille }
         }
         r.verifier("« Petite » donne un texte plus petit que « Très grande » "
                    + "(\(petit) px contre \(grand) px)", petit < grand)
+        r.egal("« Grande » vaut exactement le 7,2 % du prototype",
+               TailleNommee.grande.tailleRatio, 0.072)
 
         r.egal("une longueur précise retrouve sa taille nommée",
                TailleNommee.laPlusProche(de: 32), .grande)

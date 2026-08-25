@@ -43,9 +43,11 @@ struct PanneauPersonnaliserView: View {
             .pickerStyle(.segmented)
 
             if let mep = etat.miseEnPage {
-                Text("\(mep.parametres.taille) px — \(mep.capacite) caractères par ligne")
+                Text(Textes.Interface.tailleEtLongueurLigne(
+                    mep.parametres.taille, caracteres: mep.longueurLigneCible))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack {
@@ -69,6 +71,7 @@ struct PanneauPersonnaliserView: View {
                 Label(Textes.Interface.policeRisquee, systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack(spacing: 18) {
@@ -127,6 +130,24 @@ struct PanneauPersonnaliserView: View {
                     curseurPourcent(Textes.Interface.margeInterieure,
                                     valeur: $etat.profil.bandeauMargeInterieureRatioLargeur,
                                     de: 0, a: 0.25)
+                    // La marge intérieure ne borne le texte que si elle est plus
+                    // serrée que la longueur de ligne cible. Le dire, plutôt que
+                    // de laisser croire à un curseur cassé.
+                    if let mep = etat.miseEnPage {
+                        if mep.margeInterieureSansEffet {
+                            Text(Textes.Interface.margeSansEffet)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text(Textes.Interface.colonneDeTexteLargeur(
+                                Int(mep.largeurColonneTexte),
+                                sur: Int(etat.tailleVideo?.width ?? 0)))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             }
         }
@@ -176,6 +197,7 @@ struct PanneauPersonnaliserView: View {
                     Text(Textes.Interface.logoRondExplication)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 curseurPourcent(Textes.Interface.tailleLogo,

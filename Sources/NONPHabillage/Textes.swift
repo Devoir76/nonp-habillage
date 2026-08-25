@@ -191,7 +191,28 @@ enum Textes {
 
         // Aperçu
         static let apercu = "Aperçu"
-        static let fondDeLApercu = "Image de fond"
+        // « Image de fond » n'était pas compris : on ne savait pas de quelle
+        // image il s'agissait, ni pourquoi en changer.
+        static let fondDeLApercu = "Image de la vidéo"
+        static let fondDeLApercuExplication =
+            "L'aperçu se peint sur une image de votre vidéo. Prenez-en une claire "
+            + "et une sombre : c'est le seul moyen de vérifier que le texte reste "
+            + "lisible sur les deux."
+        static let colonneDeTexte = "Colonne de texte"
+        /// Ce que l'utilisateur obtient : la taille du texte et la longueur de
+        /// ligne visée. Surtout pas la « capacité » brute — la place que la
+        /// largeur laisserait —, qui annonçait 55 caractères là où les lignes
+        /// en font 32.
+        static func tailleEtLongueurLigne(_ px: Int, caracteres: Int) -> String {
+            "\(px) px — lignes d'environ \(caracteres) caractères"
+        }
+        static func colonneDeTexteLargeur(_ px: Int, sur largeur: Int) -> String {
+            "\(px) px de large, sur \(largeur) px d'image"
+        }
+        static let margeSansEffet =
+            "Sans effet pour l'instant : à cette taille, le texte est déjà plus "
+            + "étroit que la marge. Augmentez-la, ou choisissez une taille plus grande."
+
         static let planClair = "plan clair"
         static let planSombre = "plan sombre"
         static let repliquePrecedente = "Réplique précédente"

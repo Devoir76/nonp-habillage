@@ -122,6 +122,24 @@ Lecture, écriture et validation du schéma v1 (champs inconnus refusés, messag
 en français), préréglages livrés (**Neutre** par défaut, **NONP**), mémorisation
 du dernier profil utilisé, import et export d'un `.json`.
 
+**Ce que la mémorisation doit couvrir** (précisé le 25/08). Le dernier profil
+utilisé, et avec lui **le chemin du fichier de logo** : on ne redépose pas son
+logo à chaque lancement. Le schéma prévoit déjà `logo.fichier`, « absolu, ou
+relatif au fichier de profil ». Deux points à trancher en même temps :
+
+- un chemin absolu casse dès que le fichier est déplacé — prévoir un message
+  clair, et proposer d'en choisir un autre plutôt que de graver sans logo
+  (invariant nº4 vaut aussi ici) ;
+- un profil **partagé** ne peut pas porter le chemin d'un logo qui n'existe que
+  sur la machine de l'expéditeur. Le profil mémorisé localement et le profil
+  exporté n'ont donc pas les mêmes besoins.
+
+**Trois réglages de l'interface n'ont pas de champ dans le schéma** et leur
+persistance se décide ici : `longueurLigneCible` (la taille nommée),
+`logoRecadreEnCercle` (le recadrage rond), et la taille de police que pose une
+taille nommée — le schéma stocke bien `taille_pct_hauteur`, mais le lien entre
+les deux reste à écrire.
+
 **À trancher dans ce lot** : `espaces_lateraux`, héritage de l'ASS adossé à la
 taille de police alors qu'il consomme de la largeur — 9,6 % de la largeur utile
 en 16:9, 30,2 % en 9:16. Voir ADR-0001, décision ouverte nº6.
