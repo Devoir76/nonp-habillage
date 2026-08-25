@@ -126,6 +126,14 @@ struct ProfilHabillage: Equatable {
     var margeLateraleRatioLargeur: Double
     /// Nombre maximal de lignes affichées simultanément. Prototype : `MAXLINES`.
     var lignesMax: Int
+    /// Longueur de ligne visée, en caractères (ADR §5).
+    ///
+    /// C'est l'expression interne des quatre tailles nommées de l'interface —
+    /// Petite, Normale, Grande, Très grande valent 42, 37, 32 et 28. Le champ
+    /// n'existe PAS dans le schéma partagé, qui stocke `taille_pct_hauteur` :
+    /// la façon dont les deux se répondent est une question du lot 6, et rien
+    /// ne lit ni n'écrit encore ce champ depuis un JSON.
+    var longueurLigneCible: Int = MoteurMiseEnPage.longueurLigneCibleParDefaut
 
     // MARK: - Sous-titres, apparence
 
@@ -172,6 +180,7 @@ struct ProfilHabillage: Equatable {
         margeBasseRatio: 0.072,          // MARGINV_RATIO
         margeLateraleRatioLargeur: 0.03,
         lignesMax: 2,                    // MAXLINES
+        longueurLigneCible: 32,          // « Grande » — ce que rend le prototype en 16:9
         couleurTexte: .blanc,
         contourCouleur: .noir,
         contourRatio: 0.006,             // OUTLINE_RATIO
@@ -204,6 +213,7 @@ struct ProfilHabillage: Equatable {
         margeBasseRatio: 0.072,
         margeLateraleRatioLargeur: 0.03,
         lignesMax: 2,
+        longueurLigneCible: 32,
         couleurTexte: .blanc,
         contourCouleur: .noir,
         contourRatio: 0.006,

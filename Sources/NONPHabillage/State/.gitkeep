@@ -1,5 +1,0 @@
-État de l'application : AppState, ProfilStore (charger / enregistrer / valider).
-Rempli aux lots 5 et 6. Voir docs/adr/0001-app-compagnon-avfoundation.md.
-
-Ce fichier ne sert qu'à faire exister le dossier dans Git ; il commence par un
-point, SwiftPM l'ignore donc à la compilation. À supprimer dès le premier source.

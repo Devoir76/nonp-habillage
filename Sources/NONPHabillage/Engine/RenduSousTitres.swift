@@ -78,7 +78,8 @@ enum RenduSousTitres {
         texte: String? = nil,
         lignes: [String]? = nil,
         profil: ProfilHabillage,
-        miseEnPage: MiseEnPageRendu
+        miseEnPage: MiseEnPageRendu,
+        calqueLogo: CGImage? = nil
     ) throws -> CGImage {
 
         let largeur = fond.width
@@ -99,6 +100,11 @@ enum RenduSousTitres {
         else { throw ErreurRendu.contexteIndisponible }
 
         ctx.draw(fond, in: CGRect(x: 0, y: 0, width: largeur, height: hauteur))
+        // Le logo AVANT les sous-titres, comme dans la composition vidéo : un
+        // logo mal placé ne doit jamais masquer une réplique.
+        if let calqueLogo {
+            ctx.draw(calqueLogo, in: CGRect(x: 0, y: 0, width: largeur, height: hauteur))
+        }
         couche.setNeedsDisplay()
         couche.render(in: ctx)
 

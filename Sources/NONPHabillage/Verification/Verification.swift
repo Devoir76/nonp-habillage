@@ -26,6 +26,11 @@ enum Verification {
     static func maybeRun() {
         let args = CommandLine.arguments
 
+        // Capture de l'interface (lot 5).
+        if args.contains("--capture") {
+            exit(MainActor.assumeIsolated { CaptureInterface.executer(arguments: args) })
+        }
+
         // Export vidéo en ligne de commande (lot 4).
         if args.contains("--exporter") {
             exit(CommandeExport.executer(arguments: args))
@@ -69,6 +74,7 @@ enum Verification {
         ControlesFidelite.executer(r, corpus: corpus)
         ControlesRendu.executer(r, corpus: corpus)
         ControlesLogo.executer(r)
+        ControlesInterface.executer(r)
         ControlesExport.executer(r, videoReelle: videoReelle)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()

@@ -194,6 +194,26 @@ libres, en 16:9, 9:16 et 1:1.
 
 ---
 
+## D-7 — L'avertissement de zone regarde les deux dimensions (lot 5)
+
+**Ce que fait le prototype** : `avertissements_zone()` compare le BAS du logo au
+HAUT de la zone des sous-titres, sans jamais regarder l'horizontale. Un logo posé
+bas mais complètement à droite d'un bandeau `ajuste` étroit déclenchait donc une
+alerte pour rien.
+
+**Ce que fait l'app native** : un vrai recoupement de rectangles.
+
+**Et surtout, il est enfin lu.** Le prototype imprimait ces avertissements dans
+un terminal, juste avant un encodage de plusieurs minutes. L'aperçu du lot 5 les
+montre AVANT d'encoder, à côté de l'image, et le logo se déplace à la souris
+pour les faire disparaître.
+
+**Vérifié par** : `ControlesInterface`, rubrique « avertissements de zone » —
+logo en bas avec sous-titres, logo en haut, logo en bas sans sous-titres, logo
+au bord, logo au centre, pas de logo.
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le

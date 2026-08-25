@@ -55,11 +55,14 @@ struct MiseEnPageRendu {
         largeurVideo: Int,
         hauteurVideo: Int,
         tailleForcee: Int? = nil,
-        longueurLigneCible: Int = MoteurMiseEnPage.longueurLigneCibleParDefaut
+        longueurLigneCible: Int? = nil
     ) throws -> MiseEnPageRendu {
 
+        // Sans consigne explicite, c'est le profil qui commande — c'est lui que
+        // règle la taille nommée choisie dans l'interface.
+        let demandee = longueurLigneCible ?? profil.longueurLigneCible
         let cible = min(MoteurMiseEnPage.longueurLigneMaximale,
-                        max(MoteurMiseEnPage.longueurLigneMinimale, longueurLigneCible))
+                        max(MoteurMiseEnPage.longueurLigneMinimale, demandee))
         let mesureur = MesureurCoreText(famille: profil.police)
 
         // Point de départ : la taille demandée par le profil, qui est un

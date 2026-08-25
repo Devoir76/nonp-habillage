@@ -90,6 +90,131 @@ enum Textes {
         }
     }
 
+    // MARK: - Avertissements (lot 5)
+
+    /// Ce qui mérite d'être signalé sans empêcher de graver.
+    ///
+    /// Le prototype imprimait ces avertissements dans un terminal, juste avant
+    /// un encodage de plusieurs minutes : personne ne les lisait. L'aperçu les
+    /// rend enfin utiles — on voit le défaut AVANT d'encoder, et on peut
+    /// déplacer le logo à la souris pour le corriger sur-le-champ.
+    enum Avertissements {
+        static let logoSurBandeau =
+            "Le logo empiète sur la zone des sous-titres. Déplacez-le, "
+            + "ou réduisez sa taille."
+        static let logoHorsMargesSures =
+            "Le logo touche le bord de l'image. Certaines plateformes rognent "
+            + "les bords : éloignez-le un peu."
+    }
+
+    // MARK: - Interface (lot 5)
+
+    enum Interface {
+
+        // Écran d'accueil
+        static let deposezVotreVideo = "Déposez votre vidéo ici"
+        static let formatsAcceptes = "MP4, MOV ou M4V"
+        static let ouChoisir = "Choisir un fichier…"
+        static let sousTitresFacultatifs =
+            "Sous-titres (facultatif) — déposez un .srt ou un .vtt"
+        static let boutonHabiller = "Habiller"
+        static let boutonAnnuler = "Annuler"
+        static let retirer = "Retirer"
+
+        static func videoChargee(_ nom: String, largeur: Int, hauteur: Int,
+                                 duree: String) -> String {
+            "\(nom) — \(largeur)×\(hauteur), \(duree)"
+        }
+        static func sousTitresCharges(_ nom: String, repliques: Int) -> String {
+            "\(nom) — \(repliques) répliques"
+        }
+
+        // Volet Personnaliser
+        static let personnaliser = "Personnaliser"
+        static let sousTitres = "Sous-titres"
+        static let logo = "Logo"
+        static let bandeau = "Bandeau"
+
+        static let taille = "Taille"
+        static let police = "Police"
+        static let autrePolice = "Autre police du système…"
+        static let policeRisquee =
+            "Cette police n'est pas garantie sur les autres Mac : un profil "
+            + "partagé pourrait ne pas s'afficher à l'identique."
+        static let couleurTexte = "Couleur du texte"
+        static let couleurContour = "Contour"
+        static let epaisseurContour = "Épaisseur du contour"
+        static let lignesMax = "Lignes maximum"
+
+        static let bandeauActif = "Fond derrière le texte"
+        static let modeBandeau = "Largeur du fond"
+        static let modePleineLargeur = "Pleine largeur"
+        static let modeAjuste = "Ajusté au texte"
+        static let couleurBandeau = "Couleur du fond"
+        static let hauteurFixe = "Hauteur constante"
+        static let hauteurAutomatique = "Automatique"
+        static func hauteurLignes(_ n: Int) -> String {
+            n == 1 ? "1 ligne" : "\(n) lignes"
+        }
+        static let margeBasse = "Marge basse"
+        static let margeInterieure = "Marge intérieure"
+
+        static let choisirLogo = "Choisir une image…"
+        static let aucunLogo = "Aucun logo"
+        static let retirerLogo = "Retirer le logo"
+        static let positionLogo = "Position"
+        static let tailleLogo = "Taille"
+        static let opaciteLogo = "Opacité"
+        static let deplacerLogo = "Faites glisser le logo sur l'aperçu pour le placer."
+
+        static func nomCoin(_ coin: CoinLogo) -> String {
+            switch coin {
+            case .hautGauche: return "Haut gauche"
+            case .hautDroit: return "Haut droit"
+            case .basGauche: return "Bas gauche"
+            case .basDroit: return "Bas droit"
+            }
+        }
+
+        static func nomTaille(_ t: TailleNommee) -> String {
+            switch t {
+            case .petite: return "Petite"
+            case .normale: return "Normale"
+            case .grande: return "Grande"
+            case .tresGrande: return "Très grande"
+            }
+        }
+
+        // Aperçu
+        static let apercu = "Aperçu"
+        static let fondDeLApercu = "Image de fond"
+        static let planClair = "plan clair"
+        static let planSombre = "plan sombre"
+        static let repliquePrecedente = "Réplique précédente"
+        static let repliqueSuivante = "Réplique suivante"
+        static let phraseDeReference = "Phrase de référence — aucun sous-titre chargé"
+        static func repliqueSur(_ index: Int, _ total: Int) -> String {
+            "Réplique \(index) sur \(total)"
+        }
+        static let repliqueLaPlusLongue = "la plus longue du fichier"
+        static let apercuSansEncodage = "Aucun encodage : l'aperçu est instantané."
+
+        // Progression
+        static func progression(_ pourcent: Int) -> String { "\(pourcent) %" }
+        static let estimationEnCours = "Estimation du temps restant…"
+        static func tempsRestant(_ texte: String) -> String { "Encore \(texte) environ" }
+        static let exportTermine = "Vidéo habillée"
+        static let exportAnnule = "Export annulé."
+        static let revelerDansFinder = "Afficher dans le Finder"
+        static let recommencer = "Habiller une autre vidéo"
+
+        // Divers
+        static let rienAGraver =
+            "Ajoutez des sous-titres ou un logo : sans l'un ni l'autre, "
+            + "il n'y a rien à graver."
+        static let chargementApercu = "Préparation de l'aperçu…"
+    }
+
     // MARK: - Logo (lot 4bis)
 
     enum Logo {
