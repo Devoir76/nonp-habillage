@@ -1,6 +1,0 @@
-Moteur : SubtitleParser (SRT/VTT), Segmenter (resegmentation), LayoutEngine,
-OverlayRenderer (Core Text + CALayer), VideoComposer (AVFoundation).
-Rempli aux lots 2, 3 et 4. Voir docs/adr/0001-app-compagnon-avfoundation.md.
-
-Ce fichier ne sert qu'à faire exister le dossier dans Git ; il commence par un
-point, SwiftPM l'ignore donc à la compilation. À supprimer dès le premier source.

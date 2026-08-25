@@ -13,6 +13,12 @@ import SwiftUI
 @main
 struct NONPHabillageApp: App {
 
+    init() {
+        // Harnais de vérification headless (--verifier …) : exécute les
+        // contrôles et quitte. Sans effet en usage normal.
+        Verification.maybeRun()
+    }
+
     var body: some Scene {
         WindowGroup(Textes.nomApplication) {
             FenetrePrincipaleView()

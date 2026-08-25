@@ -14,6 +14,11 @@ dist/
 *.srt
 *.vtt
 
+# Corpus de vérification : des sous-titres réels, donc hors dépôt par principe.
+# ./Scripts/verifier.sh l'utilise s'il existe, sinon on lui passe --corpus.
+# Les fixtures des contrôles, elles, sont des chaînes Swift — rien à versionner.
+Corpus/
+
 # Profil personnel (réglage local, pas réglage du projet)
 profil.json
 

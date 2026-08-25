@@ -1,5 +1,0 @@
-Modèles de données : Profil (Codable, miroir exact du schéma v1), Cue, MediaFile.
-Rempli au lot 2 (Cue) puis au lot 6 (Profil). Voir docs/adr/0001-app-compagnon-avfoundation.md.
-
-Ce fichier ne sert qu'à faire exister le dossier dans Git ; il commence par un
-point, SwiftPM l'ignore donc à la compilation. À supprimer dès le premier source.
