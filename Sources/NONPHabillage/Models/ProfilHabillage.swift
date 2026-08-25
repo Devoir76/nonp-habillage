@@ -109,6 +109,16 @@ struct ProfilHabillage: Equatable {
     var logoPosition: PositionLogo
     /// Opacité du logo, de 0 (invisible) à 1 (opaque).
     var logoOpacite: Double
+    /// Recadrer le logo en cercle, à la volée.
+    ///
+    /// Le prototype fabriquait un fichier (`--make-logo`) qu'il fallait produire
+    /// avant d'habiller. Ici c'est un réglage réversible : on le coche, l'aperçu
+    /// montre le résultat, on le décoche. Aucun fichier n'est écrit à côté du
+    /// logo de l'utilisateur.
+    ///
+    /// Comme `longueurLigneCible`, ce champ n'existe pas dans le schéma partagé :
+    /// sa persistance est une question du lot 6.
+    var logoRecadreEnCercle: Bool = false
 
     // MARK: - Sous-titres, géométrie
 
@@ -175,6 +185,7 @@ struct ProfilHabillage: Equatable {
         logoMargeRatio: 0.04,            // MARGIN_RATIO
         logoPosition: .coin(.hautGauche),
         logoOpacite: 1.0,
+        logoRecadreEnCercle: false,
         police: "Arial",                 // DEFAULT_FONT
         tailleRatio: 0.072,              // FONT_RATIO
         margeBasseRatio: 0.072,          // MARGINV_RATIO
@@ -208,6 +219,7 @@ struct ProfilHabillage: Equatable {
         logoMargeRatio: 0.04,
         logoPosition: .coin(.hautGauche),
         logoOpacite: 1.0,
+        logoRecadreEnCercle: false,
         police: "Helvetica Neue",
         tailleRatio: 0.072,
         margeBasseRatio: 0.072,

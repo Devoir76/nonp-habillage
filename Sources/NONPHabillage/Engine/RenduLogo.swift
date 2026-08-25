@@ -23,6 +23,14 @@ enum ErreurLogo: Error {
 
 enum RenduLogo {
 
+    /// Charge l'image d'un logo, en appliquant le recadrage rond si le profil
+    /// le demande.
+    static func charger(_ url: URL, recadreEnCercle: Bool) throws -> CGImage {
+        let source = try charger(url)
+        guard recadreEnCercle else { return source }
+        return LogoRond.recadrerEnCercle(source) ?? source
+    }
+
     /// Charge l'image d'un logo.
     static func charger(_ url: URL) throws -> CGImage {
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -48,7 +56,7 @@ enum RenduLogo {
     ) throws -> CGImage? {
         guard profil.logoActif, let fichier = profil.logoFichier else { return nil }
 
-        let source = try charger(fichier)
+        let source = try charger(fichier, recadreEnCercle: profil.logoRecadreEnCercle)
         let rect = GeometrieLogo.rectangle(
             profil: profil, parametres: parametres,
             tailleSource: CGSize(width: source.width, height: source.height),

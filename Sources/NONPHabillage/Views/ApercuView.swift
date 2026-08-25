@@ -51,7 +51,10 @@ struct ApercuView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .frame(height: 300)
+        // Aucune hauteur imposée : l'aperçu prend toute la place que la colonne
+        // de gauche lui laisse, et grandit avec la fenêtre. C'est `tailleAffichee`
+        // qui garantit que l'IMAGE ENTIÈRE y tient, sans recadrage.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// La zone saisissable du logo, superposée à l'aperçu.
@@ -94,14 +97,8 @@ struct ApercuView: View {
     }
 
     private func tailleAffichee(image: CGImage, dans zone: CGSize) -> CGSize {
-        let rapport = CGFloat(image.width) / CGFloat(image.height)
-        var l = zone.width
-        var h = l / rapport
-        if h > zone.height {
-            h = zone.height
-            l = h * rapport
-        }
-        return CGSize(width: l.rounded(), height: h.rounded())
+        Apercu.tailleAffichee(
+            image: CGSize(width: image.width, height: image.height), dans: zone)
     }
 
     // MARK: - Avertissements

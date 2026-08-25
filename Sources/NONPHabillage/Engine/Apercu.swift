@@ -52,7 +52,8 @@ enum Apercu {
         var calqueLogo: CGImage? = nil
         var rectangleLogo: CGRect? = nil
         if profil.logoActif, let fichier = profil.logoFichier {
-            let source = try RenduLogo.charger(fichier)
+            let source = try RenduLogo.charger(
+                fichier, recadreEnCercle: profil.logoRecadreEnCercle)
             rectangleLogo = GeometrieLogo.rectangle(
                 profil: profil, parametres: miseEnPage.parametres,
                 tailleSource: CGSize(width: source.width, height: source.height),
@@ -113,6 +114,24 @@ enum Apercu {
         }
         return PhrasesDeReference.laPlusLongueTenantEn(
             profil.lignesMax, mesure: { miseEnPage.decouper($0).count })
+    }
+
+    /// Taille d'affichage d'une image dans une zone donnée.
+    ///
+    /// L'image tient ENTIÈRE : on prend le plus petit des deux facteurs
+    /// d'échelle, et le rapport est conservé. Jamais de recadrage — juger un
+    /// habillage sur un morceau d'image n'aurait aucun sens, et un logo posé
+    /// dans un coin serait justement le premier à disparaître.
+    ///
+    /// L'échelle ne dépasse pas 1 : agrandir une vidéo au-delà de sa définition
+    /// donnerait un aperçu plus net que le rendu, donc trompeur.
+    static func tailleAffichee(image: CGSize, dans zone: CGSize) -> CGSize {
+        guard image.width > 0, image.height > 0, zone.width > 0, zone.height > 0 else {
+            return .zero
+        }
+        let echelle = min(zone.width / image.width, zone.height / image.height)
+        return CGSize(width: (image.width * echelle).rounded(),
+                      height: (image.height * echelle).rounded())
     }
 
     /// Les répliques d'un fichier, la **plus longue en premier**.

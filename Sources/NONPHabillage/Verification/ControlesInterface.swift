@@ -40,6 +40,188 @@ enum ControlesInterface {
 
         r.section("Interface — l'accueil tient sans défilement")
         MainActor.assumeIsolated { dispositionAccueil(r) }
+
+        r.section("Interface — deux colonnes, aperçu entier, réglages atteignables")
+        MainActor.assumeIsolated { dispositionDeuxColonnes(r) }
+
+        r.section("Interface — logo recadré en cercle")
+        logoRond(r)
+    }
+
+    // MARK: - Deux colonnes
+
+    /// À taille par défaut ET fenêtre agrandie : l'aperçu montre l'image
+    /// ENTIÈRE, et tous les réglages restent atteignables.
+    @MainActor
+    private static func dispositionDeuxColonnes(_ r: Rapport) {
+        _ = NSApplication.shared
+
+        let tailles: [(String, CGSize)] = [
+            ("taille par défaut", CGSize(width: Fenetre.largeurIdealeOuverte,
+                                         height: Fenetre.hauteurIdealeOuverte)),
+            ("taille minimale", CGSize(width: Fenetre.largeurMinimaleOuverte,
+                                       height: Fenetre.hauteurMinimaleOuverte)),
+            ("fenêtre agrandie", CGSize(width: 1800, height: 1150)),
+        ]
+        // Quatre formats de vidéo : ce qui tient en 16:9 peut déborder en 9:16.
+        let formats: [(String, CGSize)] = [
+            ("16:9", CGSize(width: 1920, height: 1080)),
+            ("9:16", CGSize(width: 1080, height: 1920)),
+            ("1:1", CGSize(width: 1080, height: 1080)),
+            ("4:5", CGSize(width: 1080, height: 1350)),
+        ]
+
+        for (nomTaille, fenetre) in tailles {
+            // La place réellement laissée à l'aperçu : la fenêtre, moins la
+            // colonne des réglages, moins la barre du haut et les marges.
+            let zone = CGSize(
+                width: fenetre.width - Fenetre.largeurReglages - 32,
+                height: fenetre.height - hauteurBarreEntrees() - 90)
+
+            r.verifier("\(nomTaille) : l'aperçu garde au moins "
+                       + "\(Int(Fenetre.largeurMinimaleApercu)) points de large "
+                       + "(\(Int(zone.width)))",
+                       zone.width >= Fenetre.largeurMinimaleApercu - 32)
+            r.verifier("\(nomTaille) : l'aperçu garde au moins "
+                       + "\(Int(Fenetre.hauteurMinimaleApercu)) points de haut "
+                       + "(\(Int(zone.height)))",
+                       zone.height >= Fenetre.hauteurMinimaleApercu - 10)
+
+            for (nomFormat, video) in formats {
+                let affichee = Apercu.tailleAffichee(image: video, dans: zone)
+                // Image ENTIÈRE : elle tient dans la zone…
+                let tient = affichee.width <= zone.width + 0.5
+                    && affichee.height <= zone.height + 0.5
+                // …et le rapport est conservé, donc rien n'est rogné.
+                let rapportVideo = video.width / video.height
+                let rapportAffiche = affichee.height > 0
+                    ? affichee.width / affichee.height : 0
+                let memeRapport = abs(rapportVideo - rapportAffiche) < 0.02
+                r.verifier("\(nomTaille) \(nomFormat) : image entière, non rognée "
+                           + "(\(Int(affichee.width))×\(Int(affichee.height)))",
+                           tient && memeRapport)
+            }
+        }
+
+        // La fenêtre grandit : l'aperçu doit grandir avec elle.
+        let petite = Apercu.tailleAffichee(
+            image: CGSize(width: 1920, height: 1080),
+            dans: CGSize(width: 600, height: 400))
+        let grande = Apercu.tailleAffichee(
+            image: CGSize(width: 1920, height: 1080),
+            dans: CGSize(width: 1200, height: 800))
+        r.verifier("l'aperçu grandit avec la fenêtre "
+                   + "(\(Int(petite.width)) → \(Int(grande.width)) points)",
+                   grande.width > petite.width)
+
+        // Les réglages : la colonne est défilante, donc tous atteignables quelle
+        // que soit la hauteur. Ce qui doit être vérifié, c'est qu'ils tiennent
+        // en LARGEUR — une colonne trop étroite rognerait un curseur.
+        let etat = AppState()
+        etat.profil.logoActif = true
+        etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
+        let hote = NSHostingView(
+            rootView: PanneauPersonnaliserView().environmentObject(etat)
+                .frame(width: Fenetre.largeurReglages - 32))
+        hote.layoutSubtreeIfNeeded()
+        let taille = hote.fittingSize
+        r.verifier("les réglages tiennent dans la colonne sans être rognés "
+                   + "(\(Int(taille.width)) points pour "
+                   + "\(Int(Fenetre.largeurReglages - 32)))",
+                   taille.width <= Fenetre.largeurReglages - 32 + 1)
+        r.verifier("la colonne des réglages a une hauteur exploitable "
+                   + "(\(Int(taille.height)) points, défilante)", taille.height > 200)
+
+        // Et la fenêtre minimale doit vraiment loger les deux colonnes.
+        r.verifier("la largeur minimale loge l'aperçu et les réglages",
+                   Fenetre.largeurMinimaleOuverte
+                   >= Fenetre.largeurMinimaleApercu + Fenetre.largeurReglages)
+    }
+
+    /// Hauteur RÉELLE de la barre du haut, volet ouvert.
+    ///
+    /// Mesurée sur la vraie vue, dans l'état où elle se trouve quand le volet
+    /// est ouvert : une vidéo est forcément chargée — le bouton Personnaliser
+    /// est désactivé sans elle —, donc les zones de dépôt sont dans leur forme
+    /// compacte. L'estimer à la hausse faisait croire que l'aperçu n'avait que
+    /// 150 points de haut à la taille minimale.
+    @MainActor
+    private static func hauteurBarreEntrees() -> CGFloat {
+        let etat = AppState()
+        etat.chargerVideo(URL(fileURLWithPath: "/x.mp4"))   // état « chargé », compact
+        etat.voletOuvert = true
+        let hote = NSHostingView(
+            rootView: BarreEntrees().environmentObject(etat)
+                .frame(width: Fenetre.largeurIdealeOuverte))
+        hote.layoutSubtreeIfNeeded()
+        return hote.fittingSize.height
+    }
+
+    // MARK: - Logo rond
+
+    private static func logoRond(_ r: Rapport) {
+        // Un carré plein : après recadrage, les coins doivent être transparents
+        // et le centre intact.
+        let cote = 200
+        guard let ctx = CGContext(
+            data: nil, width: cote, height: cote, bitsPerComponent: 8,
+            bytesPerRow: cote * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            r.verifier("image d'essai", false); return
+        }
+        ctx.setFillColor(CouleurProfil.bleuNONP.cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: cote, height: cote))
+        guard let carre = ctx.makeImage(),
+              let rond = LogoRond.recadrerEnCercle(carre) else {
+            r.verifier("recadrage en cercle", false); return
+        }
+
+        r.egal("le recadrage garde les dimensions",
+               "\(rond.width)×\(rond.height)", "\(cote)×\(cote)")
+        r.egal("le coin est transparent", alpha(de: rond, x: 3, y: 3), 0)
+        r.egal("le centre est opaque", alpha(de: rond, x: cote / 2, y: cote / 2), 255)
+
+        // Anticrénelage : sur le bord du disque, on doit trouver des valeurs
+        // INTERMÉDIAIRES. Un bord franc ne contiendrait que 0 et 255, et le
+        // cercle serait dentelé.
+        var intermediaires = 0
+        let rayon = Double(cote) / 2
+        for angle in stride(from: 0.0, to: 2 * Double.pi, by: 0.05) {
+            let x = Int(rayon + rayon * cos(angle) * 0.999)
+            let y = Int(rayon + rayon * sin(angle) * 0.999)
+            let a = alpha(de: rond, x: min(max(x, 0), cote - 1),
+                          y: min(max(y, 0), cote - 1))
+            if a > 10 && a < 245 { intermediaires += 1 }
+        }
+        r.verifier("le bord est lissé (\(intermediaires) pixels intermédiaires)",
+                   intermediaires > 10)
+
+        // Une image rectangulaire donne un vrai rond, pas une ellipse coupée :
+        // elle est d'abord ramenée à son carré central.
+        guard let large = CGContext(
+            data: nil, width: 400, height: 100, bitsPerComponent: 8,
+            bytesPerRow: 400 * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+        large.setFillColor(CouleurProfil.bleuNONP.cgColor)
+        large.fill(CGRect(x: 0, y: 0, width: 400, height: 100))
+        if let rect = large.makeImage(), let rondRect = LogoRond.recadrerEnCercle(rect) {
+            r.egal("une image rectangulaire donne un carré",
+                   "\(rondRect.width)×\(rondRect.height)", "100×100")
+        }
+
+        // Le réglage est réversible : sans lui, l'image sort telle quelle.
+        r.verifier("sans le réglage, l'image n'est pas touchée",
+                   LogoRond.carreCentral(de: carre).width == cote)
+    }
+
+    /// Alpha d'un pixel, coordonnées depuis le HAUT à gauche.
+    private static func alpha(de image: CGImage, x: Int, y: Int) -> Int {
+        guard let donnees = image.dataProvider?.data,
+              let base = CFDataGetBytePtr(donnees) else { return -1 }
+        let index = y * image.bytesPerRow + x * 4
+        guard index + 3 < CFDataGetLength(donnees) else { return -1 }
+        // Format premultipliedLast : l'alpha est le quatrième octet.
+        return Int(base[index + 3])
     }
 
     // MARK: - Disposition

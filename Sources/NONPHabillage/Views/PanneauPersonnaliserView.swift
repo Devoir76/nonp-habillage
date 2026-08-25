@@ -166,6 +166,18 @@ struct PanneauPersonnaliserView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                // Le `--make-logo` du prototype, devenu un réglage réversible :
+                // on coche, l'aperçu montre le rond, on décoche. Inutile si le
+                // PNG fourni est déjà détouré.
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle(Textes.Interface.logoRond, isOn: Binding(
+                        get: { etat.profil.logoRecadreEnCercle },
+                        set: { etat.profil.logoRecadreEnCercle = $0 }))
+                    Text(Textes.Interface.logoRondExplication)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 curseurPourcent(Textes.Interface.tailleLogo,
                                 valeur: $etat.profil.logoTailleRatio, de: 0.01, a: 0.50)
                 curseurPourcent(Textes.Interface.opaciteLogo,

@@ -83,6 +83,7 @@ enum CaptureInterface {
                 // En bas à gauche : la position qui déclenche l'avertissement
                 // de zone, pour qu'il soit visible sur la capture.
                 etat.profil.logoPosition = .coin(.basGauche)
+                etat.profil.logoRecadreEnCercle = true
             }
             etat.rafraichirApercu()
             attendre(que: { etat.apercu != nil }, secondes: 5)
@@ -90,7 +91,18 @@ enum CaptureInterface {
             capturer("2-accueil-charge", hauteur: 420)
 
             etat.voletOuvert = true
-            capturer("3-volet-ouvert", hauteur: 1180)
+            // Aux dimensions réelles de la fenêtre, volet ouvert.
+            let vue = FenetrePrincipaleView.pourCapture(etat: etat)
+                .frame(width: Fenetre.largeurIdealeOuverte,
+                       height: Fenetre.hauteurIdealeOuverte)
+            let renduDeux = ImageRenderer(content: vue)
+            renduDeux.scale = 2
+            if let image = renduDeux.cgImage {
+                try? ImagesReference.ecrire(
+                    image, vers: dossier.appendingPathComponent("3-deux-colonnes.png"))
+                ecrites.append("3-deux-colonnes")
+                print("  ✓ 3-deux-colonnes.png  (\(image.width / 2)×\(image.height / 2) points)")
+            }
 
             // Le volet, rendu SANS ScrollView. `ImageRenderer` ne donne pas de
             // taille de contenu à une zone défilante hors écran et la rend

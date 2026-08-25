@@ -214,6 +214,32 @@ au bord, logo au centre, pas de logo.
 
 ---
 
+## D-8 — Le recadrage rond est un réglage, pas un fichier à fabriquer (lot 5)
+
+**Ce que fait le prototype** : `--make-logo mon_logo.png` écrit un
+`logo_circle.png` sur le disque. Il faut donc fabriquer le fichier AVANT
+d'habiller, et recommencer si le résultat ne convient pas.
+
+**Ce que fait l'app native** : « Recadrer en cercle » est une case à cocher. Le
+découpage s'applique au vol, l'aperçu montre le résultat immédiatement, et
+décocher revient en arrière. **Aucun fichier n'est écrit à côté du logo de
+l'utilisateur.**
+
+**Le procédé, lui, est celui du prototype** : sur-échantillonnage ×4, découpe du
+disque sur l'image agrandie, réduction. C'est la réduction qui moyenne les
+pixels du bord et lisse le contour.
+
+**Une correction au passage** : le prototype prend `W/2` comme rayon quel que
+soit le format, si bien qu'une image plus haute que large voyait son cercle
+coupé. Ici l'image est d'abord ramenée à son **carré central**, puis le disque
+y est inscrit — un logo rectangulaire donne un vrai rond.
+
+**Vérifié par** : `ControlesInterface`, rubrique « logo recadré en cercle » —
+coins transparents, centre opaque, bord lissé (98 pixels de valeur
+intermédiaire relevés sur le pourtour), image rectangulaire ramenée au carré.
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le

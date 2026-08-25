@@ -19,7 +19,7 @@ enum CommandeExport {
     ///
     /// Logo : `--logo <image>` `--logo-position haut-gauche|haut-droit|
     /// bas-gauche|bas-droit|<x>,<y>` `--logo-taille <% hauteur>`
-    /// `--logo-marge <% hauteur>` `--logo-opacite <0–1>`
+    /// `--logo-marge <% hauteur>` `--logo-opacite <0–1>` `--logo-rond`
     ///
     /// Les trois usages de l'ADR s'obtiennent par la présence ou l'absence des
     /// deux options, qui sont indépendantes :
@@ -86,6 +86,9 @@ enum CommandeExport {
            let v = Double(args[o + 1]) {
             profil.logoOpacite = v
         }
+        if args.contains("--logo-rond") {
+            profil.logoRecadreEnCercle = true
+        }
 
         print("Habillage — export")
         print(String(repeating: "─", count: 66))
@@ -97,6 +100,7 @@ enum CommandeExport {
                 + " — " + descriptionPosition(profil.logoPosition)
                 + ", " + arrondi(profil.logoTailleRatio * 100) + " % de la hauteur"
                 + ", opacité " + arrondi(profil.logoOpacite * 100) + " %"
+                + (profil.logoRecadreEnCercle ? ", recadré en cercle" : "")
         }
         print("  logo        : \(descriptionLogo)")
         print("  usage       : \(usage(sousTitres: sousTitres, profil: profil))")

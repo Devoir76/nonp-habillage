@@ -166,6 +166,10 @@ enum Textes {
         static let tailleLogo = "Taille"
         static let opaciteLogo = "Opacité"
         static let deplacerLogo = "Faites glisser le logo sur l'aperçu pour le placer."
+        static let logoRond = "Recadrer en cercle"
+        static let logoRondExplication =
+            "Découpe le disque inscrit, bord lissé. Inutile si votre PNG est "
+            + "déjà détouré." 
 
         static func nomCoin(_ coin: CoinLogo) -> String {
             switch coin {

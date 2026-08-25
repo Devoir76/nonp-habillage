@@ -23,7 +23,12 @@ struct NONPHabillageApp: App {
         WindowGroup(Textes.nomApplication) {
             FenetrePrincipaleView()
         }
-        // La fenêtre s'ajuste au contenu : esprit sobre du cahier des charges.
-        .windowResizability(.contentSize)
+        // `.contentMinSize` et non `.contentSize` : la fenêtre respecte la
+        // taille MINIMALE du contenu — elle s'agrandit donc quand le volet
+        // s'ouvre — mais reste librement redimensionnable. Avec `.contentSize`,
+        // elle était clouée à la taille du contenu, impossible à agrandir pour
+        // voir l'aperçu en grand.
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: Fenetre.largeurFermee, height: Fenetre.hauteurFermee)
     }
 }

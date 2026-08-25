@@ -105,6 +105,17 @@ la longueur de ligne cible quand aucun sous-titre n'est chargé, sinon la
 L'image de fond est choisissable parmi plusieurs instants de la vidéo — au moins
 un plan clair et un plan sombre — pour juger le contraste des couleurs.
 
+**Ajouté après retour d'usage (25/08)** : disposition en **deux volets** —
+aperçu à gauche, grand et toujours visible ; réglages à droite, en colonne
+défilante. C'est la seule qui permette de régler en voyant. L'aperçu montre
+l'image **entière**, mise à l'échelle, jamais rognée, et grandit avec la
+fenêtre, qui est redimensionnable. Le `--make-logo` du prototype est porté sous
+forme de réglage « recadrer en cercle », en plus de l'acceptation d'un PNG déjà
+détouré.
+
+**Acceptation complémentaire** — à taille par défaut comme en fenêtre agrandie,
+l'aperçu affiche l'image entière et tous les réglages restent atteignables.
+
 ## Lot 6 — Profils (1 j)
 
 Lecture, écriture et validation du schéma v1 (champs inconnus refusés, messages
