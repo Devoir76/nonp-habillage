@@ -83,6 +83,10 @@ Lecture, écriture et validation du schéma v1 (champs inconnus refusés, messag
 en français), préréglages livrés (**Neutre** par défaut, **NONP**), mémorisation
 du dernier profil utilisé, import et export d'un `.json`.
 
+**À trancher dans ce lot** : `espaces_lateraux`, héritage de l'ASS adossé à la
+taille de police alors qu'il consomme de la largeur — 9,6 % de la largeur utile
+en 16:9, 30,2 % en 9:16. Voir ADR-0001, décision ouverte nº6.
+
 **Acceptation** — un profil écrit par le prototype Python est accepté sans
 retouche ; un profil produit par l'app est accepté par le prototype ; un fichier
 corrompu produit un message clair et aucun rendu.

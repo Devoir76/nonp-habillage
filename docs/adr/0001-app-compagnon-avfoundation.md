@@ -333,3 +333,56 @@ n'a jamais dépendu du nom et suit sa propre échéance.
    trancher au lot 5, l'aperçu sur image fixe étant le minimum retenu.
 5. **Amender le prototype Python** dès maintenant pour le bandeau pleine largeur
    (bénéfice immédiat sur l'outil de production), ou attendre l'app native ?
+6. **Remplacer `espaces_lateraux` par une marge en % de la largeur** — constaté
+   au lot 3, à trancher au lot 6. Voir ci-dessous.
+
+### Décision nº6 — `espaces_lateraux`, un héritage de l'ASS inadapté au relatif
+
+**Constat, lot 3.** `sous_titre.bandeau.espaces_lateraux` élargit le fond du
+mode `ajuste` en collant *n* espaces durs `\h` de chaque côté du texte. C'est
+un procédé d'ASS : faute de pouvoir dessiner un rectangle, libass n'avait que
+le texte pour agir sur la boîte. L'unité qui en découle est la **largeur d'une
+espace**, donc une fraction de la **taille de police** — elle-même dérivée de
+la **hauteur** de la vidéo. Or ce que cette marge consomme, c'est de la
+**largeur**. Le réglage est adossé à la mauvaise dimension : c'est le même
+défaut de conception que celui corrigé au §5, à un autre endroit.
+
+**Mesure** (Arial, profil NONP, `espaces_lateraux: 4`, donc 8 espaces au
+total). À la taille que le profil demande, avant toute réduction :
+
+| Format | Taille nominale | Largeur utile | Coût des 8 espaces | |
+|---|---|---|---|---|
+| 16:9 1080p | 78 px | 1804 px | 173 px — **9,6 %** | supportable |
+| 9:16 1080×1920 | 138 px | 1016 px | 307 px — **30,2 %** | intenable |
+
+Trois fois plus cher en vertical, pour un réglage que personne n'a modifié :
+la vidéo est plus étroite alors que la police, dérivée de la hauteur, est plus
+grande.
+
+**Conséquence observée.** En 9:16, le moteur réduit la police jusqu'à ce que la
+longueur de ligne cible tienne dans ce qui reste. Elle descend à **61 px** —
+elle atteint bien ses 32 caractères, c'est justement pour les atteindre qu'elle
+descend si bas, mais le texte est nettement plus petit qu'il n'aurait besoin de
+l'être. Environ un cinquième de la largeur utile part en marge de fond.
+
+**Piste.** Exprimer cette marge comme tout le reste du schéma : un pourcentage
+de la largeur vidéo — `bandeau.marge_laterale_pct_largeur`, symétrique du
+`marge_interieure_pct_largeur` déjà défini pour le mode `pleine-largeur`.
+`espaces_lateraux` resterait **accepté en lecture** pour compatibilité, converti
+à l'ouverture, et cesserait d'être écrit.
+
+**À vérifier au moment de trancher**, car cela touche le contrat partagé
+(invariant nº6) :
+
+- le prototype Python consomme `espaces_lateraux` ; un profil écrit par l'app
+  doit rester lisible par lui tant qu'il fait foi (invariant nº5) ;
+- l'ajout doit rester **facultatif, avec une valeur par défaut qui reproduit le
+  rendu actuel**, pour que le schéma reste en version 1 ;
+- quelle valeur par défaut donne, en 16:9, un fond visuellement identique à
+  celui d'aujourd'hui — c'est la condition pour que le préréglage NONP ne
+  change pas.
+
+**Hors périmètre du lot 3**, qui n'a touché à aucun profil : le rendu actuel
+applique `espaces_lateraux` tel que le schéma le définit. Seule la façon de
+l'appliquer a changé — c'est le rectangle qui s'élargit, plus le texte (voir
+`docs/divergences-prototype.md`, D-4).
