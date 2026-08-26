@@ -191,6 +191,11 @@ Concrètement : la taille demandée par le profil est un **maximum** ; si la
 largeur de la vidéo ne permet pas d'atteindre la longueur de ligne cible, la
 taille est **réduite** — jamais le texte débordé.
 
+> ⚠︎ **Amendé le 26/08** — voir « Amendement du 26/08 » à la fin de ce §5. La
+> réduction décrite ci-dessus reste vraie, mais ce n'est qu'un **filet de
+> sécurité** : elle ne fait pas de la longueur de ligne le réglage qui gouverne
+> la taille. Ce sont deux réglages distincts.
+
 Trois conséquences :
 
 - **Aucun plancher qui contredise la géométrie.** Un conflit entre taille voulue
@@ -204,6 +209,62 @@ Trois conséquences :
 
 Un même profil doit pouvoir servir en 16:9, 9:16, 1:1 et 4:5 sans retouche.
 Cette exigence fait partie des tests de parité (lot 3).
+
+#### Amendement du 26/08 — taille et longueur de ligne sont deux réglages distincts
+
+**Ce que le texte ci-dessus laissait croire.** Que régler la longueur de ligne
+cible suffisait à régler la taille du texte : la taille demandée n'étant qu'un
+maximum, viser des lignes plus courtes devait donner un texte plus gros. Le lot 5
+a mis quatre tailles nommées derrière cette idée — Petite, Normale, Grande, Très
+grande — en ne posant que la longueur de ligne cible.
+
+**Les quatre choix rendaient exactement le même texte** : 78 px dans les quatre
+cas, sur une vidéo 16:9. Seule la césure bougeait. Aucun contrôle automatique ne
+s'en est aperçu — les images comparées DIFFÉRAIENT bel et bien, puisque les
+coupures de ligne changeaient. Il a fallu regarder l'écran.
+
+**Pourquoi le couplage était faux.** Son arithmétique reposait sur l'estimation
+« 0,72 × taille » du prototype — celle-là même que ce §5 condamne trois
+paragraphes plus haut. Avec elle, une 16:9 1080p n'a de place que pour 32
+caractères, et la contrainte mord dès qu'on vise plus court. Avec la **mesure
+exacte de Core Text**, que ce §5 impose précisément, la place réelle est tout
+autre :
+
+| Taille nommée | Police | Place mesurée | Cible | Réduction |
+|---|---|---|---|---|
+| Petite | 58 px | 75 car. | 42 car. | aucune |
+| Normale | 68 px | 64 car. | 37 car. | aucune |
+| Grande | 78 px | 55 car. | 32 car. | aucune |
+| Très grande | 91 px | 47 car. | 28 car. | aucune |
+
+(16:9 1080p, Arial, profil neutre.) La place disponible vaut près du double de
+la cible : en 16:9, la contrainte de largeur **ne mord jamais**. Le §5 se
+corrigeait donc lui-même — en remplaçant l'estimation par la mesure, il retirait
+au couplage la seule chose qui le faisait tenir.
+
+**Décision.** Ce sont **deux réglages distincts**, et ils gouvernent deux choses
+différentes :
+
+- la **longueur de ligne cible** gouverne la **césure** — le rythme de lecture,
+  l'endroit où les lignes se coupent. Elle reste bornée à [28, 42] ;
+- la **taille de police** (`taille_pct_hauteur` du schéma) gouverne la **taille
+  du texte**.
+
+La **taille nommée de l'interface porte les deux** : chacune pose une cible ET un
+ratio de taille — 5,4 %, 6,3 %, 7,2 % et 8,4 % de la hauteur. « Grande » vaut
+exactement le **7,2 % du prototype**, pour que le préréglage NONP ne bouge pas
+d'un pixel.
+
+**Ce qui ne change pas.** La réduction reste, comme filet de sécurité, et elle
+sert encore là où le défaut du 23/08 est né : en 9:16 1080×1920, « Grande »
+demande 138 px et le moteur la ramène à **76 px** pour que la ligne tienne. C'est
+bien le comportement voulu par ce §5 — simplement, ce n'est pas le mécanisme par
+lequel on choisit une taille.
+
+**Vérifié par** : `ControlesInterface`, rubrique « tailles nommées ». Les quatre
+polices doivent être distinctes et croissantes, la place mesurée est reportée
+format par format dans le rapport, et le contrôle échouerait si le couplage
+redevenait vrai.
 
 ### 6. Le schéma de profils est commun aux deux implémentations
 
@@ -320,6 +381,13 @@ l'identifiant de bundle **`com.nonp.habillage`** (builds de test :
 `com.nonp.habillage.test`). Le nom de travail devient le nom tout court : plus
 aucune mention « provisoire » dans le code. Reste à produire l'**icône**, qui
 n'a jamais dépendu du nom et suit sa propre échéance.
+
+## Tranché le 26/08
+
+**§5 amendé — taille et longueur de ligne sont deux réglages distincts.** Le
+couplage des deux ne tenait que par l'imprécision de l'estimation « 0,72 ×
+taille », que ce même §5 remplaçait par la mesure exacte. Détail, mesures et
+conséquences : « Amendement du 26/08 » au §5.
 
 ## Décisions restant ouvertes
 

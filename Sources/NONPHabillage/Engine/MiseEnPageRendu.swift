@@ -48,6 +48,19 @@ struct MiseEnPageRendu {
     /// Largeur moyenne d'un caractère à la taille retenue.
     let largeurMoyenneCaractere: Double
 
+    /// La taille que le PROFIL demandait, avant toute réduction.
+    ///
+    /// À ne pas confondre avec `parametres.tailleDemandee`, qui ne vaut rien
+    /// ici : le calcul ci-dessous appelle `MoteurMiseEnPage` avec `tailleForcee`,
+    /// si bien que le moteur voit la taille déjà retenue comme si le profil
+    /// l'avait demandée. Ses champs `tailleDemandee` et `reduitePourTenir`
+    /// sortent donc toujours égaux et faux. C'est ici que la vérité se trouve.
+    let tailleDemandeeParLeProfil: Int
+    /// Vrai si la largeur a imposé de réduire la taille demandée par le profil.
+    /// C'est le filet de sécurité de l'ADR §5, et le seul endroit qui sache
+    /// s'il a servi.
+    var reduitePourTenir: Bool { parametres.taille < tailleDemandeeParLeProfil }
+
     /// Largeur réellement occupée par une ligne pleine.
     ///
     /// C'est la PLUS SERRÉE des deux règles de césure : la largeur disponible,
@@ -138,7 +151,8 @@ struct MiseEnPageRendu {
             largeurDisponible: largeurDisponible,
             longueurLigneCible: cible,
             capacite: capacite(largeurDisponible, taille),
-            largeurMoyenneCaractere: mesureur.largeurMoyenneCaractere(taillePolice: taille))
+            largeurMoyenneCaractere: mesureur.largeurMoyenneCaractere(taillePolice: taille),
+            tailleDemandeeParLeProfil: tailleDemandee)
     }
 
     /// Le critère de tenue de ligne du rendu — DEUX conditions, et il faut les

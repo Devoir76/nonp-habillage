@@ -109,6 +109,16 @@ enum GeometrieSousTitres {
         let largeurUtile = Self.largeurUtile(
             profil: profil, parametres: parametres,
             largeurVideo: largeurVideo, police: police)
+
+        // Aucune ligne, donc rien à poser — et surtout aucun bandeau. Sans ce
+        // garde-fou, `max(1, lignes.count)` plus bas réservait la hauteur d'une
+        // ligne et le mode `pleine-largeur` peignait une bande vide en travers
+        // de l'image : un fond n'a de sens que sous du texte, et il n'y a rien
+        // à masquer quand il n'y en a pas.
+        guard !lignes.isEmpty else {
+            return RepliquePosee(bandeaux: [], lignes: [], largeurUtile: largeurUtile)
+        }
+
         let hauteurLigne = police.hauteurLigne
         let padding = Double(parametres.paddingBandeau)
         let margeBasse = Double(parametres.margeBasse)

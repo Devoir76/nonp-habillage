@@ -75,13 +75,18 @@ enum CaptureInterface {
         }
 
         // 1. Accueil vide.
-        capturer("1-accueil-vide", hauteur: 420)
+        capturer("1-accueil-vide", hauteur: Fenetre.hauteurFermee)
 
-        // 2 et 3 demandent une vraie vidéo.
+        // Les suivantes demandent une vraie vidéo.
         if let v = args.firstIndex(of: "--video"), v + 1 < args.count {
             let video = URL(fileURLWithPath: args[v + 1])
             etat.chargerVideo(video)
-            attendre(que: { etat.apercu != nil }, secondes: 20)
+            attendre(que: { etat.imageAccueil != nil }, secondes: 20)
+
+            // 2. Vidéo seule, volet fermé : l'accueil montre une image de la
+            //    vidéo — nue, sans phrase de référence ni bandeau vide. C'est
+            //    ce que voit quelqu'un qui vient de déposer son fichier.
+            capturer("2-accueil-video-seule", hauteur: Fenetre.hauteurFermeeAvecVideo)
 
             if let s = args.firstIndex(of: "--corpus-srt"), s + 1 < args.count {
                 etat.chargerSousTitres(URL(fileURLWithPath: args[s + 1]))
@@ -96,7 +101,9 @@ enum CaptureInterface {
             etat.rafraichirApercu()
             attendre(que: { etat.apercu != nil }, secondes: 5)
 
-            capturer("2-accueil-charge", hauteur: 420)
+            // 3. Le même accueil, une fois les sous-titres et le logo ajoutés :
+            //    l'image montre alors l'habillage, et lui seul.
+            capturer("3-accueil-habille", hauteur: Fenetre.hauteurFermeeAvecVideo)
 
             etat.voletOuvert = true
             // Aux dimensions réelles de la fenêtre, volet ouvert.
@@ -107,9 +114,9 @@ enum CaptureInterface {
             renduDeux.scale = 2
             if let image = renduDeux.cgImage {
                 try? ImagesReference.ecrire(
-                    image, vers: dossier.appendingPathComponent("3-deux-colonnes.png"))
-                ecrites.append("3-deux-colonnes")
-                print("  ✓ 3-deux-colonnes.png  (\(image.width / 2)×\(image.height / 2) points)")
+                    image, vers: dossier.appendingPathComponent("4-deux-colonnes.png"))
+                ecrites.append("4-deux-colonnes")
+                print("  ✓ 4-deux-colonnes.png  (\(image.width / 2)×\(image.height / 2) points)")
             }
 
             // Le volet, rendu SANS ScrollView. `ImageRenderer` ne donne pas de
@@ -127,13 +134,13 @@ enum CaptureInterface {
             renduVolet.scale = 2
             if let image = renduVolet.cgImage {
                 try? ImagesReference.ecrire(
-                    image, vers: dossier.appendingPathComponent("4-volet-sans-defilement.png"))
-                ecrites.append("4-volet-sans-defilement")
-                print("  ✓ 4-volet-sans-defilement.png  "
+                    image, vers: dossier.appendingPathComponent("5-volet-sans-defilement.png"))
+                ecrites.append("5-volet-sans-defilement")
+                print("  ✓ 5-volet-sans-defilement.png  "
                       + "(\(image.width / 2)×\(image.height / 2) points)")
             }
         } else {
-            print("  — captures 2 et 3 : non exécutées (passer --video <fichier>)")
+            print("  — captures 2 à 5 : non exécutées (passer --video <fichier>)")
         }
 
         print("")

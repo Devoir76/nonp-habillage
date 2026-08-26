@@ -28,9 +28,16 @@ import AppKit
 /// Rassemblées ici pour que le contrôle de disposition mesure exactement ce que
 /// l'application applique, plutôt que des valeurs recopiées à côté.
 enum Fenetre {
-    /// Volet fermé : l'écran d'accueil seul.
+    /// Volet fermé, aucune vidéo : l'écran d'accueil seul.
     static let largeurFermee: CGFloat = 620
     static let hauteurFermee: CGFloat = 420
+
+    /// Volet fermé, une vidéo chargée : la fenêtre grandit pour loger son
+    /// image. Une hauteur inchangée n'aurait laissé qu'une vignette, qui ne
+    /// confirmerait rien.
+    static let hauteurFermeeAvecVideo: CGFloat = 580
+    /// En deçà, l'image de l'accueil ne montrerait plus rien de reconnaissable.
+    static let hauteurMinimaleImageAccueil: CGFloat = 180
 
     /// Volet ouvert : il faut la place de deux colonnes.
     static let largeurMinimaleOuverte: CGFloat = 1020
@@ -78,10 +85,25 @@ struct ContenuFenetre: View {
             minWidth: etat.voletOuvert ? Fenetre.largeurMinimaleOuverte : Fenetre.largeurFermee,
             idealWidth: etat.voletOuvert ? Fenetre.largeurIdealeOuverte : Fenetre.largeurFermee,
             maxWidth: .infinity,
-            minHeight: etat.voletOuvert ? Fenetre.hauteurMinimaleOuverte : Fenetre.hauteurFermee,
-            idealHeight: etat.voletOuvert ? Fenetre.hauteurIdealeOuverte : Fenetre.hauteurFermee,
+            minHeight: hauteurMinimale,
+            idealHeight: hauteurIdeale,
             maxHeight: .infinity)
         .coordinateSpace(name: "apercu")
+    }
+
+    /// Trois états, dans l'ordre où on les rencontre : l'accueil nu, l'accueil
+    /// qui montre une image de la vidéo, le volet ouvert.
+    ///
+    /// La hauteur MINIMALE augmente quand une vidéo arrive : c'est elle qui fait
+    /// grandir la fenêtre, l'idéale ne valant qu'à l'ouverture.
+    private var hauteurMinimale: CGFloat {
+        if etat.voletOuvert { return Fenetre.hauteurMinimaleOuverte }
+        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : Fenetre.hauteurFermee
+    }
+
+    private var hauteurIdeale: CGFloat {
+        if etat.voletOuvert { return Fenetre.hauteurIdealeOuverte }
+        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : Fenetre.hauteurFermee
     }
 
     // MARK: - Accueil
@@ -92,6 +114,18 @@ struct ContenuFenetre: View {
             if etat.voletOuvert {
                 Divider()
                 deuxColonnes
+            } else if etat.video != nil {
+                // Volet fermé mais vidéo chargée : son image, et rien d'autre.
+                Divider()
+                ImageAccueilView()
+            } else {
+                // Rien à montrer sous les zones de dépôt — mais la place vide
+                // doit rester EN DESSOUS. Sans ce ressort, une fenêtre agrandie
+                // centrait la barre verticalement et la laissait flotter au
+                // milieu de nulle part : c'est ce qui faisait croire à une
+                // application cassée. Le cas se rencontre en agrandissant la
+                // fenêtre, et désormais aussi en retirant la vidéo.
+                Spacer(minLength: 0)
             }
         }
     }
@@ -165,7 +199,7 @@ struct BarreEntrees: View {
                 typesAcceptes: UTType.videosAcceptees,
                 fichierCharge: descriptionVideo,
                 onFichier: { etat.chargerVideo($0) },
-                onRetirer: nil)
+                onRetirer: etat.video != nil ? { etat.retirerVideo() } : nil)
 
             ZoneDepotView(
                 titre: Textes.Interface.sousTitresFacultatifs,

@@ -86,6 +86,31 @@ enum Apercu {
             miseEnPage: miseEnPage, rectangleLogo: rectangleLogo)
     }
 
+    /// L'image montrée sur l'écran d'accueil, volet fermé.
+    ///
+    /// Elle a un autre rôle que l'aperçu de réglage : elle ne sert pas à régler,
+    /// elle sert à CONFIRMER — qu'on a chargé la bonne vidéo, et que ce qu'on
+    /// s'apprête à graver est bien ce qu'on croit. Elle ne montre donc que ce
+    /// qui sera réellement gravé.
+    ///
+    /// D'où la différence avec `composer` : sans fichier de sous-titres, **pas
+    /// de texte**. La phrase de référence sert à régler la police et les
+    /// couleurs (ADR §2) ; l'afficher sur l'accueil laisserait croire qu'elle
+    /// finira dans la vidéo. Le logo, lui, y figure : celui-là sera bien gravé.
+    ///
+    /// - Parameter replique: la réplique à montrer, ou `nil` si aucun fichier
+    ///   de sous-titres n'est chargé.
+    static func composerAccueil(
+        fond: CGImage, profil: ProfilHabillage, replique: String?
+    ) throws -> ResultatApercu {
+        if let replique {
+            return try composer(fond: fond, profil: profil, texte: replique,
+                                avecSousTitres: true)
+        }
+        return try composer(fond: fond, profil: profil, lignes: [],
+                            avecSousTitres: false)
+    }
+
     /// Les lignes réellement affichées pour un texte donné.
     static func premiereReplique(
         texte: String, profil: ProfilHabillage, miseEnPage: MiseEnPageRendu

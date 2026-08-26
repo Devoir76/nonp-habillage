@@ -42,7 +42,9 @@ final class AppState: ObservableObject {
     @Published var profil: ProfilHabillage = .neutre {
         didSet { if profil != oldValue { rafraichirApercu() } }
     }
-    @Published var voletOuvert = false
+    @Published var voletOuvert = false {
+        didSet { if voletOuvert != oldValue { rafraichirApercu() } }
+    }
 
     /// La taille nommée cochée dans l'interface, dérivée du profil.
     var tailleNommee: TailleNommee {
@@ -67,6 +69,10 @@ final class AppState: ObservableObject {
     @Published private(set) var repliques: [Cue] = []
 
     @Published private(set) var apercu: CGImage?
+    /// L'image de l'écran d'accueil, volet fermé — voir `Apercu.composerAccueil`.
+    /// Calculée seulement quand elle est visible : volet ouvert, elle ne sert à
+    /// personne et ferait une composition de plus à chaque coup de curseur.
+    @Published private(set) var imageAccueil: CGImage?
     @Published private(set) var avertissements: [AvertissementZone] = []
     @Published private(set) var rectangleLogo: CGRect?
     @Published private(set) var miseEnPage: MiseEnPageRendu?
@@ -91,20 +97,52 @@ final class AppState: ObservableObject {
 
     // MARK: - Chargement des entrées
 
+    /// Le chargement de vidéo en cours.
+    ///
+    /// Analyser une vidéo prend un instant. Sans ce jeton, une vidéo retirée —
+    /// ou remplacée par une autre — pendant l'analyse reparaissait quand
+    /// celle-ci s'achevait : le bouton « Retirer » semblait n'avoir rien fait.
+    private var chargementCourant = UUID()
+
     func chargerVideo(_ url: URL) {
+        let jeton = UUID()
+        chargementCourant = jeton
         Task {
             do {
                 let taille = try await ImagesVideo.dimensions(de: url)
                 let duree = try await ImagesVideo.duree(de: url)
+                guard chargementCourant == jeton else { return }
                 video = url
                 tailleVideo = taille
                 dureeVideo = duree
                 erreur = nil
-                await preparerFonds()
+                await preparerFonds(jeton: jeton)
             } catch {
+                guard chargementCourant == jeton else { return }
                 erreur = Textes.Export.formatNonPrisEnCharge(url.lastPathComponent)
             }
         }
+    }
+
+    /// Retirer la vidéo, comme on retire les sous-titres.
+    ///
+    /// Le fichier de sous-titres avait son bouton, la vidéo non : on ne pouvait
+    /// changer de vidéo qu'en relançant l'application. Les sous-titres déjà
+    /// chargés, eux, SURVIVENT — ce sont deux dépôts distincts, et on change
+    /// souvent de vidéo en gardant le même habillage. Les réglages aussi : ils
+    /// vivent dans le profil, pas dans le fichier.
+    func retirerVideo() {
+        chargementCourant = UUID()      // une analyse en vol ne la fera pas reparaître
+        video = nil
+        tailleVideo = nil
+        dureeVideo = 0
+        fondsDisponibles = []
+        indexFond = 0                   // recalcule l'aperçu, qui n'a plus de fond
+        apercuEnPreparation = false
+        // Le volet se referme : sans vidéo son bouton est désactivé, et le
+        // laisser ouvert figerait la fenêtre en deux colonnes vides.
+        voletOuvert = false
+        erreur = nil
     }
 
     func chargerSousTitres(_ url: URL) {
@@ -154,10 +192,11 @@ final class AppState: ObservableObject {
 
     // MARK: - Aperçu
 
-    private func preparerFonds() async {
+    private func preparerFonds(jeton: UUID) async {
         guard let video else { return }
         apercuEnPreparation = true
         let instants = (try? await ImagesVideo.instantsRepresentatifs(de: video)) ?? []
+        guard chargementCourant == jeton else { return }
         // Du plus sombre au plus clair : l'utilisateur trouve ainsi tout de
         // suite les deux extrêmes dont l'ADR fait le critère de contraste.
         fondsDisponibles = instants.sorted { $0.luminosite < $1.luminosite }
@@ -169,7 +208,18 @@ final class AppState: ObservableObject {
     /// Recalcule l'aperçu. Appelé à chaque réglage — c'est instantané, aucune
     /// vidéo n'est écrite.
     func rafraichirApercu() {
-        guard indexFond < fondsDisponibles.count else { apercu = nil; return }
+        // Plus de fond, donc plus rien de dérivé. Tout est remis à zéro, pas
+        // seulement l'image : un avertissement de zone ou une mise en page
+        // laissés là décriraient la vidéo PRÉCÉDENTE, et se rattacheraient en
+        // silence à la suivante le temps que son aperçu arrive.
+        guard indexFond < fondsDisponibles.count else {
+            apercu = nil
+            imageAccueil = nil
+            avertissements = []
+            rectangleLogo = nil
+            miseEnPage = nil
+            return
+        }
         let fond = fondsDisponibles[indexFond].image
 
         do {
@@ -195,6 +245,19 @@ final class AppState: ObservableObject {
             rectangleLogo = resultat.rectangleLogo
             miseEnPage = resultat.miseEnPage
             erreur = nil
+
+            // L'image de l'accueil. Avec un fichier de sous-titres, c'est
+            // exactement l'aperçu — le texte affiché est réel, il sera gravé.
+            // Sans fichier, elle se recompose sans texte : voir
+            // `Apercu.composerAccueil`.
+            if voletOuvert {
+                imageAccueil = nil
+            } else if repliques.isEmpty {
+                imageAccueil = try Apercu.composerAccueil(
+                    fond: fond, profil: profil, replique: nil).image
+            } else {
+                imageAccueil = resultat.image
+            }
         } catch let e as ErreurPolice {
             erreur = Textes.Rendu.message(pour: e)
         } catch let e as ErreurLogo {

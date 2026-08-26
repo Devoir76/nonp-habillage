@@ -14,6 +14,8 @@
 
 import Foundation
 import CoreGraphics
+import ImageIO
+import UniformTypeIdentifiers
 import SwiftUI
 import AppKit
 
@@ -43,6 +45,13 @@ enum ControlesInterface {
 
         r.section("Interface — deux colonnes, aperçu entier, réglages atteignables")
         MainActor.assumeIsolated { dispositionDeuxColonnes(r) }
+
+        r.section("Interface — l'accueil montre une image de la vidéo")
+        imageDAccueil(r)
+        MainActor.assumeIsolated { dispositionImageAccueil(r) }
+
+        r.section("Interface — retirer la vidéo")
+        MainActor.assumeIsolated { retirerLaVideo(r) }
 
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
@@ -195,23 +204,224 @@ enum ControlesInterface {
                    >= Fenetre.largeurMinimaleApercu + Fenetre.largeurReglages)
     }
 
-    /// Hauteur RÉELLE de la barre du haut, volet ouvert.
+    /// Hauteur de la barre du haut, mesurée sur la VRAIE vue.
     ///
-    /// Mesurée sur la vraie vue, dans l'état où elle se trouve quand le volet
-    /// est ouvert : une vidéo est forcément chargée — le bouton Personnaliser
-    /// est désactivé sans elle —, donc les zones de dépôt sont dans leur forme
-    /// compacte. L'estimer à la hausse faisait croire que l'aperçu n'avait que
-    /// 150 points de haut à la taille minimale.
+    /// C'est la disposition AppKit qui répond, pas une estimation : l'estimer à
+    /// la hausse faisait croire que l'aperçu n'avait que 150 points de haut à la
+    /// taille minimale.
+    ///
+    /// Ce qu'elle mesure est la forme HAUTE — zones de dépôt vides, 120 points
+    /// chacune. `chargerVideo` est asynchrone et le fichier n'existe pas : la
+    /// vidéo n'arrive jamais, et les zones ne passent pas à leur forme compacte
+    /// de 44 points. C'est sans gravité, et même utile : toute place calculée à
+    /// partir de cette hauteur est la PIRE : à l'usage, volet ouvert, une vidéo
+    /// est forcément chargée et la barre est plus courte. Un contrôle qui passe
+    /// ici passe donc a fortiori. Mais il ne faut pas lire cette valeur comme
+    /// « la hauteur de la barre en usage » — elle ne l'est pas.
     @MainActor
     private static func hauteurBarreEntrees() -> CGFloat {
         let etat = AppState()
-        etat.chargerVideo(URL(fileURLWithPath: "/x.mp4"))   // état « chargé », compact
         etat.voletOuvert = true
         let hote = NSHostingView(
             rootView: BarreEntrees().environmentObject(etat)
                 .frame(width: Fenetre.largeurIdealeOuverte))
         hote.layoutSubtreeIfNeeded()
         return hote.fittingSize.height
+    }
+
+    // MARK: - Image de l'accueil
+
+    /// Ce que l'accueil montre, volet fermé — et surtout ce qu'il ne montre PAS.
+    ///
+    /// Le piège est nommé : l'aperçu du volet affiche une phrase de référence
+    /// quand aucun sous-titre n'est chargé, pour qu'on ne règle pas à l'aveugle.
+    /// La même image sur l'accueil ferait croire que cette phrase sera gravée.
+    /// C'est un mensonge que les pixels savent démentir, alors on le leur
+    /// demande : sans sous-titres ni logo, l'accueil doit rendre le plan NU,
+    /// octet pour octet.
+    private static func imageDAccueil(_ r: Rapport) {
+        guard let fond = fondDeControle() else {
+            r.verifier("fond de contrôle", false); return
+        }
+        let profil = ProfilHabillage.neutre
+
+        guard let nu = try? Apercu.composerAccueil(
+            fond: fond, profil: profil, replique: nil) else {
+            r.verifier("image d'accueil sans sous-titres", false); return
+        }
+        r.verifier("sans sous-titres ni logo : l'accueil montre le plan nu, "
+                   + "sans phrase de référence ni bandeau vide",
+                   !ImagesReference.differe(nu.image, de: fond))
+
+        // Et le volet, lui, montre bien du texte : les deux images ont des rôles
+        // différents, et cette différence est le cœur du contrôle.
+        let auVolet = try? Apercu.composer(
+            fond: fond, profil: profil,
+            texte: Apercu.texteDeReference(profil: profil), avecSousTitres: false)
+        r.verifier("l'aperçu du volet, lui, affiche la phrase de référence",
+                   auVolet.map { ImagesReference.differe($0.image, de: fond) } == true)
+
+        // Avec un fichier de sous-titres, l'accueil montre EXACTEMENT l'aperçu :
+        // ce texte-là est réel, il sera gravé.
+        let avecST = try? Apercu.composerAccueil(
+            fond: fond, profil: profil, replique: texteDEssai)
+        let apercu = try? Apercu.composer(
+            fond: fond, profil: profil, texte: texteDEssai, avecSousTitres: true)
+        let identiques: Bool
+        if let a = avecST?.image, let b = apercu?.image {
+            identiques = !ImagesReference.differe(a, de: b)
+        } else {
+            identiques = false
+        }
+        r.verifier("avec des sous-titres : l'accueil est exactement l'aperçu",
+                   identiques)
+
+        // Le logo, lui, figure sur l'accueil sans sous-titres : il sera gravé.
+        if let fichier = fabriquerLogoDEssai() {
+            defer { try? FileManager.default.removeItem(at: fichier) }
+            var avecLogo = profil
+            avecLogo.logoActif = true
+            avecLogo.logoFichier = fichier
+            let image = try? Apercu.composerAccueil(
+                fond: fond, profil: avecLogo, replique: nil)
+            r.verifier("un logo est gravé, donc il figure sur l'accueil",
+                       image.map { ImagesReference.differe($0.image, de: fond) } == true)
+            r.verifier("le logo reste saisissable : son rectangle est connu",
+                       image?.rectangleLogo != nil)
+        } else {
+            r.verifier("fabrication du logo d'essai", false)
+        }
+
+        // Le bandeau vide était le second mensonge possible : en mode
+        // `pleine-largeur`, une réplique sans ligne peignait quand même sa bande
+        // en travers de l'image.
+        var pleineLargeur = profil
+        pleineLargeur.bandeauMode = .pleineLargeur
+        pleineLargeur.bandeauActif = true
+        let sansLigne = try? Apercu.composerAccueil(
+            fond: fond, profil: pleineLargeur, replique: nil)
+        r.verifier("mode « pleine-largeur » : aucune bande vide sur l'accueil",
+                   sansLigne.map { !ImagesReference.differe($0.image, de: fond) } == true)
+    }
+
+    /// Un logo d'essai sur disque : `RenduLogo` lit un fichier, pas une image en
+    /// mémoire. Fabriqué ici plutôt que versionné — le `.gitignore` exclut les
+    /// médias.
+    private static func fabriquerLogoDEssai() -> URL? {
+        let cote = 128
+        guard let ctx = CGContext(
+            data: nil, width: cote, height: cote, bitsPerComponent: 8,
+            bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.setFillColor(CouleurProfil.bleuNONP.cgColor)
+        ctx.fillEllipse(in: CGRect(x: 0, y: 0, width: cote, height: cote))
+        guard let image = ctx.makeImage() else { return nil }
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nonp-logo-accueil.png")
+        guard let destination = CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.png.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return url
+    }
+
+    /// La place laissée à l'image de l'accueil, volet fermé.
+    ///
+    /// Même méthode que pour les deux colonnes : la fenêtre, moins la barre du
+    /// haut. La barre est mesurée dans sa forme HAUTE — voir
+    /// `hauteurBarreEntrees` —, donc la place calculée ici est la pire ; la
+    /// vraie, zones de dépôt compactes, est plus généreuse.
+    @MainActor
+    private static func dispositionImageAccueil(_ r: Rapport) {
+        _ = NSApplication.shared
+
+        let tailles: [(String, CGSize)] = [
+            ("à l'ouverture", CGSize(width: Fenetre.largeurFermee,
+                                     height: Fenetre.hauteurFermeeAvecVideo)),
+            ("fenêtre agrandie", CGSize(width: 1400, height: 900)),
+        ]
+
+        for (nom, fenetre) in tailles {
+            let zone = CGSize(width: fenetre.width - 32,
+                              height: fenetre.height - hauteurBarreEntrees() - 60)
+            r.verifier("\(nom) : l'image garde au moins "
+                       + "\(Int(Fenetre.hauteurMinimaleImageAccueil)) points de haut "
+                       + "(\(Int(zone.height)))",
+                       zone.height >= Fenetre.hauteurMinimaleImageAccueil)
+
+            for (format, video) in [("16:9", CGSize(width: 1920, height: 1080)),
+                                    ("9:16", CGSize(width: 1080, height: 1920))] {
+                let affichee = Apercu.tailleAffichee(image: video, dans: zone)
+                r.verifier("\(nom) \(format) : image entière, non rognée "
+                           + "(\(Int(affichee.width))×\(Int(affichee.height)))",
+                           affichee.width <= zone.width + 0.5
+                           && affichee.height <= zone.height + 0.5
+                           && affichee.width > 0)
+            }
+        }
+
+        // Une vidéo chargée fait grandir la fenêtre : sinon l'image ne serait
+        // qu'une vignette, et ne confirmerait rien.
+        r.verifier("l'accueil grandit quand une vidéo arrive "
+                   + "(\(Int(Fenetre.hauteurFermee)) → "
+                   + "\(Int(Fenetre.hauteurFermeeAvecVideo)) points)",
+                   Fenetre.hauteurFermeeAvecVideo > Fenetre.hauteurFermee)
+    }
+
+    // MARK: - Retirer la vidéo
+
+    /// Le fichier de sous-titres avait son bouton « Retirer », la vidéo non : on
+    /// ne pouvait changer de vidéo qu'en relançant l'application.
+    @MainActor
+    private static func retirerLaVideo(_ r: Rapport) {
+        let etat = AppState()
+        etat.voletOuvert = true
+
+        // Des sous-titres réellement chargés : c'est ce qui doit SURVIVRE.
+        let srt = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nonp-accueil-essai.srt")
+        let contenu = """
+            1
+            00:00:01,000 --> 00:00:03,000
+            Il m'a dit qu'il n'avait rien vu ce jour-là.
+
+            """
+        try? contenu.write(to: srt, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: srt) }
+        etat.chargerSousTitres(srt)
+        r.verifier("des sous-titres sont chargés pour l'essai", etat.sousTitres != nil)
+
+        etat.retirerVideo()
+
+        r.verifier("retirer la vidéo : plus de vidéo", etat.video == nil)
+        r.verifier("retirer la vidéo : plus de définition ni de durée",
+                   etat.tailleVideo == nil && etat.dureeVideo == 0)
+        r.verifier("retirer la vidéo : plus d'image de fond",
+                   etat.fondsDisponibles.isEmpty)
+        r.verifier("retirer la vidéo : plus d'aperçu ni d'image d'accueil",
+                   etat.apercu == nil && etat.imageAccueil == nil)
+        r.verifier("retirer la vidéo : rien de la vidéo précédente ne subsiste "
+                   + "(avertissements, mise en page, rectangle du logo)",
+                   etat.avertissements.isEmpty && etat.miseEnPage == nil
+                   && etat.rectangleLogo == nil)
+        r.verifier("retirer la vidéo : le volet se referme", !etat.voletOuvert)
+        r.verifier("retirer la vidéo : « Habiller » redevient impossible",
+                   !etat.peutHabiller)
+
+        // Et surtout : les sous-titres ne sont pas jetés au passage. Ce sont
+        // deux dépôts distincts, et on change souvent de vidéo en gardant le
+        // même habillage.
+        r.verifier("retirer la vidéo garde les sous-titres chargés",
+                   etat.sousTitres != nil && !etat.cues.isEmpty)
+
+        // La réciproque tenait déjà, mais rien ne la vérifiait : retirer les
+        // sous-titres ne doit pas retirer la vidéo.
+        let autre = AppState()
+        autre.chargerSousTitres(srt)
+        autre.retirerSousTitres()
+        r.verifier("retirer les sous-titres n'emporte rien d'autre",
+                   autre.sousTitres == nil && autre.cues.isEmpty && autre.video == nil)
     }
 
     // MARK: - Logo rond
@@ -491,6 +701,39 @@ enum ControlesInterface {
                    + "(\(petit) px contre \(grand) px)", petit < grand)
         r.egal("« Grande » vaut exactement le 7,2 % du prototype",
                TailleNommee.grande.tailleRatio, 0.072)
+
+        // POURQUOI les deux réglages sont distincts, en chiffres. L'ADR §5
+        // couplait taille et longueur de ligne : la taille demandée devait être
+        // réduite quand la largeur ne permettait pas d'atteindre la cible. Cette
+        // arithmétique reposait sur l'estimation « 0,72 × taille » ; avec la
+        // mesure exacte, la place est bien plus grande, et la réduction ne mord
+        // plus jamais en 16:9. Si ce contrôle venait à échouer, ce serait le
+        // signe que le couplage est redevenu vrai — et que §5 est à relire.
+        for t in TailleNommee.allCases {
+            var profil = ProfilHabillage.neutre
+            profil.longueurLigneCible = t.longueurLigneCible
+            profil.tailleRatio = t.tailleRatio
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: profil, largeurVideo: 1920, hauteurVideo: 1080) else { continue }
+            r.verifier("16:9 1080p, \(Textes.Interface.nomTaille(t)) : "
+                       + "\(mep.parametres.taille) px, place pour "
+                       + "\(mep.capacite) caractères, cible "
+                       + "\(t.longueurLigneCible) — la taille n'est pas réduite",
+                       !mep.reduitePourTenir && mep.capacite >= t.longueurLigneCible)
+        }
+
+        // En 9:16, la réduction sert encore : c'est le défaut du 23/08, et le
+        // filet de sécurité reste tendu.
+        var verticale = ProfilHabillage.neutre
+        verticale.longueurLigneCible = TailleNommee.grande.longueurLigneCible
+        verticale.tailleRatio = TailleNommee.grande.tailleRatio
+        if let mep = try? MiseEnPageRendu.calculer(
+            profil: verticale, largeurVideo: 1080, hauteurVideo: 1920) {
+            r.verifier("9:16, Grande : la taille est bien réduite pour tenir "
+                       + "(\(mep.tailleDemandeeParLeProfil) → "
+                       + "\(mep.parametres.taille) px)",
+                       mep.reduitePourTenir)
+        }
 
         r.egal("une longueur précise retrouve sa taille nommée",
                TailleNommee.laPlusProche(de: 32), .grande)

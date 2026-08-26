@@ -121,6 +121,17 @@ enum Textes {
         static let boutonAnnuler = "Annuler"
         static let retirer = "Retirer"
 
+        // L'image de l'accueil, sous les zones de dépôt. Elle confirme le
+        // fichier chargé, et elle occupe la place que la fenêtre agrandie
+        // laissait vide. Les deux phrases disent ce qu'on regarde — sans quoi
+        // on prendrait l'une pour l'autre.
+        static let imageAccueilSansSousTitres =
+            "Une image de votre vidéo. Ouvrez « Personnaliser » pour voir "
+            + "l'habillage et le régler."
+        static let imageAccueilAvecSousTitres =
+            "Aperçu sur la réplique la plus longue de votre fichier. Ouvrez "
+            + "« Personnaliser » pour la parcourir et régler l'habillage."
+
         static func videoChargee(_ nom: String, largeur: Int, hauteur: Int,
                                  duree: String) -> String {
             "\(nom) — \(largeur)×\(hauteur), \(duree)"
