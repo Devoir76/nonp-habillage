@@ -165,6 +165,19 @@ largeur saute d'une réplique à l'autre.
   bande ne saute pas entre une réplique d'une ligne et une réplique de deux.
 - Marges et marge intérieure réglables dans les deux modes.
 
+> ⚠︎ **Amendé le 26/08 — la marge intérieure n'est plus réglable dans
+> l'interface.** Le champ `bandeau.marge_interieure_pct_largeur` reste au schéma,
+> dans le profil et dans la géométrie, qui l'applique toujours : un fichier de
+> profil rend exactement comme avant. Seul le curseur a quitté le volet
+> Personnaliser. Mesure à l'appui, sur 16:9 1080p avec une cible de 32
+> caractères : la marge doit atteindre **22,3 %** pour changer quoi que ce soit,
+> soit **89 %** d'une course de 0 à 25 % sans le moindre effet — la longueur de
+> ligne cible coupe le texte bien avant que la marge ne le touche. L'interface
+> avait d'abord affiché un avertissement expliquant cette inertie ; s'excuser
+> d'un réglage inutile ne vaut pas mieux que de le retirer. Le curseur pourra
+> revenir au lot 6 si la **décision nº6** — qui gouverne la largeur de la colonne
+> de texte — lui rend un effet.
+
 ### 5. La mise en page s'adapte au format de la vidéo
 
 **Défaut constaté le 23/08** (vidéo verticale 9:16, capture à l'appui). Le
@@ -388,6 +401,10 @@ n'a jamais dépendu du nom et suit sa propre échéance.
 couplage des deux ne tenait que par l'imprécision de l'estimation « 0,72 ×
 taille », que ce même §5 remplaçait par la mesure exacte. Détail, mesures et
 conséquences : « Amendement du 26/08 » au §5.
+
+**§4 amendé — la marge intérieure quitte l'interface, pas le schéma.** 89 % de
+la course du curseur restaient sans effet ; le champ reste au profil et au rendu,
+la commande disparaît du volet. Elle pourra revenir avec la décision nº6.
 
 ## Décisions restant ouvertes
 

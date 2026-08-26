@@ -56,15 +56,25 @@ enum ControlesInterface {
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
 
-        r.section("Interface — marge intérieure du bandeau")
+        r.section("Interface — marge intérieure : retirée du volet, vivante au profil")
         margeInterieure(r)
     }
 
     // MARK: - Marge intérieure
 
-    /// Elle s'applique en `pleine-largeur` — le schéma partagé dit
-    /// explicitement qu'elle est « ignorée en mode ajuste » —, et elle ne borne
-    /// le texte que lorsqu'elle est plus serrée que la longueur de ligne cible.
+    /// Le curseur « Marge intérieure » a quitté le volet Personnaliser au lot 5 :
+    /// près de 90 % de sa course ne produisait aucun effet, et l'expliquer à
+    /// l'utilisateur revenait à s'excuser d'un réglage inutile. Le chiffre exact
+    /// est mesuré plus bas, et reporté dans le rapport plutôt que recopié —
+    /// l'estimation de départ, « 24 % de marge, donc 96 % de course inerte »,
+    /// était arrondie vers le haut.
+    ///
+    /// **Ce qui compte désormais, c'est que le CHAMP soit intact.** Il reste au
+    /// schéma partagé, dans le profil et dans la géométrie : un fichier de profil
+    /// venu du prototype doit rendre exactement comme avant, alors même que plus
+    /// aucune commande ne l'expose. C'est le genre de garantie qu'un retrait
+    /// d'interface casse en silence — d'où ces contrôles, qui vont jusqu'aux
+    /// pixels plutôt que de s'arrêter à la mise en page.
     private static func margeInterieure(_ r: Rapport) {
         var profil = ProfilHabillage.neutre
         let (w, h) = (1920, 1080)
@@ -81,27 +91,61 @@ enum ControlesInterface {
         profil.bandeauMode = .pleineLargeur
         let large = largeurDecoupe(profil, marge: 0.03, w, h)
         let serree = largeurDecoupe(profil, marge: 0.25, w, h)
-        r.verifier("mode « pleine-largeur » : une marge serrée réduit la colonne "
-                   + "(\(Int(large)) → \(Int(serree)) px)", serree < large)
+        r.verifier("sans curseur, le champ agit toujours : une marge serrée "
+                   + "réduit la colonne (\(Int(large)) → \(Int(serree)) px)",
+                   serree < large)
 
-        // Et le seuil est annoncé, plutôt que laissé à deviner.
-        profil.bandeauMargeInterieureRatioLargeur = 0.03
-        let faible = try? MiseEnPageRendu.calculer(
-            profil: profil, largeurVideo: w, hauteurVideo: h)
-        r.verifier("à 3 %, l'interface annonce que la marge est sans effet",
-                   faible?.margeInterieureSansEffet == true)
+        // Jusqu'aux PIXELS : la mise en page pourrait changer sans que le rendu
+        // bouge. C'est la vraie promesse faite au fichier de profil.
+        if let fond = fondDeControle() {
+            var p = profil
+            p.bandeauMargeInterieureRatioLargeur = 0.03
+            let a = try? Apercu.composer(fond: fond, profil: p,
+                                         texte: texteDEssai, avecSousTitres: true)
+            p.bandeauMargeInterieureRatioLargeur = 0.25
+            let b = try? Apercu.composer(fond: fond, profil: p,
+                                         texte: texteDEssai, avecSousTitres: true)
+            let bouge: Bool
+            if let a = a?.image, let b = b?.image {
+                bouge = ImagesReference.differe(a, de: b)
+            } else {
+                bouge = false
+            }
+            r.verifier("un profil qui pose une marge intérieure rend toujours "
+                       + "différemment — le champ va jusqu'aux pixels", bouge)
+        }
 
-        profil.bandeauMargeInterieureRatioLargeur = 0.25
-        let forte = try? MiseEnPageRendu.calculer(
-            profil: profil, largeurVideo: w, hauteurVideo: h)
-        r.verifier("à 25 %, la marge mord et l'interface ne le dit plus",
-                   forte?.margeInterieureSansEffet == false)
+        // Les deux profils livrés gardent leur valeur : rien n'a bougé côté
+        // fichier, seul le volet a changé.
+        r.egal("le profil neutre garde sa marge intérieure",
+               ProfilHabillage.neutre.bandeauMargeInterieureRatioLargeur, 0.03)
+        r.egal("le préréglage NONP garde la sienne",
+               ProfilHabillage.nonpHistorique.bandeauMargeInterieureRatioLargeur, 0.03)
 
-        // Sur une vidéo étroite, elle mord bien plus tôt : c'est là qu'elle sert.
+        // POURQUOI le curseur est parti, en chiffres. Le seuil est cherché sur
+        // toute la course qu'aurait eue le curseur — 0 à 25 %.
+        let course = 0.25
+        var seuil = course
+        for pas in 0...250 {
+            let marge = course * Double(pas) / 250
+            var p = profil
+            p.bandeauMargeInterieureRatioLargeur = marge
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: p, largeurVideo: w, hauteurVideo: h) else { continue }
+            if !mep.margeInterieureSansEffet { seuil = marge; break }
+        }
+        let inerte = Int((seuil / course * 100).rounded())
+        r.verifier("16:9 1080p : la marge ne mord qu'à partir de "
+                   + "\(String(format: "%.1f", seuil * 100)) %, soit \(inerte) % "
+                   + "d'une course de 0 à 25 % sans aucun effet — c'est ce qui a "
+                   + "retiré le curseur du volet", inerte >= 85)
+
+        // Sur une vidéo étroite, elle mord bien plus tôt : c'est là qu'elle
+        // servirait, et c'est ce que la décision nº6 devra trancher au lot 6.
         profil.bandeauMargeInterieureRatioLargeur = 0.10
         let verticale = try? MiseEnPageRendu.calculer(
             profil: profil, largeurVideo: 1080, hauteurVideo: 1920)
-        r.verifier("en 9:16, la marge agit dès 10 %",
+        r.verifier("en 9:16, la marge agirait dès 10 % — matière à la décision nº6",
                    verticale?.margeInterieureSansEffet == false)
     }
 

@@ -168,7 +168,9 @@ enum Textes {
             n == 1 ? "1 ligne" : "\(n) lignes"
         }
         static let margeBasse = "Marge basse"
-        static let margeInterieure = "Marge intérieure"
+        // « Marge intérieure » n'a plus de libellé : le curseur a été retiré du
+        // volet au lot 5 — voir `PanneauPersonnaliserView`. Le champ du profil,
+        // lui, reste.
 
         static let choisirLogo = "Choisir une image…"
         static let aucunLogo = "Aucun logo"
@@ -209,7 +211,6 @@ enum Textes {
             "L'aperçu se peint sur une image de votre vidéo. Prenez-en une claire "
             + "et une sombre : c'est le seul moyen de vérifier que le texte reste "
             + "lisible sur les deux."
-        static let colonneDeTexte = "Colonne de texte"
         /// Ce que l'utilisateur obtient : la taille du texte et la longueur de
         /// ligne visée. Surtout pas la « capacité » brute — la place que la
         /// largeur laisserait —, qui annonçait 55 caractères là où les lignes
@@ -217,12 +218,9 @@ enum Textes {
         static func tailleEtLongueurLigne(_ px: Int, caracteres: Int) -> String {
             "\(px) px — lignes d'environ \(caracteres) caractères"
         }
-        static func colonneDeTexteLargeur(_ px: Int, sur largeur: Int) -> String {
-            "\(px) px de large, sur \(largeur) px d'image"
-        }
-        static let margeSansEffet =
-            "Sans effet pour l'instant : à cette taille, le texte est déjà plus "
-            + "étroit que la marge. Augmentez-la, ou choisissez une taille plus grande."
+        // Partis avec le curseur « Marge intérieure » : la largeur de la colonne
+        // de texte et l'avertissement « sans effet pour l'instant ». Les deux
+        // n'existaient que pour expliquer un réglage qui ne faisait rien.
 
         static let planClair = "plan clair"
         static let planSombre = "plan sombre"

@@ -76,8 +76,15 @@ struct MiseEnPageRendu {
     ///
     /// Sur une vidéo 16:9, avec une cible de 32 caractères, la colonne de texte
     /// ne fait déjà qu'un peu plus de la moitié de l'image : la marge intérieure
-    /// du bandeau doit dépasser 24 % pour changer quoi que ce soit. Mesuré, et
-    /// dit à l'utilisateur plutôt que laissé à deviner.
+    /// du bandeau doit atteindre **22,3 %** pour changer quoi que ce soit — soit
+    /// 89 % d'une course de 0 à 25 % sans le moindre effet. (Mesuré par
+    /// `ControlesInterface` ; l'estimation de départ disait 24 %, arrondie.)
+    ///
+    /// PLUS AFFICHÉ. L'interface a d'abord annoncé « sans effet pour l'instant »
+    /// sous le curseur ; le curseur lui-même est parti au lot 5, et l'excuse
+    /// avec lui. Cette mesure reste pour la décision nº6 de l'ADR, qui doit dire
+    /// au lot 6 qui gouverne la largeur de la colonne de texte : c'est elle qui
+    /// établit que la marge intérieure, aujourd'hui, ne la gouverne pas.
     var margeInterieureSansEffet: Bool { capacite > longueurLigneCible }
 
     /// Calcule la mise en page de rendu pour une vidéo donnée.

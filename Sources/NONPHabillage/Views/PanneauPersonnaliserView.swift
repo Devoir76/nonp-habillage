@@ -126,29 +126,27 @@ struct PanneauPersonnaliserView: View {
 
                 curseurPourcent(Textes.Interface.margeBasse,
                                 valeur: $etat.profil.margeBasseRatio, de: 0, a: 0.30)
-                if etat.profil.bandeauMode == .pleineLargeur {
-                    curseurPourcent(Textes.Interface.margeInterieure,
-                                    valeur: $etat.profil.bandeauMargeInterieureRatioLargeur,
-                                    de: 0, a: 0.25)
-                    // La marge intérieure ne borne le texte que si elle est plus
-                    // serrée que la longueur de ligne cible. Le dire, plutôt que
-                    // de laisser croire à un curseur cassé.
-                    if let mep = etat.miseEnPage {
-                        if mep.margeInterieureSansEffet {
-                            Text(Textes.Interface.margeSansEffet)
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else {
-                            Text(Textes.Interface.colonneDeTexteLargeur(
-                                Int(mep.largeurColonneTexte),
-                                sur: Int(etat.tailleVideo?.width ?? 0)))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
+
+                // PAS de curseur « Marge intérieure » ici, et c'est délibéré.
+                // Mesuré au lot 5 : sur une 16:9, la marge doit atteindre 22,3 %
+                // pour changer quoi que ce soit — 89 % de la course d'un curseur
+                // allant de 0 à 25 % sans le moindre effet, parce que la longueur
+                // de ligne cible coupe le texte bien avant que la marge ne le
+                // touche. Il avait d'abord reçu un
+                // avertissement expliquant pourquoi il ne faisait rien —
+                // c'était s'excuser d'un réglage inutile plutôt que le retirer.
+                //
+                // Le champ `bandeau.marge_interieure_pct_largeur` RESTE : au
+                // schéma partagé, dans le profil, et dans la géométrie, qui
+                // continue de l'appliquer. Rien ne change pour un fichier de
+                // profil, et un profil du prototype rend à l'identique. Seule
+                // la commande disparaît de l'interface.
+                //
+                // Elle pourra revenir au lot 6 : la décision nº6 de l'ADR doit
+                // trancher qui, de `espaces_lateraux`, de la marge intérieure ou
+                // de la longueur de ligne cible, gouverne la largeur de la
+                // colonne de texte. Si l'arbitrage lui rend un effet, le curseur
+                // reviendra avec.
             }
         }
     }
