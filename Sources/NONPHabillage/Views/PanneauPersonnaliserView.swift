@@ -81,10 +81,13 @@ struct PanneauPersonnaliserView: View {
                                  valeur: $etat.profil.contourCouleur)
             }
 
+            // Passe par `etat.lignesMax`, pas par `etat.profil.lignesMax` : la
+            // case « Hauteur constante » du bandeau reprend cette valeur, et
+            // doit la suivre quand elle change.
             Stepper(value: Binding(
-                get: { etat.profil.lignesMax },
-                set: { etat.profil.lignesMax = $0 }), in: 1...4) {
-                Text("\(Textes.Interface.lignesMax) : \(etat.profil.lignesMax)")
+                get: { etat.lignesMax },
+                set: { etat.lignesMax = $0 }), in: 1...4) {
+                Text("\(Textes.Interface.lignesMax) : \(etat.lignesMax)")
             }
             .frame(maxWidth: 220)
         }
@@ -114,15 +117,36 @@ struct PanneauPersonnaliserView: View {
 
                 // Hauteur constante : ce qui empêche la bande de sauter entre
                 // une réplique d'une ligne et une réplique de deux.
-                Picker(Textes.Interface.hauteurFixe, selection: Binding(
-                    get: { etat.profil.bandeauHauteurFixeLignes },
-                    set: { etat.profil.bandeauHauteurFixeLignes = $0 })) {
-                    Text(Textes.Interface.hauteurAutomatique).tag(0)
-                    ForEach(1...4, id: \.self) { n in
-                        Text(Textes.Interface.hauteurLignes(n)).tag(n)
-                    }
+                //
+                // UNE CASE À COCHER, plus un menu « N lignes ». Le menu et le
+                // pas-à-pas « Lignes maximum » affichaient tous deux « 2 » et
+                // paraissaient faire double emploi ; ils ne le font pas — l'un
+                // borne le TEXTE, l'autre fige la HAUTEUR DU FOND —, mais rien
+                // dans l'interface ne le disait. Choisir deux fois le même
+                // nombre n'apportait rien : la case reprend celui de « Lignes
+                // maximum » et le suit, et la phrase en dessous nomme la valeur
+                // reprise, de sorte que les deux réglages se distinguent enfin.
+                //
+                // Le champ `bandeau.hauteur_fixe_lignes` RESTE au schéma
+                // partagé avec sa valeur libre de 0 à 4, comme
+                // `marge_interieure_pct_largeur` avant lui : seule la commande
+                // disparaît. Un profil du prototype qui fixerait 3 lignes est
+                // lu, appliqué et rendu tel quel — la case l'affiche comme
+                // « hauteur figée », sans y toucher tant qu'on ne clique pas.
+                // C'est exactement ce que le schéma recommandait déjà : « même
+                // valeur que lignes_max ».
+                VStack(alignment: .leading, spacing: 2) {
+                    Toggle(Textes.Interface.hauteurFixe, isOn: Binding(
+                        get: { etat.hauteurConstante },
+                        set: { etat.hauteurConstante = $0 }))
+                    Text(etat.hauteurConstante
+                         ? Textes.Interface.hauteurFixeActive(
+                             etat.profil.bandeauHauteurFixeLignes)
+                         : Textes.Interface.hauteurFixeInactive)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: 280)
 
                 curseurPourcent(Textes.Interface.margeBasse,
                                 valeur: $etat.profil.margeBasseRatio, de: 0, a: 0.30)

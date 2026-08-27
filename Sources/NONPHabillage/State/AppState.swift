@@ -58,6 +58,42 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// « Lignes maximum », vue par l'interface — et non `profil.lignesMax` en
+    /// direct.
+    ///
+    /// La case « Hauteur constante » reprend la valeur de « Lignes maximum » :
+    /// elle doit donc la SUIVRE quand elle change, sans quoi on cocherait une
+    /// hauteur de deux lignes puis on passerait le texte à trois, et le fond
+    /// resterait figé sur l'ancienne valeur sans que rien ne le dise.
+    ///
+    /// Un seul remplacement de `profil`, pas deux : deux écritures
+    /// successives déclencheraient deux compositions d'aperçu pour un seul clic.
+    var lignesMax: Int {
+        get { profil.lignesMax }
+        set {
+            var p = profil
+            let suivait = p.bandeauHauteurFixeLignes > 0
+            p.lignesMax = newValue
+            if suivait { p.bandeauHauteurFixeLignes = newValue }
+            profil = p
+        }
+    }
+
+    /// La case « Hauteur constante » du volet, projection booléenne du champ
+    /// `bandeau.hauteur_fixe_lignes`.
+    ///
+    /// Le champ, lui, garde sa valeur LIBRE de 0 à 4 — c'est le contrat du
+    /// schéma partagé (invariant nº6), et le schéma recommande déjà « même
+    /// valeur que lignes_max ». Un profil venu du prototype qui fixerait 3
+    /// lignes là où le texte en autorise 2 reste donc lu, appliqué et rendu tel
+    /// quel : la case se contente d'afficher qu'une hauteur est figée. Cocher,
+    /// décocher, ou toucher à « Lignes maximum » réaligne la valeur — c'est
+    /// alors une décision de l'utilisateur, pas un écrasement silencieux.
+    var hauteurConstante: Bool {
+        get { profil.bandeauHauteurFixeLignes > 0 }
+        set { profil.bandeauHauteurFixeLignes = newValue ? profil.lignesMax : 0 }
+    }
+
     // MARK: - Aperçu
 
     /// Les images de fond proposées, du plan le plus sombre au plus clair.
@@ -202,6 +238,22 @@ final class AppState: ObservableObject {
         fondsDisponibles = instants.sorted { $0.luminosite < $1.luminosite }
         indexFond = fondsDisponibles.count / 2
         apercuEnPreparation = false
+        rafraichirApercu()
+    }
+
+    /// Pose des images de fond sans passer par une vidéo.
+    ///
+    /// Réservé à la VÉRIFICATION et à la capture d'interface : `fondsDisponibles`
+    /// est en lecture seule pour les vues, et le seul chemin normal passe par
+    /// `chargerVideo`, qui est asynchrone et exige un vrai fichier. Sans cette
+    /// porte, la barre de choix du fond — menu, libellés, réserve « aperçu
+    /// seulement » — ne pourrait pas être MESURÉE : elle ne s'affiche qu'à
+    /// partir de deux fonds.
+    func poserFondsDeControle(
+        _ fonds: [(instant: Double, image: CGImage, luminosite: Double)]
+    ) {
+        fondsDisponibles = fonds
+        indexFond = fonds.isEmpty ? 0 : fonds.count / 2
         rafraichirApercu()
     }
 

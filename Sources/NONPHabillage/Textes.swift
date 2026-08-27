@@ -162,11 +162,24 @@ enum Textes {
         static let modePleineLargeur = "Pleine largeur"
         static let modeAjuste = "Ajusté au texte"
         static let couleurBandeau = "Couleur du fond"
+        /// Une CASE À COCHER depuis le lot 5, plus un menu « N lignes ».
+        ///
+        /// « Lignes maximum : 2 » et « Hauteur constante : 2 lignes » se
+        /// lisaient comme deux façons de dire la même chose. Elles ne le sont
+        /// pas — l'une borne le TEXTE, l'autre fige la HAUTEUR DE LA BANDE —,
+        /// mais l'interface ne le disait nulle part. Cochée, la case reprend
+        /// la valeur de « Lignes maximum » et la suit ; les deux phrases
+        /// ci-dessous disent ce que le fond fait dans chaque cas, sous la case
+        /// plutôt qu'en bas de fenêtre.
         static let hauteurFixe = "Hauteur constante"
-        static let hauteurAutomatique = "Automatique"
-        static func hauteurLignes(_ n: Int) -> String {
-            n == 1 ? "1 ligne" : "\(n) lignes"
+        static func hauteurFixeActive(_ n: Int) -> String {
+            "Le fond garde la hauteur de \(n == 1 ? "1 ligne" : "\(n) lignes") — "
+            + "la valeur de « Lignes maximum ». Il ne saute plus entre une "
+            + "réplique d'une ligne et une réplique de deux."
         }
+        static let hauteurFixeInactive =
+            "Le fond s'ajuste à chaque réplique : il change de hauteur entre "
+            + "une réplique d'une ligne et une réplique de deux."
         static let margeBasse = "Marge basse"
         // « Marge intérieure » n'a plus de libellé : le curseur a été retiré du
         // volet au lot 5 — voir `PanneauPersonnaliserView`. Le champ du profil,
@@ -204,13 +217,57 @@ enum Textes {
 
         // Aperçu
         static let apercu = "Aperçu"
-        // « Image de fond » n'était pas compris : on ne savait pas de quelle
-        // image il s'agissait, ni pourquoi en changer.
-        static let fondDeLApercu = "Image de la vidéo"
-        static let fondDeLApercuExplication =
-            "L'aperçu se peint sur une image de votre vidéo. Prenez-en une claire "
-            + "et une sombre : c'est le seul moyen de vérifier que le texte reste "
-            + "lisible sur les deux."
+
+        /// Le menu des images de fond, nommé TROIS fois avant de se faire
+        /// comprendre.
+        ///
+        /// « Image de fond », puis « Image de la vidéo » : ni l'un ni l'autre ne
+        /// disait à quoi le choix sert, et l'explication vivait en bas du volet
+        /// d'aperçu — trop loin du menu pour être lue. Le lot 5 renonce à
+        /// expliquer et rend le contrôle explicite : son nom dit qu'il ne touche
+        /// que l'aperçu, chaque entrée dit ce qu'elle vaut, et la réserve
+        /// « jamais la vidéo exportée » tient sur la MÊME LIGNE que le menu.
+        static let fondDeLApercu = "Fond de l'aperçu"
+        /// Sur la même ligne que le menu : la seule chose qu'on puisse craindre
+        /// en y touchant, démentie là où on la craint.
+        static let fondApercuSeulement = "N'affecte que l'aperçu, pas la vidéo exportée."
+        /// Sous le menu : ce qu'il faut EN FAIRE. C'est le critère de contraste
+        /// de l'ADR §2 — regarder les deux extrêmes —, tout ce qui restait
+        /// d'utile dans l'ancienne explication.
+        static let fondDeLApercuConseil =
+            "Regardez le plus sombre et le plus clair : c'est ainsi qu'on vérifie "
+            + "que le texte reste lisible sur toute la vidéo."
+
+        /// Libellé d'une entrée du menu : son rang, puis ce qu'elle vaut.
+        ///
+        /// TOUTES les entrées sont libellées, plus seulement les deux extrêmes.
+        /// « 3/6 » tout seul ne disait rien de l'image qu'on allait obtenir, et
+        /// obligeait à essayer pour savoir. Les extrêmes gardent un nom absolu —
+        /// ce sont eux qui tranchent une couleur de texte (ADR §2) ; les autres
+        /// sont qualifiées par leur luminosité MESURÉE, pas par leur rang, de
+        /// sorte que le libellé décrive l'image et non sa place dans la liste.
+        static func nomFond(index: Int, total: Int, luminosite: Double) -> String {
+            let numero = "\(index + 1)/\(total)"
+            let qualificatif: String
+            if index == 0 {
+                qualificatif = fondLePlusSombre
+            } else if index == total - 1 {
+                qualificatif = fondLePlusClair
+            } else if luminosite < 0.35 {
+                qualificatif = fondSombre
+            } else if luminosite < 0.65 {
+                qualificatif = fondMoyen
+            } else {
+                qualificatif = fondClair
+            }
+            return "\(numero) — \(qualificatif)"
+        }
+
+        static let fondLePlusSombre = "le plus sombre"
+        static let fondSombre = "sombre"
+        static let fondMoyen = "moyen"
+        static let fondClair = "clair"
+        static let fondLePlusClair = "le plus clair"
         /// Ce que l'utilisateur obtient : la taille du texte et la longueur de
         /// ligne visée. Surtout pas la « capacité » brute — la place que la
         /// largeur laisserait —, qui annonçait 55 caractères là où les lignes
@@ -222,8 +279,9 @@ enum Textes {
         // de texte et l'avertissement « sans effet pour l'instant ». Les deux
         // n'existaient que pour expliquer un réglage qui ne faisait rien.
 
-        static let planClair = "plan clair"
-        static let planSombre = "plan sombre"
+        // « plan clair » et « plan sombre » ont laissé la place à l'échelle
+        // complète ci-dessus : ils ne nommaient que les deux extrêmes, et les
+        // quatre entrées du milieu restaient des numéros nus.
         static let repliquePrecedente = "Réplique précédente"
         static let repliqueSuivante = "Réplique suivante"
         static let phraseDeReference = "Phrase de référence — aucun sous-titre chargé"

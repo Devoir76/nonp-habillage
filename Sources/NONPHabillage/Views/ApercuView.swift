@@ -23,8 +23,11 @@ struct ApercuView: View {
             imageOuAttente
             avertissements
             barreDeChoix
+            // Le conseil d'usage — regarder les deux extrêmes —, et rien de
+            // plus. L'ancien paragraphe commençait par expliquer ce qu'était
+            // l'image de fond ; le menu le dit désormais lui-même.
             if etat.fondsDisponibles.count > 1 {
-                Text(Textes.Interface.fondDeLApercuExplication)
+                Text(Textes.Interface.fondDeLApercuConseil)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -133,12 +136,24 @@ struct ApercuView: View {
             if etat.fondsDisponibles.count > 1 {
                 Picker(Textes.Interface.fondDeLApercu, selection: $etat.indexFond) {
                     ForEach(Array(etat.fondsDisponibles.enumerated()), id: \.offset) { i, f in
-                        Text(nomDuFond(index: i, luminosite: f.luminosite)).tag(i)
+                        Text(Textes.Interface.nomFond(
+                            index: i, total: etat.fondsDisponibles.count,
+                            luminosite: f.luminosite)).tag(i)
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 260)
-                .help(Textes.Interface.fondDeLApercuExplication)
+                .frame(maxWidth: 210)
+
+                // SUR LA MÊME LIGNE que le menu, et pas en bas du volet : la
+                // crainte qu'un menu nommé « Image de la vidéo » inspirait —
+                // toucher à la vidéo qui sera gravée — se dément là où elle
+                // naît. Une phrase à trois cents points de distance n'est pas
+                // lue, c'est le retour de test du lot 5.
+                Text(Textes.Interface.fondApercuSeulement)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(-1)
             }
 
             Spacer()
@@ -178,14 +193,4 @@ struct ApercuView: View {
         }
     }
 
-    /// Le plan le plus sombre et le plus clair sont nommés : ce sont eux qui
-    /// tranchent une couleur de texte (ADR §2).
-    private func nomDuFond(index: Int, luminosite: Double) -> String {
-        let numero = "\(index + 1)/\(etat.fondsDisponibles.count)"
-        if index == 0 { return "\(numero) — \(Textes.Interface.planSombre)" }
-        if index == etat.fondsDisponibles.count - 1 {
-            return "\(numero) — \(Textes.Interface.planClair)"
-        }
-        return numero
-    }
 }

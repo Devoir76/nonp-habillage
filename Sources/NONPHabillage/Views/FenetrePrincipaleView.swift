@@ -7,6 +7,15 @@
 // barre de progression. Rien d'autre. » Volet fermé, c'est exactement ce qu'on
 // voit, et cela tient sans défilement.
 //
+// ── Le bouton « Habiller » vit EN BAS ────────────────────────────────────────
+//
+// Barre d'action fixe au pied de la fenêtre, aligné à droite, toujours visible :
+// c'est la convention macOS, et la seule place qui tienne dans les trois états.
+// Il était en haut à droite de la barre des dépôts, où l'action finale se lisait
+// comme un accessoire du dépôt. Surtout pas dans la colonne des réglages : elle
+// défile, et un bouton qui disparaît au défilement n'est plus une action, c'est
+// une trouvaille.
+//
 // ── Volet ouvert : DEUX COLONNES ─────────────────────────────────────────────
 //
 // L'aperçu à GAUCHE, grand et toujours visible ; les réglages à DROITE, dans
@@ -28,22 +37,32 @@ import AppKit
 /// Rassemblées ici pour que le contrôle de disposition mesure exactement ce que
 /// l'application applique, plutôt que des valeurs recopiées à côté.
 enum Fenetre {
+    /// Place réservée à la barre d'action du bas.
+    ///
+    /// Elle s'ajoute à chacune des hauteurs de fenêtre : la barre est arrivée au
+    /// lot 5, et la fenêtre lui rend sa hauteur plutôt que de la prendre sur
+    /// l'accueil ou sur l'aperçu. Écrite en clair, et non fondue dans les
+    /// totaux, pour qu'on voie ce que le déplacement du bouton a coûté — et pour
+    /// que le contrôle de disposition puisse comparer cette réserve à la hauteur
+    /// que la barre occupe RÉELLEMENT.
+    static let hauteurBarreAction: CGFloat = 50
+
     /// Volet fermé, aucune vidéo : l'écran d'accueil seul.
     static let largeurFermee: CGFloat = 620
-    static let hauteurFermee: CGFloat = 420
+    static let hauteurFermee: CGFloat = 420 + hauteurBarreAction
 
     /// Volet fermé, une vidéo chargée : la fenêtre grandit pour loger son
     /// image. Une hauteur inchangée n'aurait laissé qu'une vignette, qui ne
     /// confirmerait rien.
-    static let hauteurFermeeAvecVideo: CGFloat = 580
+    static let hauteurFermeeAvecVideo: CGFloat = 580 + hauteurBarreAction
     /// En deçà, l'image de l'accueil ne montrerait plus rien de reconnaissable.
     static let hauteurMinimaleImageAccueil: CGFloat = 180
 
     /// Volet ouvert : il faut la place de deux colonnes.
     static let largeurMinimaleOuverte: CGFloat = 1020
     static let largeurIdealeOuverte: CGFloat = 1180
-    static let hauteurMinimaleOuverte: CGFloat = 720
-    static let hauteurIdealeOuverte: CGFloat = 860
+    static let hauteurMinimaleOuverte: CGFloat = 720 + hauteurBarreAction
+    static let hauteurIdealeOuverte: CGFloat = 860 + hauteurBarreAction
 
     /// Largeur de la colonne des réglages : assez pour un curseur et son
     /// libellé sans que le texte se replie ligne à ligne.
@@ -110,7 +129,7 @@ struct ContenuFenetre: View {
 
     private var accueil: some View {
         VStack(spacing: 0) {
-            BarreEntrees(habiller: habiller)
+            BarreEntrees()
             if etat.voletOuvert {
                 Divider()
                 deuxColonnes
@@ -127,6 +146,11 @@ struct ContenuFenetre: View {
                 // fenêtre, et désormais aussi en retirant la vidéo.
                 Spacer(minLength: 0)
             }
+
+            // LA BARRE D'ACTION, au pied de la fenêtre et hors de tout ce qui
+            // défile : dernier élément de la pile, elle est sous l'aperçu ET
+            // sous la colonne des réglages, jamais dedans.
+            BarreAction(habiller: habiller)
         }
     }
 
@@ -176,7 +200,8 @@ struct ContenuFenetre: View {
     }
 }
 
-/// La barre du haut : ce qu'on dépose, et ce qu'on lance.
+/// La barre du haut : ce qu'on dépose. Rien de plus depuis le lot 5 — ce qu'on
+/// LANCE est descendu dans `BarreAction`.
 ///
 /// Hauteur NATURELLE, jamais étirée. C'est son étirement qui creusait, dans la
 /// première version, un grand vide entre elle et l'aperçu.
@@ -188,7 +213,6 @@ struct ContenuFenetre: View {
 struct BarreEntrees: View {
 
     @EnvironmentObject var etat: AppState
-    var habiller: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 12) {
@@ -218,13 +242,6 @@ struct BarreEntrees: View {
                     .onTapGesture { etat.effacerErreur() }
             }
 
-            if etat.video != nil && !etat.quelqueChoseAGraver {
-                Text(Textes.Interface.rienAGraver)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             HStack {
                 Toggle(isOn: $etat.voletOuvert) {
                     Label(Textes.Interface.personnaliser,
@@ -234,10 +251,6 @@ struct BarreEntrees: View {
                 .disabled(etat.video == nil)
 
                 Spacer()
-
-                Button(Textes.Interface.boutonHabiller) { habiller() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!etat.peutHabiller)
             }
         }
         .padding(20)
@@ -257,5 +270,46 @@ struct BarreEntrees: View {
         guard let st = etat.sousTitres else { return nil }
         return Textes.Interface.sousTitresCharges(st.lastPathComponent,
                                                   repliques: etat.cues.count)
+    }
+}
+
+/// Le pied de la fenêtre : l'action, et ce qui l'empêche.
+///
+/// Convention macOS — une barre d'action au bas de la fenêtre, l'action
+/// principale à droite. C'est là qu'on la cherche, et c'est la seule place qui
+/// ne bouge pas : la barre est hors de la zone défilante, sa hauteur est
+/// naturelle et fixe, elle ne dépend ni du volet ni de la longueur des réglages.
+///
+/// « Il n'y a rien à graver » DESCEND AVEC LE BOUTON. La phrase n'existe que
+/// pour expliquer un bouton grisé ; la laisser en haut de la fenêtre pendant que
+/// le bouton part en bas, c'est refaire exactement ce qu'on reproche à une
+/// explication posée loin de son contrôle.
+struct BarreAction: View {
+
+    @EnvironmentObject var etat: AppState
+    var habiller: () -> Void = {}
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 12) {
+                if etat.video != nil && !etat.quelqueChoseAGraver {
+                    Text(Textes.Interface.rienAGraver)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(Textes.Interface.boutonHabiller) { habiller() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!etat.peutHabiller)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

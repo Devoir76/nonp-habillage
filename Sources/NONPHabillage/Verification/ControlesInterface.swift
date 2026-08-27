@@ -58,6 +58,16 @@ enum ControlesInterface {
 
         r.section("Interface — marge intérieure : retirée du volet, vivante au profil")
         margeInterieure(r)
+
+        r.section("Interface — « Habiller » dans la barre d'action du bas")
+        MainActor.assumeIsolated { barreAction(r) }
+
+        r.section("Interface — hauteur constante : une case, la valeur de « Lignes maximum »")
+        MainActor.assumeIsolated { hauteurConstante(r) }
+
+        r.section("Interface — fond de l'aperçu : le contrôle se dit lui-même")
+        fondDeLApercu(r)
+        MainActor.assumeIsolated { dispositionBarreDeChoix(r) }
     }
 
     // MARK: - Marge intérieure
@@ -158,6 +168,344 @@ enum ControlesInterface {
             profil: p, largeurVideo: w, hauteurVideo: h))?.largeurColonneTexte ?? 0
     }
 
+
+    // MARK: - Barre d'action
+
+    /// « Habiller » est descendu de la barre des dépôts au pied de la fenêtre.
+    ///
+    /// Ce qui se juge à l'œil — une barre d'action au bas de la fenêtre, action
+    /// alignée à droite — reste le jugement d'Éric, capture 4 à l'appui. Ce qui
+    /// se mesure, c'est la promesse qui a motivé le déplacement : **toujours
+    /// visible**. Elle se démontre en trois temps.
+    ///
+    /// 1. La barre ne DÉFILE pas. C'est ce qu'il fallait éviter avant tout : la
+    ///    colonne des réglages défile, et un bouton posé dedans disparaît dès
+    ///    qu'on descend chercher la taille du logo. La barre étant sœur de cette
+    ///    colonne et non fille, sa hauteur ne bouge pas d'un point quand le
+    ///    volet s'ouvre ni quand les réglages s'allongent — alors que la hauteur
+    ///    du panneau, elle, change beaucoup. Les deux mesures ensemble le disent.
+    /// 2. La barre TIENT dans la fenêtre, volet fermé comme ouvert, sans rien
+    ///    pousser dehors.
+    /// 3. Elle ne prend pas sa place sur l'aperçu : les minima de l'aperçu
+    ///    valent toujours une fois sa hauteur retranchée (voir
+    ///    `dispositionDeuxColonnes`, qui la retranche vraiment).
+    @MainActor
+    private static func barreAction(_ r: Rapport) {
+        _ = NSApplication.shared
+
+        let barreFermee = hauteurBarreAction(voletOuvert: false, avecLogo: false)
+        let barreOuverte = hauteurBarreAction(voletOuvert: true, avecLogo: false)
+        let barreReglagesLongs = hauteurBarreAction(voletOuvert: true, avecLogo: true)
+
+        r.verifier("la barre d'action a une hauteur de barre, pas de panneau "
+                   + "(\(Int(barreFermee)) points)",
+                   barreFermee > 0 && barreFermee <= 80)
+        r.verifier("la place que la fenêtre lui réserve couvre celle qu'elle "
+                   + "prend (\(Int(barreFermee)) points pour "
+                   + "\(Int(Fenetre.hauteurBarreAction)) réservés)",
+                   barreFermee <= Fenetre.hauteurBarreAction)
+
+        // 1. Hors de la zone défilante.
+        r.egal("sa hauteur ne change pas quand le volet s'ouvre",
+               Int(barreOuverte), Int(barreFermee))
+        let panneauCourt = hauteurPanneauReglages(avecLogo: false)
+        let panneauLong = hauteurPanneauReglages(avecLogo: true)
+        r.verifier("la colonne des réglages, elle, s'allonge vraiment "
+                   + "(\(Int(panneauCourt)) → \(Int(panneauLong)) points)",
+                   panneauLong > panneauCourt + 50)
+        r.egal("des réglages plus longs ne déplacent pas la barre d'un point — "
+               + "elle n'est pas dans la colonne qui défile",
+               Int(barreReglagesLongs), Int(barreFermee))
+
+        // 2. Elle tient dans la fenêtre, avec ce qu'il y a au-dessus.
+        let entrees = hauteurBarreEntrees()
+        r.verifier("volet fermé : dépôts + barre d'action tiennent dans la "
+                   + "fenêtre (\(Int(entrees + barreFermee)) points pour "
+                   + "\(Int(Fenetre.hauteurFermee)))",
+                   entrees + barreFermee <= Fenetre.hauteurFermee)
+        r.verifier("volet ouvert : dépôts + aperçu minimal + barre d'action "
+                   + "tiennent dans la fenêtre minimale "
+                   + "(\(Int(entrees + Fenetre.hauteurMinimaleApercu + barreOuverte)) "
+                   + "points pour \(Int(Fenetre.hauteurMinimaleOuverte)))",
+                   entrees + Fenetre.hauteurMinimaleApercu + barreOuverte
+                   <= Fenetre.hauteurMinimaleOuverte)
+
+        // 3. Le bouton reste commandé par le même état qu'avant : le déplacer
+        //    ne devait rien changer à QUAND il est actionnable.
+        let etat = AppState()
+        r.verifier("sans vidéo, « Habiller » est impossible", !etat.peutHabiller)
+        etat.profil.logoActif = true
+        etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
+        r.verifier("un logo seul ne suffit pas sans vidéo", !etat.peutHabiller)
+
+        // Et « il n'y a rien à graver » a suivi le bouton : la phrase n'explique
+        // qu'un bouton grisé, elle doit être à côté de lui.
+        r.verifier("la phrase qui explique le bouton grisé existe toujours",
+                   !Textes.Interface.rienAGraver.isEmpty)
+    }
+
+    /// Hauteur naturelle de la barre d'action, mesurée sur la VRAIE vue.
+    @MainActor
+    private static func hauteurBarreAction(voletOuvert: Bool,
+                                           avecLogo: Bool) -> CGFloat {
+        let etat = AppState()
+        etat.voletOuvert = voletOuvert
+        if avecLogo {
+            etat.profil.logoActif = true
+            etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
+        }
+        let hote = NSHostingView(
+            rootView: BarreAction().environmentObject(etat)
+                .frame(width: Fenetre.largeurIdealeOuverte))
+        hote.layoutSubtreeIfNeeded()
+        return hote.fittingSize.height
+    }
+
+    /// Hauteur naturelle du contenu de la colonne défilante.
+    @MainActor
+    private static func hauteurPanneauReglages(avecLogo: Bool) -> CGFloat {
+        let etat = AppState()
+        if avecLogo {
+            etat.profil.logoActif = true
+            etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
+        }
+        let hote = NSHostingView(
+            rootView: PanneauPersonnaliserView().environmentObject(etat)
+                .frame(width: Fenetre.largeurReglages - 32))
+        hote.layoutSubtreeIfNeeded()
+        return hote.fittingSize.height
+    }
+
+    // MARK: - Hauteur constante
+
+    /// Le menu « Hauteur constante : N lignes » est devenu une CASE À COCHER qui
+    /// reprend la valeur de « Lignes maximum ».
+    ///
+    /// Même situation que la marge intérieure, et donc mêmes exigences : une
+    /// commande quitte l'interface, le champ du schéma partagé reste. Ce qui
+    /// doit être prouvé n'est pas que la case fonctionne — c'est que
+    /// `bandeau.hauteur_fixe_lignes` n'a rien perdu au passage. Les contrôles
+    /// vont donc jusqu'aux PIXELS, et parcourent TOUTE la course que le schéma
+    /// autorise (0 à 4), y compris les valeurs que plus aucune commande ne sait
+    /// choisir : c'est exactement là qu'un retrait d'interface casse un champ en
+    /// silence.
+    @MainActor
+    private static func hauteurConstante(_ r: Rapport) {
+        // La case dit la vérité sur les deux profils livrés, sans les toucher.
+        let neutre = AppState()
+        neutre.profil = .neutre
+        r.verifier("profil neutre : la case est cochée", neutre.hauteurConstante)
+        r.egal("profil neutre : le champ garde sa valeur",
+               ProfilHabillage.neutre.bandeauHauteurFixeLignes, 2)
+        r.egal("le préréglage NONP garde la sienne",
+               ProfilHabillage.nonpHistorique.bandeauHauteurFixeLignes, 0)
+
+        let nonp = AppState()
+        nonp.profil = .nonpHistorique
+        r.verifier("préréglage NONP : la case est décochée", !nonp.hauteurConstante)
+
+        // Cocher reprend « Lignes maximum ». Décocher rend la hauteur au texte.
+        let etat = AppState()
+        etat.profil = .neutre
+        etat.lignesMax = 3
+        r.egal("cochée, la case suit « Lignes maximum » quand il change",
+               etat.profil.bandeauHauteurFixeLignes, 3)
+        etat.hauteurConstante = false
+        r.egal("décochée, le champ retombe à 0 — hauteur automatique",
+               etat.profil.bandeauHauteurFixeLignes, 0)
+        etat.lignesMax = 4
+        r.egal("décochée, elle ne suit plus rien",
+               etat.profil.bandeauHauteurFixeLignes, 0)
+        etat.hauteurConstante = true
+        r.egal("recochée, elle reprend la valeur courante de « Lignes maximum »",
+               etat.profil.bandeauHauteurFixeLignes, 4)
+
+        // La valeur LIBRE du schéma survit : un profil venu du prototype peut
+        // figer 3 lignes là où le texte en autorise 2, et rien ne le réécrit.
+        var libre = ProfilHabillage.neutre
+        libre.lignesMax = 2
+        libre.bandeauHauteurFixeLignes = 3
+        let charge = AppState()
+        charge.profil = libre
+        r.egal("un profil qui dissocie les deux valeurs est chargé tel quel",
+               charge.profil.bandeauHauteurFixeLignes, 3)
+        r.verifier("la case l'affiche comme figé, sans y toucher",
+                   charge.hauteurConstante
+                   && charge.profil.bandeauHauteurFixeLignes == 3)
+
+        // TOUTE la course du schéma reste vivante, commande ou pas : chaque
+        // valeur de 1 à 4 donne une bande strictement plus haute.
+        var hauteurs: [Int] = []
+        for lignes in 0...4 {
+            var p = ProfilHabillage.neutre
+            p.bandeauHauteurFixeLignes = lignes
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: p, largeurVideo: 1920, hauteurVideo: 1080) else { continue }
+            let pose = GeometrieSousTitres.poser(
+                lignes: ["Oui."], profil: p, parametres: mep.parametres,
+                police: mep.police, largeurVideo: 1920, hauteurVideo: 1080)
+            hauteurs.append(Int(pose.bandeaux.first?.height ?? 0))
+        }
+        let figees = Array(hauteurs.dropFirst())
+        r.verifier("de 1 à 4, chaque valeur du schéma donne une bande "
+                   + "strictement plus haute \(figees) — le champ n'a rien perdu "
+                   + "à voir sa commande remplacée",
+                   figees.count == 4
+                   && zip(figees, figees.dropFirst()).allSatisfy { $0 < $1 })
+        // Et 0 vaut bien « automatique », pas « rien » : sur une réplique d'une
+        // ligne, la bande automatique fait exactement une ligne. C'est ce que
+        // dit le schéma, et ce qui coûterait cher à casser en silence — plus
+        // aucune commande ne permet d'atteindre cette valeur au clic.
+        r.egal("0 = hauteur automatique : sur une réplique d'une ligne, la bande "
+               + "vaut celle d'une ligne (\(hauteurs.first ?? -1) points)",
+               hauteurs.first, figees.first)
+
+        // Jusqu'aux PIXELS : la géométrie pourrait bouger sans que le rendu suive.
+        if let fond = fondDeControle() {
+            var sans = ProfilHabillage.neutre
+            sans.bandeauHauteurFixeLignes = 0
+            var avec = ProfilHabillage.neutre
+            avec.bandeauHauteurFixeLignes = 4
+            let a = try? Apercu.composer(fond: fond, profil: sans,
+                                         texte: "Oui.", avecSousTitres: true)
+            let b = try? Apercu.composer(fond: fond, profil: avec,
+                                         texte: "Oui.", avecSousTitres: true)
+            let bouge: Bool
+            if let a = a?.image, let b = b?.image {
+                bouge = ImagesReference.differe(a, de: b)
+            } else {
+                bouge = false
+            }
+            r.verifier("un profil qui fige la hauteur rend différemment — "
+                       + "le champ va jusqu'aux pixels", bouge)
+        }
+
+        // Ce que la case devait rendre lisible : les deux réglages ne font pas
+        // la même chose, et l'interface le dit maintenant, sous la case.
+        r.verifier("cochée, la phrase nomme la valeur reprise à « Lignes maximum »",
+                   Textes.Interface.hauteurFixeActive(2).contains("2 lignes")
+                   && Textes.Interface.hauteurFixeActive(2)
+                       .contains(Textes.Interface.lignesMax))
+        r.verifier("au singulier, elle s'accorde",
+                   Textes.Interface.hauteurFixeActive(1).contains("1 ligne")
+                   && !Textes.Interface.hauteurFixeActive(1).contains("1 lignes"))
+        r.verifier("décochée, elle dit ce que le fond fait alors",
+                   !Textes.Interface.hauteurFixeInactive.isEmpty
+                   && Textes.Interface.hauteurFixeInactive
+                       != Textes.Interface.hauteurFixeActive(2))
+    }
+
+    // MARK: - Fond de l'aperçu
+
+    /// « Image de la vidéo » n'était pas compris, et l'explication vivait trop
+    /// loin pour rattraper le nom.
+    ///
+    /// Le contrôle doit donc se dire lui-même : chaque entrée porte un libellé,
+    /// et la réserve « aperçu seulement » tient sur la même ligne que le menu.
+    private static func fondDeLApercu(_ r: Rapport) {
+        // Six fonds, du plus sombre au plus clair — ce que produit
+        // `ImagesVideo.instantsRepresentatifs`.
+        let luminosites = [0.05, 0.22, 0.41, 0.58, 0.74, 0.93]
+        let libelles = luminosites.enumerated().map {
+            Textes.Interface.nomFond(index: $0.offset, total: luminosites.count,
+                                     luminosite: $0.element)
+        }
+
+        // AUCUN numéro nu : c'est le défaut qu'on corrige. « 3/6 » tout seul
+        // n'annonçait pas l'image qu'on allait obtenir.
+        let nus = libelles.filter { !$0.contains("—") }
+        r.egal("les six entrées sont libellées, aucune n'est un numéro nu",
+               nus, [])
+        r.verifier("chaque entrée annonce son rang", libelles.enumerated()
+                   .allSatisfy { $0.element.hasPrefix("\($0.offset + 1)/6 ") })
+        r.verifier("la première dit qu'elle est la plus sombre "
+                   + "(« \(libelles[0]) »)",
+                   libelles[0].hasSuffix(Textes.Interface.fondLePlusSombre))
+        r.verifier("la dernière dit qu'elle est la plus claire "
+                   + "(« \(libelles[5]) »)",
+                   libelles[5].hasSuffix(Textes.Interface.fondLePlusClair))
+
+        // L'échelle ne recule jamais : une image plus claire n'est jamais
+        // qualifiée plus sombre que celle qui la précède.
+        let echelle = [Textes.Interface.fondLePlusSombre, Textes.Interface.fondSombre,
+                       Textes.Interface.fondMoyen, Textes.Interface.fondClair,
+                       Textes.Interface.fondLePlusClair]
+        // Le qualificatif EXACT, pas un suffixe : « le plus sombre » se termine
+        // par « sombre », et une comparaison par suffixe confondrait les deux.
+        let rangs = libelles.map { libelle -> Int in
+            guard let separateur = libelle.range(of: " — ") else { return -1 }
+            let qualificatif = String(libelle[separateur.upperBound...])
+            return echelle.firstIndex(of: qualificatif) ?? -1
+        }
+        r.verifier("l'échelle des libellés est croissante \(rangs)",
+                   !rangs.contains(-1)
+                   && zip(rangs, rangs.dropFirst()).allSatisfy { $0 <= $1 })
+
+        // Deux fonds seulement : les deux extrêmes, et rien entre eux.
+        r.egal("à deux fonds, les deux libellés restent justes",
+               [Textes.Interface.nomFond(index: 0, total: 2, luminosite: 0.1),
+                Textes.Interface.nomFond(index: 1, total: 2, luminosite: 0.9)],
+               ["1/2 — \(Textes.Interface.fondLePlusSombre)",
+                "2/2 — \(Textes.Interface.fondLePlusClair)"])
+
+        // Le nom du menu, et la réserve qui l'accompagne.
+        r.verifier("le menu s'appelle « \(Textes.Interface.fondDeLApercu) » et "
+                   + "ne promet plus rien sur la vidéo",
+                   Textes.Interface.fondDeLApercu.localizedCaseInsensitiveContains("aperçu")
+                   && !Textes.Interface.fondDeLApercu.localizedCaseInsensitiveContains("vidéo"))
+        r.verifier("la réserve dit que la vidéo exportée n'est pas concernée",
+                   Textes.Interface.fondApercuSeulement
+                       .localizedCaseInsensitiveContains("aperçu")
+                   && Textes.Interface.fondApercuSeulement
+                       .localizedCaseInsensitiveContains("export"))
+        r.verifier("elle tient sur une ligne de menu — moins de 60 caractères "
+                   + "(\(Textes.Interface.fondApercuSeulement.count))",
+                   Textes.Interface.fondApercuSeulement.count < 60)
+        r.verifier("le conseil d'usage garde le critère de contraste de l'ADR §2",
+                   Textes.Interface.fondDeLApercuConseil
+                       .contains(Textes.Interface.fondLePlusSombre)
+                   && Textes.Interface.fondDeLApercuConseil
+                       .contains(Textes.Interface.fondLePlusClair))
+    }
+
+    /// La réserve est sur la MÊME LIGNE que le menu : encore faut-il que la
+    /// ligne tienne dans la colonne de l'aperçu à sa largeur minimale.
+    ///
+    /// C'est la seule façon de savoir : une ligne trop chargée ne produit pas
+    /// d'erreur, elle rogne le menu ou repousse la navigation entre répliques
+    /// hors du volet.
+    @MainActor
+    private static func dispositionBarreDeChoix(_ r: Rapport) {
+        _ = NSApplication.shared
+        guard let sombre = fondDeControle(largeur: 320, hauteur: 180),
+              let clair = fondDeControle(largeur: 320, hauteur: 180) else {
+            r.verifier("fonds de contrôle", false); return
+        }
+        let etat = AppState()
+        etat.voletOuvert = true
+        etat.poserFondsDeControle((0..<6).map { i in
+            (instant: Double(i), image: i < 3 ? sombre : clair,
+             luminosite: Double(i) / 5)
+        })
+        r.egal("six fonds posés, le menu s'affiche", etat.fondsDisponibles.count, 6)
+
+        let largeurUtile = Fenetre.largeurMinimaleApercu - 32
+        let hote = NSHostingView(
+            rootView: ApercuView().environmentObject(etat)
+                .frame(width: largeurUtile))
+        hote.layoutSubtreeIfNeeded()
+        let taille = hote.fittingSize
+        r.verifier("le volet d'aperçu tient dans sa largeur minimale sans être "
+                   + "rogné (\(Int(taille.width)) points pour \(Int(largeurUtile)))",
+                   taille.width <= largeurUtile + 1)
+
+        // Sans sous-titres chargés, la ligne porte le menu, la réserve et la
+        // mention « phrase de référence » : c'est son cas le plus chargé.
+        r.verifier("la ligne du menu reste une ligne de commandes, pas un "
+                   + "paragraphe (\(Int(taille.height)) points de volet)",
+                   taille.height > 0)
+    }
+
     // MARK: - Deux colonnes
 
     /// À taille par défaut ET fenêtre agrandie : l'aperçu montre l'image
@@ -181,12 +529,18 @@ enum ControlesInterface {
             ("4:5", CGSize(width: 1080, height: 1350)),
         ]
 
+        // La barre d'action du bas mange de la hauteur : la retrancher, plutôt
+        // que de laisser les minima de l'aperçu se vérifier sur une place qui
+        // n'existe plus.
+        let barreAction = hauteurBarreAction(voletOuvert: true, avecLogo: false)
+
         for (nomTaille, fenetre) in tailles {
             // La place réellement laissée à l'aperçu : la fenêtre, moins la
-            // colonne des réglages, moins la barre du haut et les marges.
+            // colonne des réglages, moins la barre du haut, moins la barre
+            // d'action du bas, moins les marges.
             let zone = CGSize(
                 width: fenetre.width - Fenetre.largeurReglages - 32,
-                height: fenetre.height - hauteurBarreEntrees() - 90)
+                height: fenetre.height - hauteurBarreEntrees() - barreAction - 90)
 
             r.verifier("\(nomTaille) : l'aperçu garde au moins "
                        + "\(Int(Fenetre.largeurMinimaleApercu)) points de large "
@@ -386,9 +740,14 @@ enum ControlesInterface {
             ("fenêtre agrandie", CGSize(width: 1400, height: 900)),
         ]
 
+        // Comme pour les deux colonnes : la barre d'action du bas n'est pas de
+        // la place disponible pour l'image.
+        let barreAction = hauteurBarreAction(voletOuvert: false, avecLogo: false)
+
         for (nom, fenetre) in tailles {
-            let zone = CGSize(width: fenetre.width - 32,
-                              height: fenetre.height - hauteurBarreEntrees() - 60)
+            let zone = CGSize(
+                width: fenetre.width - 32,
+                height: fenetre.height - hauteurBarreEntrees() - barreAction - 60)
             r.verifier("\(nom) : l'image garde au moins "
                        + "\(Int(Fenetre.hauteurMinimaleImageAccueil)) points de haut "
                        + "(\(Int(zone.height)))",
@@ -547,8 +906,11 @@ enum ControlesInterface {
     @MainActor
     private static func dispositionAccueil(_ r: Rapport) {
         _ = NSApplication.shared
-        let hauteurFenetre: CGFloat = 420
-        let largeurFenetre: CGFloat = 620
+        // Les VRAIES dimensions de la fenêtre, pas deux nombres recopiés à côté :
+        // c'est la raison d'être de `Fenetre`, et la barre d'action du lot 5 les
+        // a fait changer.
+        let hauteurFenetre = Fenetre.hauteurFermee
+        let largeurFenetre = Fenetre.largeurFermee
 
         for (nom, prepare) in [
             ("accueil vide", { (_: AppState) in }),

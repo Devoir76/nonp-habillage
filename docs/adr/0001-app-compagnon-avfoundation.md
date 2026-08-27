@@ -126,6 +126,31 @@ aucun sous-titre n'est encore chargé :
   Un choix « autre police du système » reste accessible, signalé comme risqué
   pour le partage. Motif : un profil partagé doit s'afficher **à l'identique**
   chez le destinataire ; une police absente casse cette promesse.
+> ⚠︎ **Amendé le 27/08 — « Habiller » vit dans une barre d'action au bas de la
+> fenêtre**, aligné à droite, hors de toute zone défilante. Il était en haut à
+> droite, dans la barre des dépôts, où l'action finale se lisait comme un
+> accessoire du dépôt. La colonne des réglages était exclue d'emblée : elle
+> défile, et un bouton qui disparaît au défilement n'est plus une action. La
+> convention macOS tranche pour le pied de fenêtre, et c'est la seule place qui
+> tienne dans les trois états de l'écran. Chaque hauteur de fenêtre lui rend sa
+> place (`Fenetre.hauteurBarreAction`) plutôt que de la prendre sur l'accueil ou
+> sur l'aperçu ; le contrôle de disposition compare cette réserve à la hauteur
+> réellement occupée. « Il n'y a rien à graver » descend avec le bouton : la
+> phrase n'explique qu'un bouton grisé.
+
+> ⚠︎ **Amendé le 27/08 — le choix d'image de fond s'appelle « Fond de
+> l'aperçu ».** « Image de fond », puis « Image de la vidéo » : les deux ont été
+> compris comme touchant à la vidéo qui sera gravée, et le paragraphe qui
+> détrompait vivait au bas du volet, trop loin du menu pour être lu. Le contrôle
+> se dit désormais lui-même — nom, réserve « n'affecte que l'aperçu, pas la vidéo
+> exportée » **sur la même ligne** que le menu, et **chaque** entrée libellée
+> (« 1/6 — le plus sombre » … « 6/6 — le plus clair »), là où seuls les deux
+> extrêmes l'étaient et où les quatre du milieu restaient des numéros nus. Les
+> qualificatifs intermédiaires viennent de la luminosité **mesurée**, non du
+> rang : le libellé décrit l'image, pas sa place dans la liste. Du paragraphe
+> supprimé ne survit que le conseil d'usage — regarder les deux extrêmes —, qui
+> est le critère de contraste de ce même §2.
+
 - **Interface en français uniquement.** L'anglais pourra s'ajouter plus tard
   sans refonte si l'app trouve un public au-delà — les textes seront donc
   centralisés dès le départ, pas dispersés dans les vues.
@@ -177,6 +202,22 @@ largeur saute d'une réplique à l'autre.
 > d'un réglage inutile ne vaut pas mieux que de le retirer. Le curseur pourra
 > revenir au lot 6 si la **décision nº6** — qui gouverne la largeur de la colonne
 > de texte — lui rend un effet.
+
+> ⚠︎ **Amendé le 27/08 — la hauteur stabilisable se règle par une case à cocher,
+> plus par un nombre de lignes.** « Lignes maximum : 2 » et « Hauteur constante :
+> 2 lignes » affichaient le même chiffre et paraissaient faire double emploi ;
+> ils ne le font pas — l'un borne le TEXTE, l'autre fige la HAUTEUR DU FOND —,
+> mais l'interface ne le disait nulle part. Cochée, la case reprend la valeur de
+> « Lignes maximum » et la suit ; c'est exactement ce que le schéma partagé
+> recommandait déjà (« même valeur que lignes_max »). Une phrase sous la case
+> nomme la valeur reprise, de sorte que les deux réglages se distinguent enfin.
+> Comme pour la marge intérieure, **le champ `bandeau.hauteur_fixe_lignes` reste
+> au schéma avec sa valeur libre de 0 à 4** : un profil qui dissocie les deux
+> valeurs est lu, appliqué et rendu tel quel, et rien ne le réécrit tant qu'on ne
+> clique pas. Les contrôles couvrent désormais toute la course du champ, y
+> compris les valeurs qu'aucune commande ne sait plus choisir, et vont jusqu'aux
+> pixels — un retrait d'interface est le genre de changement qui casse un champ
+> en silence.
 
 ### 5. La mise en page s'adapte au format de la vidéo
 
@@ -405,6 +446,18 @@ conséquences : « Amendement du 26/08 » au §5.
 **§4 amendé — la marge intérieure quitte l'interface, pas le schéma.** 89 % de
 la course du curseur restaient sans effet ; le champ reste au profil et au rendu,
 la commande disparaît du volet. Elle pourra revenir avec la décision nº6.
+
+## Tranché le 27/08 — retour de test du lot 5
+
+**§2 amendé — « Habiller » descend dans une barre d'action fixe au bas de la
+fenêtre**, aligné à droite, hors de toute zone défilante.
+
+**§2 amendé — « Image de la vidéo » devient « Fond de l'aperçu »**, chaque entrée
+est libellée, et la réserve « n'affecte que l'aperçu » passe sur la ligne du menu.
+
+**§4 amendé — « Hauteur constante » devient une case à cocher** qui reprend la
+valeur de « Lignes maximum ». Le champ `hauteur_fixe_lignes` garde sa valeur
+libre au schéma ; seule la commande disparaît, comme pour la marge intérieure.
 
 ## Décisions restant ouvertes
 
