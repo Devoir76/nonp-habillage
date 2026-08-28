@@ -120,20 +120,6 @@ enum Apercu {
             .first?.lignes ?? []
     }
 
-    /// Le texte à montrer quand aucun fichier de sous-titres n'est chargé.
-    ///
-    /// L'aperçu affiche du texte EN PERMANENCE (ADR §2) : sans cela, on
-    /// règlerait la police et les couleurs sur une image vide.
-    ///
-    /// C'est TOUJOURS la même phrase : voir `PhrasesDeReference.reference` pour
-    /// le pourquoi. Une phrase qui changerait avec le réglage rendrait toute
-    /// comparaison impossible.
-    static func texteDeReference(
-        profil: ProfilHabillage, miseEnPage: MiseEnPageRendu? = nil
-    ) -> String {
-        PhrasesDeReference.reference
-    }
-
     /// Taille d'affichage d'une image dans une zone donnée.
     ///
     /// L'image tient ENTIÈRE : on prend le plus petit des deux facteurs

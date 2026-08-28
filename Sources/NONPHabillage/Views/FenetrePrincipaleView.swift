@@ -323,8 +323,30 @@ struct BarreEntrees: View {
                 Label(erreur, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
                     .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onTapGesture { etat.effacerErreur() }
+            }
+
+            // LE LOGO DU PROFIL A DISPARU. Piège nº1 du lot 6 : le chemin
+            // mémorisé est absolu, il casse dès que l'image change de dossier.
+            //
+            // L'avertissement n'est pas une erreur qu'on chasse d'un clic : il
+            // est DÉRIVÉ de l'état et reste tant que le fichier manque. « Habiller »
+            // est bloqué avec lui — jamais de gravure silencieuse sans le logo
+            // qu'on croyait poser, c'est l'esprit de l'invariant nº4.
+            if let manquant = etat.messageLogoIntrouvable {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Label(manquant, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button(Textes.Profil.choisirUnAutreLogo) { choisirUnAutreLogo() }
+                        .buttonStyle(.bordered)
+                        .fixedSize()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             HStack {
@@ -340,6 +362,15 @@ struct BarreEntrees: View {
         }
         .padding(20)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func choisirUnAutreLogo() {
+        let panneau = NSOpenPanel()
+        panneau.allowedContentTypes = UTType.imagesAcceptees
+        panneau.allowsMultipleSelection = false
+        if panneau.runModal() == .OK, let url = panneau.url {
+            etat.chargerLogo(url)
+        }
     }
 
     private var descriptionVideo: String? {

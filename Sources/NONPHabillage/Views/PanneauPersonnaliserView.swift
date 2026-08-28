@@ -16,6 +16,8 @@ struct PanneauPersonnaliserView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            sectionProfil
+            Divider()
             sectionSousTitres
             Divider()
             sectionBandeau
@@ -25,12 +27,61 @@ struct PanneauPersonnaliserView: View {
         .padding(.top, 4)
     }
 
+    // MARK: - Profil
+
+    /// Le profil : d'où viennent les réglages, et où ils repartent.
+    ///
+    /// En tête de colonne, parce que c'est le geste qui commande tous les
+    /// autres — appliquer un préréglage remplace tout ce qui suit.
+    private var sectionProfil: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(Textes.Profil.titre).font(.headline)
+
+            Text(etat.profil.nom)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Self.prereglages(appliquer: { etat.appliquerPrereglage($0) })
+            Self.importExport(importer: { choisirProfil() },
+                              exporter: { enregistrerProfil() })
+
+            if let message = etat.message {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onTapGesture { etat.effacerMessage() }
+            }
+        }
+    }
+
     // MARK: - Sous-titres
 
+    /// Les réglages de sous-titre, GRISÉS tant qu'aucun fichier n'est chargé.
+    ///
+    /// On ne règle pas l'apparence d'un texte qu'on n'a pas. L'aperçu affichait
+    /// autrefois une phrase à nous pour combler ce vide ; elle a disparu au lot
+    /// 6, parce qu'un texte qui n'est pas le sien, posé sur sa propre vidéo, se
+    /// lit comme un sous-titre qui va être gravé. Les réglages étant désormais
+    /// mémorisés d'une session à l'autre, on règle UNE FOIS avec son vrai
+    /// texte, et le besoin disparaît avec la phrase.
+    ///
+    /// Grisés, et non cachés : la colonne ne saute pas d'une hauteur à l'autre
+    /// quand un fichier arrive, et l'on voit ce qu'on obtiendrait en en
+    /// ajoutant un. Le message dit quoi faire.
     private var sectionSousTitres: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(Textes.Interface.sousTitres).font(.headline)
 
+            if !etat.aSousTitres {
+                Text(Textes.Interface.ajoutezDesSousTitres)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
             // Tailles NOMMÉES plutôt qu'un pourcentage : l'utilisateur choisit
             // une apparence, le moteur en déduit la taille selon le format.
             Self.choixSegmente(Textes.Interface.taille, selection: Binding(
@@ -71,15 +122,24 @@ struct PanneauPersonnaliserView: View {
             Self.pasAPas(Textes.Interface.lignesMax, valeur: Binding(
                 get: { etat.lignesMax },
                 set: { etat.lignesMax = $0 }), de: 1, a: 4)
+            }
+            .modifier(SansSousTitres(actif: etat.aSousTitres))
         }
     }
 
     // MARK: - Bandeau
 
+    /// Le fond derrière le texte — grisé avec le reste, et pour la même raison.
+    ///
+    /// Le schéma partagé le range sous `sous_titre.bandeau` : c'est un réglage
+    /// de sous-titre, pas une section indépendante. Sans fichier, il n'a pas
+    /// plus de sens que la couleur du texte, et le chemin « logo seul » ne doit
+    /// pas laisser croire qu'un bandeau sera gravé.
     private var sectionBandeau: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(Textes.Interface.bandeau).font(.headline)
 
+            VStack(alignment: .leading, spacing: 10) {
             Self.interrupteur(Textes.Interface.bandeauActif, actif: Binding(
                 get: { etat.profil.bandeauActif },
                 set: { etat.profil.bandeauActif = $0 }))
@@ -153,6 +213,8 @@ struct PanneauPersonnaliserView: View {
                 // colonne de texte. Si l'arbitrage lui rend un effet, le curseur
                 // reviendra avec.
             }
+            }
+            .modifier(SansSousTitres(actif: etat.aSousTitres))
         }
     }
 
@@ -204,6 +266,32 @@ struct PanneauPersonnaliserView: View {
         }
     }
 
+    private func choisirProfil() {
+        let panneau = NSOpenPanel()
+        panneau.allowedContentTypes = [.json]
+        panneau.allowsMultipleSelection = false
+        if panneau.runModal() == .OK, let url = panneau.url {
+            etat.importerProfil(url)
+        }
+    }
+
+    private func enregistrerProfil() {
+        let panneau = NSSavePanel()
+        panneau.allowedContentTypes = [.json]
+        panneau.nameFieldStringValue = Self.nomDeFichier(etat.profil.nom) + ".json"
+        if panneau.runModal() == .OK, let url = panneau.url {
+            etat.exporterProfil(vers: url)
+        }
+    }
+
+    /// Le nom du profil, rendu utilisable comme nom de fichier.
+    static func nomDeFichier(_ nom: String) -> String {
+        let propre = nom.lowercased()
+            .folding(options: .diacriticInsensitive, locale: .init(identifier: "fr_FR"))
+            .map { $0.isLetter || $0.isNumber ? $0 : "-" }
+        return String(propre).split(separator: "-").joined(separator: "-")
+    }
+
     private func choisirLogo() {
         let panneau = NSOpenPanel()
         panneau.allowedContentTypes = UTType.imagesAcceptees
@@ -245,6 +333,44 @@ struct PanneauPersonnaliserView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
         }
+    }
+
+    /// Les deux préréglages livrés.
+    ///
+    /// Des BOUTONS, pas un menu : appliquer un préréglage est une action —
+    /// elle remplace tous les réglages en cours — et non le choix d'une valeur
+    /// qui resterait affichée. Après l'avoir appliqué, on le modifie, et le
+    /// profil n'est plus « Neutre » : un menu qui continuerait de l'afficher
+    /// mentirait.
+    @MainActor
+    static func prereglages(appliquer: @escaping (ProfilHabillage) -> Void) -> some View {
+        HStack(spacing: 6) {
+            Text(Textes.Profil.preregle)
+            Button(ProfilHabillage.neutre.nom) { appliquer(.neutre) }
+                .buttonStyle(.bordered)
+            Button(ProfilHabillage.nonpHistorique.nom) { appliquer(.nonpHistorique) }
+                .buttonStyle(.bordered)
+        }
+        .font(.caption)
+    }
+
+    /// Importer, exporter.
+    ///
+    /// L'explication du logo recopié est en INFOBULLE sur « Exporter » : c'est
+    /// une précision qu'on cherche au moment d'exporter, pas un paragraphe à
+    /// relire à chaque ouverture du volet.
+    @MainActor
+    static func importExport(importer: @escaping () -> Void,
+                             exporter: @escaping () -> Void) -> some View {
+        HStack(spacing: 6) {
+            Button(Textes.Profil.importer, action: importer)
+                .buttonStyle(.bordered)
+            Button(Textes.Profil.exporter, action: exporter)
+                .buttonStyle(.bordered)
+                .help(Textes.Profil.logoRecopieExplication)
+            Spacer(minLength: 0)
+        }
+        .font(.caption)
     }
 
     /// Le choix de la police. Libellé à gauche, comme tout menu déroulant.
@@ -348,5 +474,21 @@ extension CouleurProfil {
         let ns = NSColor(couleur).usingColorSpace(.sRGB) ?? .white
         self.init(rouge: Double(ns.redComponent), vert: Double(ns.greenComponent),
                   bleu: Double(ns.blueComponent), opacite: Double(ns.alphaComponent))
+    }
+}
+
+/// Ce qui grise une section faute de sous-titres.
+///
+/// Un seul endroit pour les deux sections concernées, et pour l'opacité comme
+/// pour le `disabled` : les deux doivent aller ensemble, sinon on obtient soit
+/// des commandes mortes qui n'en ont pas l'air, soit des commandes pâles qui
+/// répondent quand même.
+struct SansSousTitres: ViewModifier {
+    let actif: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .disabled(!actif)
+            .opacity(actif ? 1 : 0.45)
     }
 }

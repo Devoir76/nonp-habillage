@@ -146,6 +146,10 @@ enum Textes {
         static let logo = "Logo"
         static let bandeau = "Bandeau"
 
+        /// Le message qui remplace les réglages de sous-titre tant qu'aucun
+        /// fichier n'est chargé.
+        static let ajoutezDesSousTitres =
+            "Ajoutez des sous-titres pour régler leur apparence."
         static let taille = "Taille"
         static let police = "Police"
         static let autrePolice = "Autre police du système…"
@@ -294,7 +298,6 @@ enum Textes {
         // quatre entrées du milieu restaient des numéros nus.
         static let repliquePrecedente = "Réplique précédente"
         static let repliqueSuivante = "Réplique suivante"
-        static let phraseDeReference = "Phrase de référence — aucun sous-titre chargé"
         static func repliqueSur(_ index: Int, _ total: Int) -> String {
             "Réplique \(index) sur \(total)"
         }
@@ -318,6 +321,117 @@ enum Textes {
     }
 
     // MARK: - Logo (lot 4bis)
+
+    // MARK: - Profils
+
+    /// Les messages de lecture, d'écriture et de mémorisation d'un profil.
+    ///
+    /// Calqués sur ceux du prototype — mêmes mots, même forme — parce que les
+    /// deux outils lisent le MÊME fichier : un profil refusé doit se corriger
+    /// avec la même indication, qu'on l'ait ouvert d'un côté ou de l'autre.
+    enum Profil {
+
+        // ── Refus de lecture ────────────────────────────────────────────────
+        static func fichierIllisible(_ nom: String) -> String {
+            "Le fichier « \(nom) » n'a pas pu être ouvert."
+        }
+        static func jsonIllisible(_ detail: String) -> String {
+            "JSON illisible : \(detail)"
+        }
+        static let pasUnObjet = "Le profil doit être un objet JSON."
+        static func doitEtreUnObjet(_ contexte: String) -> String {
+            "« \(contexte) » doit être un objet."
+        }
+        /// Un champ inconnu est REFUSÉ, jamais ignoré : c'est ce qui fait
+        /// qu'une faute de frappe se voit, au lieu de rendre un habillage
+        /// silencieusement différent de celui qu'on croyait décrire.
+        static func champInconnu(_ contexte: String, _ cle: String) -> String {
+            "\(contexte) : champ inconnu « \(cle) »"
+        }
+        static func champObligatoire(_ contexte: String, _ cle: String) -> String {
+            "\(contexte) : champ obligatoire « \(cle) » absent"
+        }
+        static func versionSchema(_ recu: Any?) -> String {
+            "profil : schema_version doit valoir \(ProfilJSON.versionSchema) "
+            + "(reçu \(description(recu)))"
+        }
+        static let nomVide = "profil : « nom » doit être un texte non vide"
+        static func champTexteNonVide(_ contexte: String, _ cle: String) -> String {
+            "\(contexte) : « \(cle) » doit être un texte non vide"
+        }
+        static func nombreAttendu(_ contexte: String, _ cle: String,
+                                  _ mini: Double, _ maxi: Double, _ recu: Any?) -> String {
+            "\(contexte) : « \(cle) » doit être un nombre entre "
+            + "\(ProfilJSON.lisible(mini)) et \(ProfilJSON.lisible(maxi)) "
+            + "(reçu \(description(recu)))"
+        }
+        static func entierAttendu(_ contexte: String, _ cle: String,
+                                  _ mini: Int, _ maxi: Int, _ recu: Any?) -> String {
+            "\(contexte) : « \(cle) » doit être un entier entre \(mini) et \(maxi) "
+            + "(reçu \(description(recu)))"
+        }
+        static func couleurAttendue(_ contexte: String, _ cle: String,
+                                    _ recu: Any?) -> String {
+            "\(contexte) : « \(cle) » doit être une couleur #RRGGBB "
+            + "(reçu \(description(recu)))"
+        }
+        static func presetInvalide(_ recu: Any?) -> String {
+            "logo.position.preset invalide : \(description(recu))"
+        }
+        static func modeInvalide(_ recu: Any?) -> String {
+            "sous_titre.bandeau : « mode » doit valoir « ajuste » ou "
+            + "« pleine-largeur » (reçu \(description(recu)))"
+        }
+
+        /// Les anomalies mises en liste, comme le prototype les présente.
+        static func refus(_ nom: String, _ anomalies: [String]) -> String {
+            "Le profil « \(nom) » n'a pas pu être lu :\n"
+            + anomalies.map { "  • " + $0 }.joined(separator: "\n")
+        }
+
+        private static func description(_ v: Any?) -> String {
+            guard let v else { return "rien" }
+            if let s = v as? String { return "« \(s) »" }
+            return "\(v)"
+        }
+
+        // ── Le logo, et ses deux pièges ─────────────────────────────────────
+
+        /// PIÈGE Nº1 — un chemin absolu casse dès que le fichier bouge.
+        ///
+        /// Jamais de gravure silencieuse sans logo : c'est l'esprit de
+        /// l'invariant nº4, qui refuse la substitution de police muette. Un
+        /// logo qu'on croit poser et qui n'apparaît pas est la même trahison.
+        static func logoIntrouvable(_ chemin: String) -> String {
+            "Le logo du profil est introuvable : \(chemin)\n"
+            + "Choisissez-en un autre — rien ne sera gravé sans lui."
+        }
+        static let choisirUnAutreLogo = "Choisir un autre logo…"
+
+        // ── Mémoire locale ──────────────────────────────────────────────────
+        static let memoireIllisible =
+            "Les réglages de la dernière session n'ont pas pu être relus. "
+            + "Le profil neutre est appliqué."
+
+        // ── Interface ───────────────────────────────────────────────────────
+        static let titre = "Profil"
+        static let importer = "Importer…"
+        static let exporter = "Exporter…"
+        static let preregle = "Préréglage"
+        static func importe(_ nom: String) -> String {
+            "Profil « \(nom) » importé."
+        }
+        static func exporte(_ nom: String, logo: String?) -> String {
+            guard let logo else { return "Profil enregistré dans « \(nom) »." }
+            return "Profil enregistré dans « \(nom) », avec une copie du logo "
+                + "(« \(logo) ») pour qu'il reste lisible sur une autre machine."
+        }
+        /// PIÈGE Nº2 — un profil partagé ne peut pas porter un chemin local.
+        static let logoRecopieExplication =
+            "Le logo est recopié à côté du profil et son chemin est écrit "
+            + "relatif : un profil envoyé à quelqu'un d'autre ne peut pas "
+            + "désigner un dossier qui n'existe que sur cette machine."
+    }
 
     enum Logo {
 

@@ -63,6 +63,25 @@ else
     echo "  ⚠️  Aucune vidéo — recopie de l'audio non contrôlée (--video <fichier>)."
 fi
 
+# ── Le contrat partagé, éprouvé DANS LES DEUX SENS ──────────────────────────
+#
+# Critère d'acceptation du lot 6. Le premier sens — un profil du prototype lu
+# par l'app — se contrôle en Swift (`ControlesProfils`). Le second — un profil
+# de l'app relu par le prototype — ne le peut pas : seul le prototype sait ce
+# qu'il accepte. L'app écrit donc des profils, et le prototype les relit.
+# LECTURE SEULE : rien n'est écrit dans le dossier du prototype (invariant nº5).
+if [[ -f "$PROTOTYPE" ]]; then
+    echo "▸ Profils écrits par l'app, relus par le prototype…"
+    TMP_PROFILS="$(mktemp -d -t nonp-habillage-profils)"
+    trap 'rm -rf "$TMP_PROFILS"' EXIT
+    "$BINAIRE" --profils "$TMP_PROFILS" > /dev/null
+    python3 "$SCRIPT_DIR/profils_python.py" \
+        --profils "$TMP_PROFILS" --prototype "$PROTOTYPE"
+else
+    echo "  ⚠️  Prototype introuvable ($PROTOTYPE) — relecture des profils non"
+    echo "     exécutée. C'est la moitié du critère d'acceptation du lot 6."
+fi
+
 if [[ -n "$CORPUS" ]]; then
     ARGS+=(--corpus "$CORPUS")
 
@@ -71,7 +90,9 @@ if [[ -n "$CORPUS" ]]; then
         # Le JSON contient le texte des sous-titres : dossier temporaire, effacé
         # en sortie, jamais dans l'arborescence du dépôt.
         TMP="$(mktemp -d -t nonp-habillage-parite)"
-        trap 'rm -rf "$TMP"' EXIT
+        # Un seul `trap` : le second effacerait le premier, et le dossier des
+        # profils resterait derrière.
+        trap 'rm -rf "$TMP" "${TMP_PROFILS:-}"' EXIT
         REFERENCE="$TMP/or-python.json"
         python3 "$SCRIPT_DIR/parite_python.py" \
             --corpus "$CORPUS" --sortie "$REFERENCE" \

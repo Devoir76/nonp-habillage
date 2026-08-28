@@ -71,6 +71,23 @@ enum TailleNommee: String, CaseIterable, Identifiable {
             abs($0.longueurLigneCible - longueur) < abs($1.longueurLigneCible - longueur)
         } ?? .grande
     }
+
+    /// La taille nommée la plus proche d'une TAILLE DE POLICE.
+    ///
+    /// Le pendant de la précédente, et le pont provisoire entre le schéma
+    /// partagé et l'interface : `taille_pct_hauteur` est au fichier,
+    /// `longueurLigneCible` ne l'est pas. Un profil qui arrive avec 7,2 % de
+    /// hauteur repart donc avec 32 caractères — « Grande » —, faute de quoi il
+    /// porterait la police du fichier et la longueur de ligne de la session
+    /// précédente, deux réglages qui ne se sont jamais rencontrés.
+    ///
+    /// C'est une déduction, pas un champ : la question de savoir si
+    /// `longueur_ligne_cible` doit entrer au schéma est la décision nº6.
+    static func laPlusProche(deTaille ratio: Double) -> TailleNommee {
+        allCases.min {
+            abs($0.tailleRatio - ratio) < abs($1.tailleRatio - ratio)
+        } ?? .grande
+    }
 }
 
 // MARK: - Polices
@@ -133,43 +150,15 @@ enum CouleursProposees {
     ]
 }
 
-// MARK: - Phrases de référence
-
-/// Ce que l'aperçu affiche quand aucun fichier de sous-titres n'est chargé.
-///
-/// L'ADR §2 est explicite : « Régler une taille, une couleur ou une police à
-/// l'aveugle n'a pas de sens. » L'aperçu montre donc du texte **en permanence**.
-/// Sans fichier, une phrase de référence « calibrée sur la longueur de ligne
-/// cible de la taille choisie, contenant accents, majuscules, jambages et
-/// ponctuation — de quoi juger lisibilité, contraste et césure ».
-enum PhrasesDeReference {
-
-    /// LA phrase de référence. Une seule, et toujours la même.
-    ///
-    /// La première version en choisissait une parmi plusieurs, « la plus longue
-    /// qui tient encore ». L'intention était bonne — remplir les lignes
-    /// disponibles — mais l'effet était pervers : en réduisant la taille du
-    /// texte, on faisait apparaître une phrase PLUS LONGUE, si bien que le bloc
-    /// occupait toujours la même place et que le réglage semblait sans effet.
-    /// On ne compare pas deux réglages si le texte change entre les deux.
-    ///
-    /// Longueur choisie pour tenir en deux lignes aux QUATRE tailles nommées :
-    /// au-delà de 2 × 28 caractères, elle déborderait à « Très grande ».
-    ///
-    /// Contenu : accents (é, à), majuscules, jambages descendants (j, g, p),
-    /// apostrophe et ponctuation — de quoi juger lisibilité, contraste et césure.
-    /// Elle ne porte de ponctuation forte qu'à la fin, et c'est délibéré : un
-    /// point-virgule au milieu ferait mordre la règle de coupure à la
-    /// ponctuation, qui scinderait la phrase en deux répliques dont l'aperçu ne
-    /// montrerait que la première — une seule ligne, là où l'on veut en voir
-    /// deux.
-    static let reference = "Ce jour-là, PERSONNE n'a bougé avant l'aube grise."
-
-    /// La phrase de référence, quelle que soit la taille.
-    ///
-    /// La signature garde ses paramètres pour rester lisible côté appelant, mais
-    /// le résultat ne dépend plus d'eux : c'est tout l'objet de la correction.
-    static func phrase(pourLongueurLigne longueur: Int, lignes: Int) -> String {
-        reference
-    }
-}
+// Les phrases de référence ont disparu au lot 6.
+//
+// L'aperçu affichait, faute de fichier de sous-titres, une phrase à nous —
+// « Ce jour-là, PERSONNE n'a bougé avant l'aube grise. » — pour ne pas régler à
+// l'aveugle (ADR §2). C'était un pis-aller de l'époque où rien n'était
+// mémorisé : un texte qui n'est pas le sien, affiché sur sa propre vidéo, se
+// lit comme un sous-titre qui va être gravé, et prête à confusion.
+//
+// La persistance du lot 6 supprime le besoin : les réglages sont retrouvés
+// d'une session à l'autre, on règle donc UNE FOIS, avec son vrai texte. Et
+// tant qu'aucun fichier n'est chargé, les réglages de sous-titre sont grisés —
+// il n'y a plus rien à régler à l'aveugle.

@@ -30,17 +30,36 @@ final class AppState: ObservableObject {
 
     // MARK: - Entrées
 
+    /// Au lancement, le profil de la DERNIÈRE SESSION — logo compris.
+    ///
+    /// À défaut, le profil neutre, comme l'ADR §2 le prévoit pour un premier
+    /// lancement. Un fichier de mémoire abîmé retombe sur le même cas : mieux
+    /// vaut ouvrir sur des réglages sobres que refuser de s'ouvrir.
+    init() {
+        if let memorise = MemoireProfil.relire() {
+            profil = memorise
+        }
+    }
+
     @Published private(set) var video: URL?
     @Published private(set) var tailleVideo: CGSize?
     @Published private(set) var dureeVideo: Double = 0
     @Published private(set) var sousTitres: URL?
     @Published private(set) var cues: [Cue] = []
     @Published private(set) var erreur: String?
+    /// Ce qui s'est bien passé, et mérite d'être dit une fois — un profil
+    /// importé, un profil écrit. Séparé de `erreur` : les deux ne se lisent pas
+    /// de la même façon et ne doivent pas se chasser l'un l'autre.
+    @Published var message: String?
 
     // MARK: - Réglages
 
     @Published var profil: ProfilHabillage = .neutre {
-        didSet { if profil != oldValue { rafraichirApercu() } }
+        didSet {
+            guard profil != oldValue else { return }
+            rafraichirApercu()
+            memoriserProfil()
+        }
     }
     @Published var voletOuvert = false {
         didSet { if voletOuvert != oldValue { rafraichirApercu() } }
@@ -127,8 +146,29 @@ final class AppState: ObservableObject {
         sousTitres != nil || (profil.logoActif && profil.logoFichier != nil)
     }
 
+    /// Un fichier de sous-titres est-il chargé ?
+    ///
+    /// Ce qui commande l'accès aux réglages de sous-titre : sans texte à soi,
+    /// on ne règle pas l'apparence d'un texte.
+    var aSousTitres: Bool { sousTitres != nil }
+
+    /// **Le profil pose un logo, et ce logo a disparu.**
+    ///
+    /// PIÈGE Nº1 du lot 6. Le chemin mémorisé — ou celui d'un profil importé —
+    /// est absolu : il casse dès que l'image change de dossier. Le laisser
+    /// passer graverait la vidéo SANS logo, sans que rien ne l'ait dit. C'est
+    /// exactement ce que l'invariant nº4 refuse pour une police, et pour la
+    /// même raison : une substitution muette part chez le destinataire.
+    ///
+    /// L'état est donc bloquant, comme une police absente, et le message
+    /// propose d'en choisir un autre.
+    var logoIntrouvable: Bool {
+        guard profil.logoActif, let f = profil.logoFichier else { return false }
+        return !FileManager.default.fileExists(atPath: f.path)
+    }
+
     var peutHabiller: Bool {
-        video != nil && quelqueChoseAGraver && etape == .accueil
+        video != nil && quelqueChoseAGraver && !logoIntrouvable && etape == .accueil
     }
 
     // MARK: - Chargement des entrées
@@ -216,6 +256,83 @@ final class AppState: ObservableObject {
         profil.logoFichier = nil
     }
 
+    // MARK: - Profils
+
+    /// Applique un préréglage livré, en gardant le logo déjà choisi.
+    ///
+    /// Changer de préréglage ne doit pas faire redéposer son logo : c'est un
+    /// fichier de l'utilisateur, pas un réglage du profil livré. Les deux
+    /// préréglages arrivent d'ailleurs sans image (`logoFichier: nil`).
+    func appliquerPrereglage(_ prereglage: ProfilHabillage) {
+        var p = prereglage
+        p.logoFichier = profil.logoFichier
+        p.logoActif = prereglage.logoActif && profil.logoFichier != nil
+        p.logoRecadreEnCercle = profil.logoRecadreEnCercle
+        profil = p
+        erreur = nil
+    }
+
+    /// Importe un profil `.json`.
+    ///
+    /// Le fichier passe par le validateur strict : champs inconnus refusés,
+    /// toutes les anomalies d'un coup. Un profil refusé ne change RIEN aux
+    /// réglages en cours — on ne remplace pas un état correct par un état
+    /// partiel.
+    func importerProfil(_ url: URL) {
+        do {
+            profil = try ProfilJSON.lire(url)
+            erreur = nil
+            message = Textes.Profil.importe(profil.nom)
+        } catch let e as ErreurProfil {
+            erreur = Textes.Profil.refus(url.lastPathComponent, e.anomalies)
+        } catch {
+            erreur = "\(error)"
+        }
+    }
+
+    /// Exporte le profil courant, avec une copie du logo à côté.
+    func exporterProfil(vers url: URL) {
+        do {
+            let copie = try ProfilJSON.ecrire(profil, vers: url)
+            message = Textes.Profil.exporte(url.lastPathComponent,
+                                            logo: copie?.lastPathComponent)
+            erreur = nil
+        } catch let e as ErreurProfil {
+            erreur = e.anomalies.joined(separator: "\n")
+        } catch {
+            erreur = "\(error)"
+        }
+    }
+
+    /// Le message à afficher quand le logo du profil a disparu.
+    ///
+    /// DÉRIVÉ de l'état, jamais posé une fois dans `erreur` : une erreur
+    /// s'efface — au premier clic, en retirant la vidéo — alors que le fichier,
+    /// lui, est toujours absent. Un avertissement qui disparaît avant le
+    /// problème qu'il décrit est pire que pas d'avertissement.
+    var messageLogoIntrouvable: String? {
+        guard logoIntrouvable, let f = profil.logoFichier else { return nil }
+        return Textes.Profil.logoIntrouvable(f.path)
+    }
+
+    /// Enregistre le profil courant, sans bloquer la frappe.
+    ///
+    /// Un coup de curseur produit des dizaines de changements : écrire à chaque
+    /// fois ferait autant d'accès disque pour un seul geste. Le dernier gagne,
+    /// une demi-seconde après le dernier changement.
+    private var memorisation: Task<Void, Never>?
+
+    private func memoriserProfil() {
+        memorisation?.cancel()
+        let aEnregistrer = profil
+        memorisation = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
+            MemoireProfil.enregistrer(aEnregistrer)
+            _ = self
+        }
+    }
+
     func retirerSousTitres() {
         sousTitres = nil
         cues = []
@@ -225,6 +342,7 @@ final class AppState: ObservableObject {
     }
 
     func effacerErreur() { erreur = nil }
+    func effacerMessage() { message = nil }
 
     // MARK: - Aperçu
 
@@ -255,6 +373,16 @@ final class AppState: ObservableObject {
         fondsDisponibles = fonds
         indexFond = fonds.isEmpty ? 0 : fonds.count / 2
         rafraichirApercu()
+    }
+
+    /// Pose une vidéo sans l'analyser.
+    ///
+    /// Même porte que les deux suivantes, et pour la même raison : `video` est
+    /// en lecture seule pour les vues, et `chargerVideo` est asynchrone et exige
+    /// un vrai fichier. Sans elle, `peutHabiller` — donc le blocage du logo
+    /// disparu — ne pourrait pas être éprouvé, faute de vidéo.
+    func poserVideoDeControle(_ url: URL) {
+        video = url
     }
 
     /// Pose des répliques sans passer par un fichier.
@@ -290,14 +418,18 @@ final class AppState: ObservableObject {
         do {
             let resultat: ResultatApercu
             if repliques.isEmpty {
-                // Aucun sous-titre : la phrase de référence, pour ne jamais
-                // régler à l'aveugle.
-                let mep = try MiseEnPageRendu.calculer(
-                    profil: profil,
-                    largeurVideo: fond.width, hauteurVideo: fond.height)
+                // Aucun sous-titre : le plan NU, avec le logo s'il y en a un.
+                //
+                // Il y avait là une phrase de référence, pour ne pas régler à
+                // l'aveugle. Elle était un pis-aller de l'époque où rien
+                // n'était mémorisé : un texte qui n'est pas le sien, affiché
+                // sur sa propre vidéo, se lit comme un sous-titre qui va être
+                // gravé. Les réglages étant désormais retrouvés d'une session à
+                // l'autre, on règle UNE FOIS, avec son vrai texte, et le besoin
+                // disparaît. Le chemin « logo seul » y gagne aussi : il ne
+                // montre plus un bandeau et une phrase dont il n'a que faire.
                 resultat = try Apercu.composer(
-                    fond: fond, profil: profil,
-                    texte: Apercu.texteDeReference(profil: profil, miseEnPage: mep),
+                    fond: fond, profil: profil, lignes: [],
                     avecSousTitres: false)
             } else {
                 let index = min(max(0, indexReplique), repliques.count - 1)

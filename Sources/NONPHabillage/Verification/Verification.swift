@@ -14,6 +14,7 @@
 //   NONPHabillage --verifier --corpus <dossier>
 //   NONPHabillage --verifier --or-python <fichier.json>
 //   NONPHabillage --verifier --video <fichier.mp4>
+//   NONPHabillage --profils <dossier>
 //
 // En pratique on passe par `./Scripts/verifier.sh`, qui compile, fabrique la
 // référence Python et enchaîne le tout.
@@ -29,6 +30,11 @@ enum Verification {
         // Capture de l'interface (lot 5).
         if args.contains("--capture") {
             exit(MainActor.assumeIsolated { CaptureInterface.executer(arguments: args) })
+        }
+
+        // Profils écrits pour relecture par le prototype (lot 6).
+        if args.contains("--profils") {
+            exit(CommandeProfils.executer(arguments: args))
         }
 
         // Export vidéo en ligne de commande (lot 4).
@@ -75,6 +81,7 @@ enum Verification {
         ControlesRendu.executer(r, corpus: corpus)
         ControlesLogo.executer(r)
         ControlesInterface.executer(r)
+        ControlesProfils.executer(r)
         ControlesExport.executer(r, videoReelle: videoReelle)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()

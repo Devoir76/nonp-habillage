@@ -163,12 +163,9 @@ struct BarreChoixApercu: View {
 
             Spacer(minLength: 0)
 
-            if etat.repliques.isEmpty {
-                Text(Textes.Interface.phraseDeReference)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            } else {
+            // Sans fichier de sous-titres, rien à droite : il n'y a plus de
+            // phrase de référence à annoncer, et l'aperçu montre le plan nu.
+            if !etat.repliques.isEmpty {
                 HStack(spacing: 6) {
                     Button {
                         etat.indexReplique = max(0, etat.indexReplique - 1)

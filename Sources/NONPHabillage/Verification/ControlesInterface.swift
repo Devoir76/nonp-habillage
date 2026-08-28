@@ -25,7 +25,7 @@ enum ControlesInterface {
         r.section("Interface — l'aperçu reflète chaque réglage")
         apercuReagit(r)
 
-        r.section("Interface — texte affiché en permanence")
+        r.section("Interface — les quatre tailles nommées")
         textePermanent(r)
 
         r.section("Interface — tailles nommées")
@@ -733,13 +733,17 @@ enum ControlesInterface {
                    + "sans phrase de référence ni bandeau vide",
                    !ImagesReference.differe(nu.image, de: fond))
 
-        // Et le volet, lui, montre bien du texte : les deux images ont des rôles
-        // différents, et cette différence est le cœur du contrôle.
+        // ET LE VOLET AUSSI, depuis le lot 6. C'est le contrôle qui a changé de
+        // sens : il exigeait auparavant que le volet, lui, affiche une phrase à
+        // nous. Un texte qui n'est pas le sien, posé sur sa propre vidéo, se lit
+        // comme un sous-titre qui va être gravé. Les réglages étant désormais
+        // mémorisés, on règle une fois avec son vrai texte, et l'aperçu sans
+        // fichier ne montre plus que le plan.
         let auVolet = try? Apercu.composer(
-            fond: fond, profil: profil,
-            texte: Apercu.texteDeReference(profil: profil), avecSousTitres: false)
-        r.verifier("l'aperçu du volet, lui, affiche la phrase de référence",
-                   auVolet.map { ImagesReference.differe($0.image, de: fond) } == true)
+            fond: fond, profil: profil, lignes: [], avecSousTitres: false)
+        r.verifier("le volet non plus n'invente aucun texte : le plan nu, "
+                   + "octet pour octet",
+                   auVolet.map { !ImagesReference.differe($0.image, de: fond) } == true)
 
         // Avec un fichier de sous-titres, l'accueil montre EXACTEMENT l'aperçu :
         // ce texte-là est réel, il sera gravé.
@@ -1075,10 +1079,15 @@ enum ControlesInterface {
         let T = Textes.Interface.self
 
         var lignes: [(String, AnyView)] = []
-        for titre in [T.sousTitres, T.bandeau, T.logo] {
+        for titre in [Textes.Profil.titre, T.sousTitres, T.bandeau, T.logo] {
             lignes.append((titre, AnyView(Text(titre).font(.headline))))
         }
         lignes += [
+            (Textes.Profil.preregle, AnyView(Volet.prereglages(appliquer: { _ in }))),
+            (Textes.Profil.exporter, AnyView(Volet.importExport(importer: {},
+                                                                exporter: {}))),
+            (T.ajoutezDesSousTitres, AnyView(Text(T.ajoutezDesSousTitres)
+                .font(.caption).fixedSize(horizontal: false, vertical: true))),
             (T.taille, AnyView(Volet.choixSegmente(
                 T.taille, selection: .constant(TailleNommee.allCases[0])) {
                     ForEach(TailleNommee.allCases) { t in
@@ -1280,35 +1289,37 @@ enum ControlesInterface {
     private static let texteDEssai =
         "Il m'a dit qu'il n'avait rien vu ce jour-là, vers quatre heures du matin."
 
-    // MARK: - Texte permanent
+    // MARK: - Les quatre tailles nommées
 
+    /// Une taille nommée doit CHANGER LA TAILLE DU TEXTE.
+    ///
+    /// La rubrique s'appelait « texte affiché en permanence » : elle vérifiait
+    /// qu'une phrase de référence s'affichait sans fichier de sous-titres, et
+    /// qu'elle restait la même aux quatre tailles. La phrase a disparu au lot 6
+    /// — voir `ReglagesInterface` — mais l'essentiel de ce que la rubrique
+    /// prouvait n'en dépendait pas : que les quatre tailles nommées donnent
+    /// quatre polices distinctes, et croissantes. C'est le défaut qui l'avait
+    /// motivée, et il reste à surveiller.
+    ///
+    /// Le texte d'épreuve est désormais celui des autres contrôles, un vrai
+    /// sous-titre : plus rien, dans l'application, n'en fabrique.
     private static func textePermanent(_ r: Rapport) {
-        // Sans fichier de sous-titres, l'aperçu montre quand même du texte.
         var taillesDePolice: [Int] = []
         for taille in TailleNommee.allCases {
             var profil = ProfilHabillage.neutre
             profil.longueurLigneCible = taille.longueurLigneCible
             profil.tailleRatio = taille.tailleRatio
 
-            // LA MÊME phrase pour les quatre tailles. Une phrase qui changerait
-            // avec le réglage rendrait la comparaison impossible : c'est ce qui
-            // faisait croire que changer de taille ne produisait aucun effet.
-            r.egal("\(Textes.Interface.nomTaille(taille)) : phrase de référence "
-                   + "identique",
-                   Apercu.texteDeReference(profil: profil),
-                   PhrasesDeReference.reference)
-
             guard let mep = try? MiseEnPageRendu.calculer(
                 profil: profil, largeurVideo: 1920, hauteurVideo: 1080) else { continue }
             taillesDePolice.append(mep.parametres.taille)
 
-            // Deux lignes exactement : une seule ne montrerait pas la césure,
-            // trois seraient tronquées par la resegmentation.
             let lignes = Apercu.premiereReplique(
-                texte: PhrasesDeReference.reference, profil: profil, miseEnPage: mep)
-            r.egal("\(Textes.Interface.nomTaille(taille)) : la phrase occupe deux "
-                   + "lignes (police \(mep.parametres.taille) px)",
-                   lignes.count, 2)
+                texte: texteDEssai, profil: profil, miseEnPage: mep)
+            r.verifier("\(Textes.Interface.nomTaille(taille)) : le texte "
+                       + "d'épreuve tient en \(profil.lignesMax) lignes au plus "
+                       + "(police \(mep.parametres.taille) px)",
+                       !lignes.isEmpty && lignes.count <= profil.lignesMax)
         }
 
         // ET LA TAILLE DU TEXTE DOIT CHANGER. C'est le défaut qui a motivé la
@@ -1322,18 +1333,6 @@ enum ControlesInterface {
                        + "soit \(Int(Double(plusGrande - plusPetite) / Double(plusPetite) * 100)) %)",
                        Double(plusGrande) >= Double(plusPetite) * 1.4)
         }
-
-        // La phrase doit porter de quoi juger : accents, majuscules, jambages,
-        // ponctuation (ADR §2).
-        let phrase = Apercu.texteDeReference(profil: .neutre)
-        r.verifier("la phrase contient des accents",
-                   phrase.rangeOfCharacter(from: CharacterSet(charactersIn: "éèêàçùôî")) != nil)
-        r.verifier("la phrase contient une majuscule",
-                   phrase.rangeOfCharacter(from: .uppercaseLetters) != nil)
-        r.verifier("la phrase contient un jambage descendant",
-                   phrase.rangeOfCharacter(from: CharacterSet(charactersIn: "pqgjy")) != nil)
-        r.verifier("la phrase contient de la ponctuation",
-                   phrase.rangeOfCharacter(from: CharacterSet(charactersIn: ".,;:!?'«»")) != nil)
 
         // Avec un fichier, c'est la réplique LA PLUS LONGUE qui vient d'abord.
         let cues = [
@@ -1522,12 +1521,15 @@ enum ControlesInterface {
         r.verifier("sous-titres seuls : aucun rectangle de logo",
                    (st?.rectangleLogo) == nil)
 
-        // Logo seul : pas de sous-titres, mais l'aperçu montre quand même la
-        // phrase de référence — sinon on réglerait le logo sur une image nue.
+        // Logo seul : pas de sous-titres, et l'aperçu ne montre QUE le plan et
+        // le logo. C'est le chemin qui gagne le plus au retrait de la phrase de
+        // référence — on ne règle plus un logo par-dessus un bandeau et un
+        // texte dont on n'a que faire.
         let logoSeul = try? Apercu.composer(
-            fond: fond, profil: avecLogo,
-            texte: Apercu.texteDeReference(profil: avecLogo), avecSousTitres: false)
+            fond: fond, profil: avecLogo, lignes: [], avecSousTitres: false)
         r.verifier("logo seul : un aperçu est produit", logoSeul != nil)
+        r.verifier("logo seul : aucun sous-titre n'est peint",
+                   logoSeul.map { !ImagesReference.differe($0.image, de: fond) } == true)
 
         // Rien à graver : l'interface le dit plutôt que de laisser cliquer.
         r.verifier("« rien à graver » est formulé",

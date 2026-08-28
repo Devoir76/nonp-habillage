@@ -152,8 +152,14 @@ enum CaptureInterface {
         return ecrites.isEmpty ? 1 : 0
     }
 
-    /// Rend le même fond aux quatre tailles nommées, empilés, sans sous-titres
-    /// chargé — donc avec la phrase de référence.
+    /// Rend le même fond aux quatre tailles nommées, pour les comparer à l'œil.
+    ///
+    /// Le texte d'épreuve appartient à CET outil, et pas à l'application :
+    /// depuis le lot 6, l'aperçu sans fichier de sous-titres ne montre plus que
+    /// le plan nu — la phrase de référence a disparu, un texte qui n'est pas le
+    /// sien prêtant à confusion sur sa propre vidéo. Une planche de comparaison
+    /// a pourtant besoin d'une phrase, et toujours LA MÊME : une phrase qui
+    /// changerait avec la taille rendrait la comparaison impossible.
     @MainActor
     private static func planchesTailles(_ video: URL, dans dossier: URL) {
         guard let fond = try? ImagesReference.image(de: video, a: 5) else {
@@ -166,17 +172,23 @@ enum CaptureInterface {
             guard let mep = try? MiseEnPageRendu.calculer(
                 profil: profil, largeurVideo: fond.width, hauteurVideo: fond.height),
                 let resultat = try? Apercu.composer(
-                    fond: fond, profil: profil,
-                    texte: Apercu.texteDeReference(profil: profil, miseEnPage: mep),
-                    avecSousTitres: false) else { continue }
+                    fond: fond, profil: profil, texte: phraseDEpreuve,
+                    avecSousTitres: true) else { continue }
             let nom = "taille-\(taille.rawValue)"
             try? ImagesReference.ecrire(
                 resultat.image, vers: dossier.appendingPathComponent("\(nom).png"))
             print("  ✓ \(nom).png — police \(mep.parametres.taille) px, "
                   + "cible \(taille.longueurLigneCible) car.")
-            print("      phrase : « \(Apercu.texteDeReference(profil: profil, miseEnPage: mep)) »")
+            print("      phrase : « \(phraseDEpreuve) »")
         }
     }
+
+    /// La phrase des planches de comparaison. Accents, majuscules, jambages
+    /// descendants, apostrophe et ponctuation : de quoi juger lisibilité,
+    /// contraste et césure. Assez courte pour tenir en deux lignes à la plus
+    /// grande des quatre tailles.
+    private static let phraseDEpreuve =
+        "Ce jour-là, PERSONNE n'a bougé avant l'aube grise."
 
     /// Laisse tourner la boucle d'exécution jusqu'à ce qu'une condition soit
     /// remplie. Les chargements d'`AppState` sont asynchrones.

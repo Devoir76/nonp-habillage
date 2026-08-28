@@ -240,6 +240,48 @@ intermédiaire relevés sur le pourtour), image rectangulaire ramenée au carré
 
 ---
 
+## D-9 — Un profil de l'app peut dépasser ce que le prototype sait lire (lot 6)
+
+**Origine** : lot 6, mesuré le 28/08/2026 en faisant relire par
+`charger_profil()` des profils écrits par l'app.
+
+**Le fait.** Le schéma de ce dépôt porte trois champs ajoutés le 23/08 —
+`bandeau.mode`, `bandeau.hauteur_fixe_lignes`,
+`bandeau.marge_interieure_pct_largeur`. Le prototype ne les connaît pas : ni son
+`profil-habillage.schema.json`, ni son `_controler()`, qui les refuse comme
+champs inconnus. L'amendement a été **proposé**, jamais appliqué au prototype.
+
+**Ce que l'app fait.** Elle n'écrit un champ facultatif que s'il s'écarte de sa
+valeur par défaut. C'est la règle que le schéma se donne à lui-même, et elle
+suffit pour que le critère d'acceptation du lot soit tenu partout où il peut
+l'être :
+
+| Profil écrit par l'app | Relu par le prototype |
+|---|---|
+| préréglage **NONP** | accepté sans retouche |
+| NONP sans logo | accepté |
+| profil réglé à la main, bandeau `ajuste` | accepté |
+| préréglage **Neutre** (bandeau pleine largeur) | **refusé** — `mode`, `hauteur_fixe_lignes` |
+
+**Pourquoi ce refus est juste.** Le prototype ne sait pas rendre un bandeau
+pleine largeur. Taire `mode` pour lui faire accepter le fichier lui ferait rendre
+autre chose que ce que le fichier décrit — un bandeau ajusté là où l'on a
+demandé une bande. Mieux vaut un refus lisible qu'un rendu faux.
+
+**Ce que cela coûte.** Un profil « Neutre » exporté depuis l'app n'est pas
+utilisable dans le prototype. Un profil issu du prototype, lui, est toujours lu
+par l'app — ce sens-là n'a aucune restriction.
+
+**Comment cela se referme.** Le jour où le prototype reçoit l'amendement du
+23/08, ces fichiers passent sans changer d'une virgule. C'est la décision
+ouverte nº5 de l'ADR (« amender le prototype dès maintenant, ou attendre »).
+
+**Contrôlé par** : `Scripts/profils_python.py`, appelé par `./Scripts/verifier.sh`
+quand le prototype est présent. Le nom des fichiers porte l'attente — `accepte-*`
+doit passer, `amende-*` doit être refusé **et seulement** sur ces trois champs.
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le
