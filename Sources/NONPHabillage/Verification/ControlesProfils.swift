@@ -38,10 +38,11 @@ enum ControlesProfils {
         r.section("Profils — ce que l'app écrit, et ce que le prototype en fait")
         ecritureEtroite(r)
 
-        r.section("Profils — préréglages livrés")
+        r.section("Profils — aucun préréglage : des réglages, et de la mémoire")
         prereglages(r)
+        MainActor.assumeIsolated { reglagesParDefaut(r) }
 
-        r.section("Profils — l'habillage NONP, devenu fichier d'exemple")
+        r.section("Profils — les apparences livrées, devenues des fichiers")
         profilDExemple(r)
 
         r.section("Profils — les réglages d'hier survivent")
@@ -548,44 +549,82 @@ enum ControlesProfils {
 
     // MARK: - Préréglages
 
+    /// **Il n'y a plus de préréglages**, et c'est ce qui se contrôle.
+    ///
+    /// Décidé le 28/08/2026. La notion de profil était mise en avant bien
+    /// au-delà de ce qu'elle sert : la plupart des utilisateurs n'auront qu'un
+    /// seul habillage, et la seule chose qu'ils en attendent est qu'il se
+    /// retrouve d'une session à l'autre. « Neutre » reste le point de départ à
+    /// la première ouverture ; ensuite ce sont les réglages mémorisés.
+    ///
+    /// Le contrôle est mécanique parce que la tentation reviendra : rajouter un
+    /// bouton de préréglage au volet est un geste d'une ligne.
     private static func prereglages(_ r: Rapport) {
-        // ── Un préréglage livré décrit une APPARENCE, pas une organisation ──
-        //
-        // Tranché le 28/08/2026. Le nom de l'application dit son origine ; ses
-        // préréglages n'ont pas à la répéter, et un bouton au nom d'une
-        // association imposerait une identité visuelle à qui ne la connaît pas.
-        // Le contrôle est mécanique parce que la tentation reviendra : ajouter
-        // « NONP » à la liste des préréglages est un geste d'une ligne.
-        let livres = [ProfilHabillage.neutre, .bandeauColore]
         r.egal("le profil appliqué au premier lancement est le neutre",
                ProfilHabillage.neutre.nom, "Neutre")
-        r.egal("l'autre préréglage livré décrit son apparence",
-               ProfilHabillage.bandeauColore.nom, "Bandeau coloré")
-        for profil in livres {
-            r.verifier("« \(profil.nom) » ne nomme aucune organisation",
-                       !profil.nom.localizedCaseInsensitiveContains("NONP"))
-        }
-
         r.verifier("le neutre ne pose aucun logo — imposer celui d'une "
                    + "association à l'ouverture serait déroutant",
                    !ProfilHabillage.neutre.logoActif)
         r.verifier("le neutre emploie le bandeau pleine largeur",
                    ProfilHabillage.neutre.bandeauMode == .pleineLargeur)
-        r.verifier("« Bandeau coloré » conserve le bandeau ajusté, comme le "
-                   + "prototype", ProfilHabillage.bandeauColore.bandeauMode == .ajuste)
-        r.verifier("et son bandeau est bien coloré et opaque — ce que son nom "
-                   + "annonce",
+
+        // Le volet ne contient plus que des RÉGLAGES : aucun libellé de profil
+        // n'y figure. Les trois gestes sont au menu Fichier.
+        r.verifier("le menu Fichier porte les trois gestes, et leurs libellés "
+                   + "disent ce qu'ils font hors contexte",
+                   Textes.Profil.importerUnProfil.contains("profil")
+                   && Textes.Profil.exporterLeProfil.contains("profil")
+                   && Textes.Profil.reglagesParDefaut
+                       .localizedCaseInsensitiveContains("défaut"))
+
+        // « Bandeau coloré » n'est plus un préréglage : c'est le profil de
+        // référence des tests de parité, et un fichier d'exemple. Ses valeurs
+        // n'ont pas bougé — c'est tout ce qui compte ici.
+        r.verifier("« Bandeau coloré » garde le bandeau ajusté du prototype",
+                   ProfilHabillage.bandeauColore.bandeauMode == .ajuste)
+        r.verifier("et son bandeau est coloré et opaque",
                    ProfilJSON.hex(ProfilHabillage.bandeauColore.bandeauCouleur) != "#000000"
                    && ProfilHabillage.bandeauColore.bandeauCouleur.opacite == 1)
-
-        // Les deux préréglages se distinguent à l'œil : deux boutons qui
-        // rendraient pareil ne seraient pas deux préréglages.
-        r.verifier("les deux préréglages livrés donnent des habillages distincts",
+        r.verifier("les deux apparences livrées restent distinctes",
                    ProfilHabillage.neutre.bandeauMode
                    != ProfilHabillage.bandeauColore.bandeauMode)
     }
 
-    // MARK: - Le profil NONP, devenu fichier d'exemple
+    /// « Revenir aux réglages par défaut » remet le neutre, et GARDE le logo.
+    @MainActor
+    private static func reglagesParDefaut(_ r: Rapport) {
+        let bac = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("nonp-defaut-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: bac, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: bac) }
+        let logo = bac.appendingPathComponent("logo.png")
+        FileManager.default.createFile(atPath: logo.path, contents: Data([0x89, 0x50]))
+
+        let etat = AppState()
+        var regle = ProfilHabillage.bandeauColore
+        regle.nom = "Le mien"
+        regle.couleurTexte = CouleurProfil(hex: "#FFD400")
+        regle.lignesMax = 4
+        regle.logoActif = true
+        regle.logoFichier = logo
+        regle.logoRecadreEnCercle = true
+        etat.profil = regle
+
+        etat.revenirAuxReglagesParDefaut()
+        r.egal("les réglages redeviennent ceux du neutre",
+               etat.profil.bandeauMode, ProfilHabillage.neutre.bandeauMode)
+        r.egal("y compris la couleur du texte",
+               ProfilJSON.hex(etat.profil.couleurTexte),
+               ProfilJSON.hex(ProfilHabillage.neutre.couleurTexte))
+        r.egal("LE LOGO EST GARDÉ — c'est un fichier de l'utilisateur, pas un "
+               + "réglage ; le retirer a son propre bouton",
+               etat.profil.logoFichier?.path, logo.path)
+        r.verifier("et il reste actif", etat.profil.logoActif)
+        r.egal("son recadrage rond aussi", etat.profil.logoRecadreEnCercle, true)
+        r.verifier("la commande le dit", etat.message != nil)
+    }
+
+    // MARK: - Le profil NONP, devenu fichier d'exemple    // MARK: - Le profil NONP, devenu fichier d'exemple
 
     /// L'habillage NONP a quitté les préréglages pour un fichier livré.
     ///
@@ -594,51 +633,59 @@ enum ControlesProfils {
     /// fichier qu'on s'échange le démontre ; un bouton câblé dans l'application
     /// ne le démontrait pas, il l'imposait.
     private static func profilDExemple(_ r: Rapport) {
-        // Le fichier tel qu'il est versionné. Cherché dans le dépôt d'abord —
-        // les contrôles tournent depuis la racine —, dans le bundle ensuite.
-        let candidats = [
-            URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent("Resources/profils-exemples/nonp.json"),
-            ProfilJSON.dossierExemples?.appendingPathComponent("nonp.json"),
-        ].compactMap { $0 }
+        let attendus: [(fichier: String, nom: String)] = [
+            ("nonp.json", "NONP"),
+            ("bandeau-colore.json", "Bandeau coloré"),
+        ]
 
-        guard let fichier = candidats.first(where: {
-            FileManager.default.fileExists(atPath: $0.path)
-        }) else {
-            r.nonExecute("profil d'exemple NONP",
-                         motif: "Resources/profils-exemples/nonp.json introuvable "
-                         + "depuis \(FileManager.default.currentDirectoryPath)")
-            return
+        for (nomFichier, nomProfil) in attendus {
+            // Le fichier tel qu'il est versionné. Cherché dans le dépôt d'abord
+            // — les contrôles tournent depuis la racine —, dans le bundle
+            // ensuite.
+            let candidats = [
+                URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                    .appendingPathComponent("Resources/profils-exemples/\(nomFichier)"),
+                ProfilJSON.dossierExemples?.appendingPathComponent(nomFichier),
+            ].compactMap { $0 }
+
+            guard let fichier = candidats.first(where: {
+                FileManager.default.fileExists(atPath: $0.path)
+            }) else {
+                r.nonExecute("profil d'exemple \(nomFichier)",
+                             motif: "introuvable depuis "
+                             + FileManager.default.currentDirectoryPath)
+                continue
+            }
+            guard let lecture = try? ProfilJSON.lireDetaille(fichier) else {
+                r.verifier("\(nomFichier) est lu par l'application", false); continue
+            }
+            r.verifier("\(nomFichier) est lu sans une remarque", true)
+            r.egal("\(nomFichier) : son nom", lecture.profil.nom, nomProfil)
+            r.verifier("\(nomFichier) : déjà au schéma courant, aucune conversion",
+                       lecture.migration == nil)
+
+            // MÊMES VALEURS que le profil de référence : seul le nom les sépare.
+            // C'est ce qui garantit que rien n'a été perdu au déménagement.
+            var attendu = ProfilHabillage.bandeauColore
+            attendu.nom = nomProfil
+            attendu.logoActif = false
+            attendu.logoFichier = nil
+            r.egal("\(nomFichier) : valeurs identiques à l'habillage de référence",
+                   lecture.profil, attendu)
+            r.verifier("\(nomFichier) : aucun logo — le fichier décrit "
+                       + "l'habillage du texte, l'image est celle de chacun",
+                       !lecture.profil.logoActif && lecture.profil.logoFichier == nil)
         }
 
-        guard let lecture = try? ProfilJSON.lireDetaille(fichier) else {
-            r.verifier("le profil d'exemple est lu par l'application", false); return
-        }
-        r.verifier("le profil d'exemple livré est lu sans une remarque", true)
-        r.egal("il porte le nom de l'association, lui", lecture.profil.nom, "NONP")
-        r.verifier("il est déjà au schéma courant : aucune conversion",
-                   lecture.migration == nil)
-
-        // MÊMES VALEURS que le préréglage : seul le nom les sépare. C'est ce
-        // qui garantit que rien n'a été perdu au déménagement.
-        var attendu = ProfilHabillage.bandeauColore
-        attendu.nom = "NONP"
-        attendu.logoActif = false
-        attendu.logoFichier = nil
-        r.egal("et ses valeurs sont EXACTEMENT celles de « Bandeau coloré » — "
-               + "l'habillage n'a rien perdu en changeant de place",
-               lecture.profil, attendu)
-
-        r.verifier("il ne porte aucun logo : le fichier décrit l'habillage du "
-                   + "texte, l'image est celle de chacun",
-                   !lecture.profil.logoActif && lecture.profil.logoFichier == nil)
-
-        // Et il est TROUVABLE : le panneau d'import s'ouvre dessus. Sans cela
-        // l'exemple existerait sans exister.
-        r.verifier("le dossier des exemples est trouvable depuis l'application",
-                   ProfilJSON.dossierExemples != nil
-                   || !FileManager.default.fileExists(
-                       atPath: Bundle.main.bundlePath + "/Contents/Resources"))
+        // Et ils sont TROUVABLES : le panneau d'import s'ouvre dessus. Sans
+        // cela un exemple existerait sans exister — c'est toute la raison pour
+        // laquelle un préréglage devenu fichier reste utilisable.
+        let dansLeBundle = ProfilJSON.dossierExemples
+        r.verifier("le dossier des exemples est livré dans l'application"
+                   + (dansLeBundle == nil ? " (hors bundle : contrôle en ligne "
+                      + "de commande)" : ""),
+                   dansLeBundle != nil
+                   || Bundle.main.bundleURL.pathExtension != "app")
     }
 
     // MARK: - Les réglages d'hier survivent au changement d'aujourd'hui
@@ -696,15 +743,37 @@ enum ControlesProfils {
         r.egal("un profil exporté hier s'importe aujourd'hui, sans rien perdre",
                importe, attenduImport)
 
-        // Et le renommage n'a pas touché aux VALEURS du préréglage : un profil
-        // enregistré depuis l'ancien bouton « NONP » est le même qu'un profil
-        // enregistré depuis « Bandeau coloré ».
-        var ancien = ProfilHabillage.bandeauColore
-        ancien.nom = "NONP"
-        var nouveau = ProfilHabillage.bandeauColore
-        nouveau.nom = "NONP"
-        r.egal("le préréglage n'a changé QUE de nom : mêmes valeurs qu'avant",
-               ancien, nouveau)
+        // ── Et la disparition des préréglages ne change rien non plus ──────
+        //
+        // Le volet a perdu sa section « Profil » le 28/08 ; les trois gestes
+        // sont au menu Fichier. Rien de tout cela ne touche aux données : ce
+        // qui a été enregistré se relit, exactement.
+        let etat = AppState()
+        etat.profil = hier
+        r.egal("un profil relu s'applique tel quel à l'application",
+               etat.profil, hier)
+        r.egal("et son nom n'est pas remplacé par celui d'un réglage livré",
+               etat.profil.nom, "NONP")
+
+        // La seule commande qui remplace les réglages en bloc est explicite, et
+        // il faut la demander : rien ne se réinitialise tout seul.
+        etat.revenirAuxReglagesParDefaut()
+        r.verifier("seul « Revenir aux réglages par défaut » les remplace, et "
+                   + "sur demande", etat.profil.bandeauMode == .pleineLargeur)
+
+        // Enfin : le fichier de mémoire écrit AVANT ce changement se relit
+        // sans conversion. Il n'a pas changé de forme — c'est ce qui fait que
+        // la persistance ne repart pas de zéro.
+        guard let ecritHier = try? MemoireProfil.donnees(hier),
+              let objet = (try? JSONSerialization.jsonObject(with: ecritHier))
+                as? [String: Any] else {
+            r.verifier("la mémoire est lisible", false); return
+        }
+        r.egal("le fichier de mémoire garde sa forme : une enveloppe, un profil",
+               Set(objet.keys), ["version_enveloppe", "profil"])
+        r.egal("et sa version d'enveloppe n'a pas bougé",
+               (objet["version_enveloppe"] as? NSNumber)?.intValue,
+               MemoireProfil.versionEnveloppe)
     }
 
     // MARK: - Mémorisation

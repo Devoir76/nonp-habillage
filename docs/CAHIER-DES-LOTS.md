@@ -118,9 +118,27 @@ l'aperçu affiche l'image entière et tous les réglages restent atteignables.
 
 ## Lot 6 — Profils (1 j)
 
-Lecture, écriture et validation du schéma v1 (champs inconnus refusés, messages
-en français), préréglages livrés (**Neutre** par défaut, **NONP**), mémorisation
-du dernier profil utilisé, import et export d'un `.json`.
+Lecture, écriture et validation du schéma (champs inconnus refusés, messages en
+français), mémorisation du dernier profil utilisé, import et export d'un `.json`.
+
+**Plus de préréglages** (tranché le 28/08). Le lot annonçait des « préréglages
+livrés (**Neutre** par défaut, **NONP**) ». Deux retours d'usage l'ont défait,
+le même jour : un préréglage au nom d'une association n'a pas sa place dans une
+application destinée au téléchargement public ; et la notion de profil était
+mise en avant bien au-delà de ce qu'elle sert, la plupart des utilisateurs
+n'ayant qu'un seul habillage dont ils attendent seulement qu'il se mémorise.
+
+Ce qui est livré à la place :
+
+- **des réglages par défaut** (l'ancien « Neutre »), point de départ à la
+  première ouverture, puis les réglages mémorisés ;
+- **des fichiers d'exemple** dans `Resources/profils-exemples/` —
+  `bandeau-colore.json` et `nonp.json` —, que le panneau d'import ouvre par
+  défaut ;
+- **trois commandes au menu Fichier** : « Importer un profil… », « Exporter le
+  profil… », « Revenir aux réglages par défaut ».
+
+Voir ADR-0001 §2, amendements du 28/08.
 
 **Ce que la mémorisation doit couvrir** (précisé le 25/08). Le dernier profil
 utilisé, et avec lui **le chemin du fichier de logo** : on ne redépose pas son
@@ -148,8 +166,13 @@ colonne dans les deux modes de bandeau. **Le schéma passe en version 2** ;
 ADR-0001, décisions nº5 et nº6, et `docs/divergences-prototype.md` D-9 et D-10.
 
 **Acceptation** — un profil écrit par le prototype Python est accepté sans
-retouche ; un profil produit par l'app est accepté par le prototype ; un fichier
-corrompu produit un message clair et aucun rendu.
+retouche ; un fichier corrompu produit un message clair et aucun rendu.
+
+Le second critère annoncé — « un profil produit par l'app est accepté par le
+prototype » — **n'est plus tenu, et c'est délibéré** : le schéma est passé en
+version 2 (décision nº6) et le prototype ne sera pas amendé (décision nº5). Le
+sens qui compte reste sans restriction, et il est mesuré à chaque exécution.
+Voir `docs/divergences-prototype.md`, D-9.
 
 ## Lot 7 — Parité, finition, release (1,5 j)
 

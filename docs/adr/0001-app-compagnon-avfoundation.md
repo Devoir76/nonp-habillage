@@ -87,6 +87,8 @@ version. Assumé.
   Rien d'autre.
 - **Volet « Personnaliser » repliable**, fermé par défaut, avec **aperçu sur une
   image fixe extraite de la vidéo** (aucun encodage) rafraîchi à chaque réglage.
+  Il ne contient **que des réglages** — importer, exporter et revenir aux
+  réglages par défaut sont au menu Fichier (amendé le 28/08, voir plus bas).
 
 **Aperçu : ce qu'on y voit** (précisé le 23/08). Régler une taille, une couleur
 ou une police à l'aveugle n'a pas de sens — il faut voir le résultat sur **sa**
@@ -185,6 +187,10 @@ d'un clic.
 > sont toujours les constantes de `nonp_habille.py`, et le profil de référence
 > des tests de parité n'a pas bougé d'une décimale.
 >
+> *(Dépassé le jour même par l'amendement suivant : il n'y a plus de préréglages
+> du tout, et les deux apparences sont livrées comme fichiers d'exemple. La
+> règle, elle, reste vraie de ce que l'application nomme.)*
+>
 > **Et l'habillage NONP y gagne sa vraie place.** Livré comme fichier
 > d'exemple, il devient la démonstration de ce que le paragraphe « Profils »
 > ci-dessous annonce : « le mécanisme qui permet à une association de figer son
@@ -200,6 +206,43 @@ d'un clic.
 **Profils** : enregistrer, charger, partager (`.json`). C'est le mécanisme qui
 permet à une association de figer son habillage et de le diffuser à ses
 bénévoles, qui obtiennent alors tous le même rendu.
+
+> ##### Amendement du 28/08 — le profil n'est pas un élément du volet
+>
+> Le §2 décrivait les profils comme une pièce de l'interface, et le lot 5 leur
+> avait donné une section en tête du volet Personnaliser : nom du profil courant,
+> deux boutons de préréglage, Importer, Exporter.
+>
+> **C'était mettre en avant une notion bien au-delà de ce qu'elle sert.** La
+> plupart des utilisateurs n'auront qu'un seul habillage, et la seule chose
+> qu'ils en attendent est qu'il se retrouve d'une session à l'autre — ce que la
+> mémorisation fait déjà, sans qu'on ait à nommer quoi que ce soit. Une section
+> en tête de colonne demandait de comprendre un concept pour se servir de
+> réglages qui n'en avaient pas besoin.
+>
+> **Ce que devient l'interface :**
+>
+> - **Le volet ne contient plus que des réglages.** Plus de section « Profil »,
+>   plus de boutons de préréglage. « Neutre » est le point de départ à la
+>   première ouverture ; ensuite ce sont les réglages mémorisés.
+> - **Les trois gestes passent au menu Fichier** — « Importer un profil… »,
+>   « Exporter le profil… », « Revenir aux réglages par défaut ». Ce sont des
+>   gestes rares et délibérés, et le menu est fait pour ça : c'est la convention
+>   macOS, et elle apporte des raccourcis clavier qu'un bouton perdu dans une
+>   colonne défilante ne pouvait pas porter.
+> - **Les apparences livrées deviennent des fichiers d'exemple**
+>   (`Resources/profils-exemples/`), et le panneau d'import s'ouvre dessus. Un
+>   préréglage qui n'est qu'un exemple n'a pas besoin d'un bouton : il a besoin
+>   d'être trouvable.
+>
+> Le mécanisme de partage décrit ci-dessus n'est pas affaibli — il est rendu à
+> sa forme naturelle. Un profil qui circule est un fichier ; il n'a jamais eu
+> besoin d'une place dans la colonne des réglages.
+>
+> **Aucun profil enregistré n'est touché**, et c'est contrôlé : le fichier de
+> mémoire garde sa forme, un profil relu s'applique tel quel, et rien ne se
+> réinitialise tout seul — seule la commande « Revenir aux réglages par défaut »
+> remplace les réglages, et elle garde le logo.
 
 ### 3. Formats d'entrée : MP4, MOV, M4V
 
@@ -461,9 +504,10 @@ en ligne de commande avant toute interface : la valeur arrive tôt.
 
 Public visé (tout public), deux usages de premier rang (logo seul compris),
 app compagnon distincte, interface simple + volet repliable, profil par défaut
-neutre (préréglages livrés amendés le 28/08 : ils décrivent une apparence, pas
-une organisation), bandeau pleine largeur par défaut, liste de polices sûres,
-interface en français, entrées MP4/MOV/M4V.
+neutre (amendé le 28/08 : plus de préréglages du tout, le volet ne contient que
+des réglages et les gestes de profil sont au menu Fichier), bandeau pleine
+largeur par défaut, liste de polices sûres, interface en français, entrées
+MP4/MOV/M4V.
 
 ## Tranché le 24/08
 

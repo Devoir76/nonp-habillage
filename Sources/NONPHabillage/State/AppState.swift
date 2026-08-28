@@ -258,18 +258,23 @@ final class AppState: ObservableObject {
 
     // MARK: - Profils
 
-    /// Applique un préréglage livré, en gardant le logo déjà choisi.
+    /// Revenir aux réglages par défaut — le profil neutre.
     ///
-    /// Changer de préréglage ne doit pas faire redéposer son logo : c'est un
-    /// fichier de l'utilisateur, pas un réglage du profil livré. Les deux
-    /// préréglages arrivent d'ailleurs sans image (`logoFichier: nil`).
-    func appliquerPrereglage(_ prereglage: ProfilHabillage) {
-        var p = prereglage
+    /// Le LOGO est conservé. C'est un fichier de l'utilisateur, pas un réglage :
+    /// « revenir aux réglages par défaut » ne doit pas obliger à le redéposer.
+    /// Le retirer a d'ailleurs son propre bouton, dans le volet, à côté de lui.
+    ///
+    /// C'est la seule commande qui remplace les réglages en bloc depuis que les
+    /// boutons de préréglage ont disparu (28/08/2026) : les autres apparences
+    /// livrées sont des fichiers d'exemple, qu'on importe.
+    func revenirAuxReglagesParDefaut() {
+        var p = ProfilHabillage.neutre
         p.logoFichier = profil.logoFichier
-        p.logoActif = prereglage.logoActif && profil.logoFichier != nil
+        p.logoActif = profil.logoActif && profil.logoFichier != nil
         p.logoRecadreEnCercle = profil.logoRecadreEnCercle
         profil = p
         erreur = nil
+        message = Textes.Profil.revenusAuxReglagesParDefaut
     }
 
     /// Importe un profil `.json`.

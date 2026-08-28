@@ -454,10 +454,19 @@ enum Textes {
             + "Le profil neutre est appliqué."
 
         // ── Interface ───────────────────────────────────────────────────────
-        static let titre = "Profil"
-        static let importer = "Importer…"
-        static let exporter = "Exporter…"
-        static let preregle = "Préréglage"
+        // ── Le menu Fichier ─────────────────────────────────────────────
+        //
+        // Ces trois libellés étaient trois boutons d'une section « Profil », en
+        // tête du volet Personnaliser. Ce sont des gestes rares et délibérés :
+        // ils ont rejoint le menu Fichier le 28/08/2026, et le volet ne
+        // contient plus que des réglages.
+        //
+        // Les libellés sont plus longs qu'en volet, et c'est voulu : dans un
+        // menu on ne voit pas le contexte, « Importer… » tout seul n'y dirait
+        // pas ce qu'on importe.
+        static let importerUnProfil = "Importer un profil…"
+        static let exporterLeProfil = "Exporter le profil…"
+        static let reglagesParDefaut = "Revenir aux réglages par défaut"
         /// Dit, à l'ouverture du panneau d'import, ce qu'on y trouve.
         ///
         /// Les préréglages livrés décrivent une APPARENCE ; l'habillage d'une
@@ -469,6 +478,8 @@ enum Textes {
         static func importe(_ nom: String) -> String {
             "Profil « \(nom) » importé."
         }
+        static let revenusAuxReglagesParDefaut =
+            "Réglages par défaut rétablis."
         static func exporte(_ nom: String, logo: String?) -> String {
             guard let logo else { return "Profil enregistré dans « \(nom) »." }
             return "Profil enregistré dans « \(nom) », avec une copie du logo "

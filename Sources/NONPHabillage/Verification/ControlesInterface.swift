@@ -1079,13 +1079,12 @@ enum ControlesInterface {
         let T = Textes.Interface.self
 
         var lignes: [(String, AnyView)] = []
-        for titre in [Textes.Profil.titre, T.sousTitres, T.bandeau, T.logo] {
+        // Plus de titre « Profil » : la section a quitté le volet le 28/08 pour
+        // le menu Fichier. La colonne ne porte plus que des réglages.
+        for titre in [T.sousTitres, T.bandeau, T.logo] {
             lignes.append((titre, AnyView(Text(titre).font(.headline))))
         }
         lignes += [
-            (Textes.Profil.preregle, AnyView(Volet.prereglages(appliquer: { _ in }))),
-            (Textes.Profil.exporter, AnyView(Volet.importExport(importer: {},
-                                                                exporter: {}))),
             (T.ajoutezDesSousTitres, AnyView(Text(T.ajoutezDesSousTitres)
                 .font(.caption).fixedSize(horizontal: false, vertical: true))),
             (T.taille, AnyView(Volet.choixSegmente(

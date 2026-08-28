@@ -103,7 +103,9 @@ enum Fenetre {
 
 struct FenetrePrincipaleView: View {
 
-    @StateObject private var etat = AppState()
+    /// Fourni par l'application, et non créé ici : le menu Fichier doit
+    /// atteindre le même état que la fenêtre (voir `CommandesProfil`).
+    @ObservedObject var etat: AppState
 
     var body: some View {
         ContenuFenetre()
@@ -326,6 +328,21 @@ struct BarreEntrees: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onTapGesture { etat.effacerErreur() }
+            }
+
+            // Ce qui s'est bien passé — un profil importé, un profil écrit,
+            // les réglages rétablis. Il s'affichait dans la section « Profil »
+            // du volet ; celle-ci a disparu le 28/08, et le message a suivi
+            // ici : les commandes qui le produisent sont désormais au menu
+            // Fichier, donc leur réponse doit être visible depuis n'importe
+            // quel état de la fenêtre, volet ouvert ou fermé.
+            if let message = etat.message {
+                Label(message, systemImage: "checkmark.circle")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture { etat.effacerMessage() }
             }
 
             // LE LOGO DU PROFIL A DISPARU. Piège nº1 du lot 6 : le chemin

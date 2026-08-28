@@ -16,8 +16,6 @@ struct PanneauPersonnaliserView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionProfil
-            Divider()
             sectionSousTitres
             Divider()
             sectionBandeau
@@ -27,34 +25,23 @@ struct PanneauPersonnaliserView: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Profil
-
-    /// Le profil : d'où viennent les réglages, et où ils repartent.
-    ///
-    /// En tête de colonne, parce que c'est le geste qui commande tous les
-    /// autres — appliquer un préréglage remplace tout ce qui suit.
-    private var sectionProfil: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Textes.Profil.titre).font(.headline)
-
-            Text(etat.profil.nom)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Self.prereglages(appliquer: { etat.appliquerPrereglage($0) })
-            Self.importExport(importer: { choisirProfil() },
-                              exporter: { enregistrerProfil() })
-
-            if let message = etat.message {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .onTapGesture { etat.effacerMessage() }
-            }
-        }
-    }
+    // Il y avait ici une section « Profil » : le nom du profil courant, deux
+    // boutons de préréglage, Importer et Exporter. Elle est partie le
+    // 28/08/2026, et le volet ne contient plus que des RÉGLAGES.
+    //
+    // Motif : la notion de profil était mise en avant bien au-delà de ce
+    // qu'elle sert. La plupart des utilisateurs n'auront qu'un seul habillage,
+    // et la seule chose qu'ils en attendent est qu'il se retrouve d'une
+    // session à l'autre — ce que la mémorisation fait déjà, sans qu'on ait à
+    // nommer quoi que ce soit. Une section en tête de colonne demandait de
+    // comprendre un concept pour se servir de réglages qui n'en avaient pas
+    // besoin.
+    //
+    // Les trois gestes qui restent — importer, exporter, revenir aux réglages
+    // par défaut — sont rares et délibérés : ils vivent au menu Fichier, qui
+    // est fait pour ça (`CommandesProfil`). Et les deux préréglages sont
+    // devenus des fichiers d'exemple : un préréglage qui n'est qu'un exemple
+    // n'a pas besoin d'un bouton, il a besoin d'être trouvable.
 
     // MARK: - Sous-titres
 
@@ -266,48 +253,6 @@ struct PanneauPersonnaliserView: View {
         }
     }
 
-    private func choisirProfil() {
-        let panneau = NSOpenPanel()
-        panneau.allowedContentTypes = [.json]
-        panneau.allowsMultipleSelection = false
-        // Ouvert sur les profils d'exemple livrés : un exemple qu'on ne trouve
-        // pas n'est pas un exemple. C'est là que vit l'habillage NONP depuis
-        // qu'il a quitté les préréglages (28/08/2026).
-        panneau.directoryURL = ProfilJSON.dossierExemples
-        panneau.message = Textes.Profil.ouExemples
-        if panneau.runModal() == .OK, let url = panneau.url {
-            etat.importerProfil(url)
-        }
-    }
-
-    private func enregistrerProfil() {
-        let panneau = NSSavePanel()
-        panneau.allowedContentTypes = [.json]
-        panneau.nameFieldStringValue = Self.nomDeFichier(etat.profil.nom) + ".json"
-
-        // L'avertissement vit DANS le panneau, pas après. Un profil qui emploie
-        // le bandeau pleine largeur ne sera pas lu par le prototype (décision
-        // nº5, tranchée le 28/08) : le dire ici, c'est le dire avant que le
-        // fichier parte. L'enregistrement n'est pas empêché — le profil est
-        // juste, c'est l'ancien outil qui ne sait pas le rendre.
-        let inconnus = ProfilJSON.champsInconnusDuPrototype(etat.profil)
-        if !inconnus.isEmpty {
-            panneau.message = Textes.Profil.inconnuDuPrototype(inconnus)
-        }
-
-        if panneau.runModal() == .OK, let url = panneau.url {
-            etat.exporterProfil(vers: url)
-        }
-    }
-
-    /// Le nom du profil, rendu utilisable comme nom de fichier.
-    static func nomDeFichier(_ nom: String) -> String {
-        let propre = nom.lowercased()
-            .folding(options: .diacriticInsensitive, locale: .init(identifier: "fr_FR"))
-            .map { $0.isLetter || $0.isNumber ? $0 : "-" }
-        return String(propre).split(separator: "-").joined(separator: "-")
-    }
-
     private func choisirLogo() {
         let panneau = NSOpenPanel()
         panneau.allowedContentTypes = UTType.imagesAcceptees
@@ -349,44 +294,6 @@ struct PanneauPersonnaliserView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
         }
-    }
-
-    /// Les deux préréglages livrés.
-    ///
-    /// Des BOUTONS, pas un menu : appliquer un préréglage est une action —
-    /// elle remplace tous les réglages en cours — et non le choix d'une valeur
-    /// qui resterait affichée. Après l'avoir appliqué, on le modifie, et le
-    /// profil n'est plus « Neutre » : un menu qui continuerait de l'afficher
-    /// mentirait.
-    @MainActor
-    static func prereglages(appliquer: @escaping (ProfilHabillage) -> Void) -> some View {
-        HStack(spacing: 6) {
-            Text(Textes.Profil.preregle)
-            Button(ProfilHabillage.neutre.nom) { appliquer(.neutre) }
-                .buttonStyle(.bordered)
-            Button(ProfilHabillage.bandeauColore.nom) { appliquer(.bandeauColore) }
-                .buttonStyle(.bordered)
-        }
-        .font(.caption)
-    }
-
-    /// Importer, exporter.
-    ///
-    /// L'explication du logo recopié est en INFOBULLE sur « Exporter » : c'est
-    /// une précision qu'on cherche au moment d'exporter, pas un paragraphe à
-    /// relire à chaque ouverture du volet.
-    @MainActor
-    static func importExport(importer: @escaping () -> Void,
-                             exporter: @escaping () -> Void) -> some View {
-        HStack(spacing: 6) {
-            Button(Textes.Profil.importer, action: importer)
-                .buttonStyle(.bordered)
-            Button(Textes.Profil.exporter, action: exporter)
-                .buttonStyle(.bordered)
-                .help(Textes.Profil.logoRecopieExplication)
-            Spacer(minLength: 0)
-        }
-        .font(.caption)
     }
 
     /// Le choix de la police. Libellé à gauche, comme tout menu déroulant.

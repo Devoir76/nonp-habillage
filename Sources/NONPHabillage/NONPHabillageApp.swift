@@ -13,6 +13,14 @@ import SwiftUI
 @main
 struct NONPHabillageApp: App {
 
+    /// L'état vit ICI, et non plus dans `FenetrePrincipaleView`.
+    ///
+    /// Le menu Fichier a besoin de l'atteindre : importer un profil, l'exporter
+    /// et revenir aux réglages par défaut sont des commandes de menu depuis le
+    /// 28/08/2026, et une `Commands` ne voit pas l'environnement d'une vue. La
+    /// fenêtre le reçoit désormais au lieu de le créer.
+    @StateObject private var etat = AppState()
+
     init() {
         // Harnais de vérification headless (--verifier …) : exécute les
         // contrôles et quitte. Sans effet en usage normal.
@@ -21,8 +29,9 @@ struct NONPHabillageApp: App {
 
     var body: some Scene {
         WindowGroup(Textes.nomApplication) {
-            FenetrePrincipaleView()
+            FenetrePrincipaleView(etat: etat)
         }
+        .commands { CommandesProfil(etat: etat) }
         // `.contentMinSize` et non `.contentSize` : la fenêtre respecte la
         // taille MINIMALE du contenu — elle s'agrandit donc quand le volet
         // s'ouvre — mais reste librement redimensionnable. Avec `.contentSize`,
