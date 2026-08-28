@@ -84,8 +84,8 @@ enum ControlesRegressionV2 {
         // exacte, par construction.
         for (nom, w, _) in definitions169 {
             let retrait = GeometrieSousTitres.retraitDuTexte(
-                profil: .nonpHistorique, largeurVideo: w)
-            let exact = Double(w) * ProfilHabillage.nonpHistorique.bandeauMargeTexteRatioLargeur
+                profil: .bandeauColore, largeurVideo: w)
+            let exact = Double(w) * ProfilHabillage.bandeauColore.bandeauMargeTexteRatioLargeur
             r.verifier("\(nom) : la v2 tient sa proportion à l'arrondi près "
                        + "(\(Int(retrait)) px pour \(String(format: "%.1f", exact)))",
                        abs(retrait - exact) <= 0.5)
@@ -93,11 +93,11 @@ enum ControlesRegressionV2 {
 
         var ecarts: [(String, Double)] = []
         for (nom, w, h) in definitions169 {
-            guard let v1 = debordVersion1(.nonpHistorique, w, h) else {
+            guard let v1 = debordVersion1(.bandeauColore, w, h) else {
                 r.verifier("\(nom) : débord de la v1 calculable", false); continue
             }
             let v2 = GeometrieSousTitres.retraitDuTexte(
-                profil: .nonpHistorique, largeurVideo: w)
+                profil: .bandeauColore, largeurVideo: w)
             ecarts.append((nom, abs(v2 - v1.debord)))
             r.verifier("\(nom) : v1 \(String(format: "%.1f", v1.debord)) px "
                        + "(\(String(format: "%.3f", v1.debord / Double(w) * 100)) % "
@@ -111,11 +111,11 @@ enum ControlesRegressionV2 {
         // la hauteur. C'est le constat qui explique tout le reste — et qui
         // interdit qu'un pourcentage unique retombe partout sur elle.
         let ratiosV1 = definitions169.compactMap { (_, w, h) -> Double? in
-            debordVersion1(.nonpHistorique, w, h).map { $0.debord / Double(w) }
+            debordVersion1(.bandeauColore, w, h).map { $0.debord / Double(w) }
         }
         let ecartMax = definitions169.compactMap { (_, w, h) -> Double? in
-            guard let v1 = debordVersion1(.nonpHistorique, w, h),
-                  let ref = debordVersion1(.nonpHistorique, 1920, 1080) else { return nil }
+            guard let v1 = debordVersion1(.bandeauColore, w, h),
+                  let ref = debordVersion1(.bandeauColore, 1920, 1080) else { return nil }
             return abs(v1.debord - ref.debord / 1920 * Double(w))
         }.max() ?? 0
         r.verifier("la v1 n'était PAS proportionnelle à la largeur : "
@@ -140,17 +140,17 @@ enum ControlesRegressionV2 {
     private static func memeImage(_ r: Rapport) {
         for (nom, w, h) in definitions169 {
             guard let fond = fondDeControle(largeur: w, hauteur: h),
-                  let v1 = debordVersion1(.nonpHistorique, w, h) else {
+                  let v1 = debordVersion1(.bandeauColore, w, h) else {
                 r.verifier("\(nom) : fond de contrôle", false); continue
             }
 
             // Le profil tel que la v1 le posait : son débord, exprimé dans
             // l'unité de la v2. C'est la MÊME géométrie, dite autrement.
-            var commeV1 = ProfilHabillage.nonpHistorique
+            var commeV1 = ProfilHabillage.bandeauColore
             commeV1.logoActif = false
             commeV1.bandeauMargeTexteRatioLargeur = v1.debord / Double(w)
 
-            var commeV2 = ProfilHabillage.nonpHistorique
+            var commeV2 = ProfilHabillage.bandeauColore
             commeV2.logoActif = false
 
             let a = try? Apercu.composer(fond: fond, profil: commeV1,
@@ -225,11 +225,11 @@ enum ControlesRegressionV2 {
         }
 
         for (nom, w, h) in definitions169 {
-            guard let v1 = debordVersion1(.nonpHistorique, w, h) else { continue }
-            var commeV1 = ProfilHabillage.nonpHistorique
+            guard let v1 = debordVersion1(.bandeauColore, w, h) else { continue }
+            var commeV1 = ProfilHabillage.bandeauColore
             commeV1.logoActif = false
             commeV1.bandeauMargeTexteRatioLargeur = v1.debord / Double(w)
-            var commeV2 = ProfilHabillage.nonpHistorique
+            var commeV2 = ProfilHabillage.bandeauColore
             commeV2.logoActif = false
 
             guard let mepV1 = try? MiseEnPageRendu.calculer(
@@ -262,10 +262,10 @@ enum ControlesRegressionV2 {
         for (nom, w, h) in [("9:16 1080×1920", 1080, 1920),
                             ("1:1 1080×1080", 1080, 1080),
                             ("4:5 1080×1350", 1080, 1350)] {
-            guard let v1 = tailleVersion1(.nonpHistorique, w, h) else {
+            guard let v1 = tailleVersion1(.bandeauColore, w, h) else {
                 r.verifier("\(nom) : taille de la v1 calculable", false); continue
             }
-            var commeV2 = ProfilHabillage.nonpHistorique
+            var commeV2 = ProfilHabillage.bandeauColore
             commeV2.logoActif = false
             guard let mep = try? MiseEnPageRendu.calculer(
                 profil: commeV2, largeurVideo: w, hauteurVideo: h) else { continue }
@@ -277,7 +277,7 @@ enum ControlesRegressionV2 {
         }
 
         // Le chiffre annoncé à l'ADR, vérifié plutôt que recopié.
-        var nonp = ProfilHabillage.nonpHistorique
+        var nonp = ProfilHabillage.bandeauColore
         nonp.logoActif = false
         let v1 = tailleVersion1(nonp, 1080, 1920) ?? 0
         let v2 = (try? MiseEnPageRendu.calculer(

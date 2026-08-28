@@ -32,7 +32,7 @@ enum ControlesRendu {
 
     static let profils: [(nom: String, profil: ProfilHabillage)] = [
         ("neutre", .neutre),
-        ("NONP", .nonpHistorique),
+        ("NONP", .bandeauColore),
     ]
 
     static func executer(_ r: Rapport, corpus: [URL]) {
@@ -195,8 +195,8 @@ enum ControlesRendu {
         }
 
         // En mode « ajuste », au contraire, le fond épouse chaque ligne : c'est
-        // le comportement historique que le préréglage NONP conserve.
-        let nonp = ProfilHabillage.nonpHistorique
+        // le comportement historique que « Bandeau coloré » conserve.
+        let nonp = ProfilHabillage.bandeauColore
         if let mep = try? MiseEnPageRendu.calculer(
             profil: nonp, largeurVideo: 1920, hauteurVideo: 1080) {
             let params = mep.parametres

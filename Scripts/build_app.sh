@@ -122,6 +122,18 @@ if [[ ! -s "$PROJECT_ROOT/LICENSE" ]]; then
     echo "✗ LICENSE manquant ou vide — build interrompue." >&2
     exit 1
 fi
+# --- Profils d'exemple ----------------------------------------------------
+# Des fichiers à IMPORTER, pas des préréglages câblés dans l'application : un
+# préréglage livré décrit une apparence, jamais une organisation (ADR §2,
+# reformulé le 28/08/2026). Le bouton « Importer… » s'ouvre sur ce dossier.
+if [[ -d "$PROJECT_ROOT/Resources/profils-exemples" ]]; then
+    echo "▸ Copie des profils d'exemple…"
+    rm -rf "$APP_BUNDLE/Contents/Resources/profils-exemples"
+    cp -R "$PROJECT_ROOT/Resources/profils-exemples" \
+          "$APP_BUNDLE/Contents/Resources/profils-exemples"
+    echo "  ✓ $(ls "$PROJECT_ROOT/Resources/profils-exemples"/*.json 2>/dev/null | wc -l | tr -d ' ') profil(s) d'exemple"
+fi
+
 mkdir -p "$APP_BUNDLE/Contents/Resources/Licenses"
 cp "$PROJECT_ROOT/LICENSE" "$APP_BUNDLE/Contents/Resources/Licenses/LICENSE"
 echo "  ✓ MPL-2.0 embarquée"

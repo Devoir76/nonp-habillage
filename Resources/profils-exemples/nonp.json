@@ -1,0 +1,33 @@
+{
+  "logo": {
+    "actif": false,
+    "marge_pct_hauteur": 4,
+    "opacite": 1,
+    "position": {
+      "preset": "haut-gauche"
+    },
+    "taille_pct_hauteur": 11.5
+  },
+  "nom": "NONP",
+  "schema_version": 2,
+  "sous_titre": {
+    "bandeau": {
+      "actif": true,
+      "couleur": "#0067F6",
+      "marge_texte_pct_largeur": 5.61,
+      "opacite": 1,
+      "padding_pct_hauteur": 1.9
+    },
+    "contour": {
+      "couleur": "#000000",
+      "epaisseur_pct_hauteur": 0.6
+    },
+    "couleur_texte": "#FFFFFF",
+    "lignes_max": 2,
+    "longueur_ligne_cible": 32,
+    "marge_basse_pct_hauteur": 7.2,
+    "marge_laterale_pct_largeur": 3,
+    "police": "Arial",
+    "taille_pct_hauteur": 7.2
+  }
+}

@@ -14,7 +14,7 @@ import Foundation
 
 enum ControlesMiseEnPage {
 
-    private static let profil = ProfilHabillage.nonpHistorique
+    private static let profil = ProfilHabillage.bandeauColore
 
     static func executer(_ r: Rapport) {
         r.section("Mise en page — 16:9, parité avec le prototype")

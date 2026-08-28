@@ -270,6 +270,11 @@ struct PanneauPersonnaliserView: View {
         let panneau = NSOpenPanel()
         panneau.allowedContentTypes = [.json]
         panneau.allowsMultipleSelection = false
+        // Ouvert sur les profils d'exemple livrés : un exemple qu'on ne trouve
+        // pas n'est pas un exemple. C'est là que vit l'habillage NONP depuis
+        // qu'il a quitté les préréglages (28/08/2026).
+        panneau.directoryURL = ProfilJSON.dossierExemples
+        panneau.message = Textes.Profil.ouExemples
         if panneau.runModal() == .OK, let url = panneau.url {
             etat.importerProfil(url)
         }
@@ -359,7 +364,7 @@ struct PanneauPersonnaliserView: View {
             Text(Textes.Profil.preregle)
             Button(ProfilHabillage.neutre.nom) { appliquer(.neutre) }
                 .buttonStyle(.bordered)
-            Button(ProfilHabillage.nonpHistorique.nom) { appliquer(.nonpHistorique) }
+            Button(ProfilHabillage.bandeauColore.nom) { appliquer(.bandeauColore) }
                 .buttonStyle(.bordered)
         }
         .font(.caption)

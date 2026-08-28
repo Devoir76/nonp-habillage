@@ -42,7 +42,7 @@ hauteur fixe optionnelle), mesure **exacte** du texte, césure prévisible.
 Rendu dans un `CALayer`, sans vidéo, sur image fixe.
 
 **Acceptation** — images de référence produites en 16:9, 9:16, 1:1 et 4:5 pour
-le profil neutre et le préréglage NONP ; aucune ligne ne déborde de la largeur
+le profil neutre et le préréglage « Bandeau coloré » ; aucune ligne ne déborde de la largeur
 utile, quel que soit le format ; en mode `pleine-largeur`, la bande couvre
 exactement la largeur et sa hauteur ne varie pas d'une réplique à l'autre quand
 `hauteur_fixe_lignes` est renseigné. Validation visuelle par Éric **avant** le

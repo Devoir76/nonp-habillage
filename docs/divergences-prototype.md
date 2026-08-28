@@ -103,7 +103,7 @@ faut les deux.
 1. **La longueur de ligne cible, en caractères** (32 par défaut) — c'est le
    rythme de lecture, et c'est exactement la règle du prototype. La conserver,
    c'est garder la césure aux mêmes endroits sur du texte ordinaire : le
-   préréglage NONP ne doit rien changer à l'existant.
+   préréglage « Bandeau coloré » ne doit rien changer à l'existant.
 2. **La largeur mesurée par Core Text** — le filet de sécurité, et ce que le
    prototype n'avait pas. Quand 32 caractères ne TIENNENT pas, la ligne se
    coupe plus tôt au lieu de déborder et de se faire recouper par libass hors
@@ -259,8 +259,8 @@ NONP.
 
 | Profil écrit par l'app | Relu par le prototype |
 |---|---|
-| préréglage NONP | refusé — version 2, `marge_texte_pct_largeur`, `longueur_ligne_cible` |
-| NONP sans logo | refusé, mêmes motifs |
+| préréglage « Bandeau coloré » | refusé — version 2, `marge_texte_pct_largeur`, `longueur_ligne_cible` |
+| « Bandeau coloré » sans logo | refusé, mêmes motifs |
 | profil réglé à la main | refusé, mêmes motifs |
 | préréglage Neutre | refusé, mêmes motifs + `mode`, `hauteur_fixe_lignes` |
 
@@ -269,7 +269,7 @@ sera pas amendé — il prend sa retraite quand l'app native sera complète, et 
 modifier reviendrait à toucher l'outil de production quotidien pour un besoin
 transitoire. Décision nº6, tranchée le même jour : l'argument de compatibilité
 qui plaidait pour rester en v1 était déjà caduc, puisque le prototype ne relisait
-plus les profils sortant du préréglage NONP.
+plus les profils sortant du préréglage « Bandeau coloré ».
 
 **Le sens qui compte n'a aucune restriction** : **tout profil du prototype est lu
 par l'app**, converti automatiquement de la v1 vers la v2, et la conversion est

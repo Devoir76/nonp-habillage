@@ -107,7 +107,7 @@ enum ControlesInterface {
 
         // C'est TOUT le changement de la v2 : en v1, ce champ n'agissait que
         // dans un mode, et l'autre dépendait d'un nombre d'espaces durs.
-        var ajuste = ProfilHabillage.nonpHistorique
+        var ajuste = ProfilHabillage.bandeauColore
         ajuste.logoActif = false
         r.verifier("en mode « ajuste » aussi — ce que la v1 ne savait pas faire "
                    + "autrement qu'en largeurs d'espace",
@@ -118,7 +118,7 @@ enum ControlesInterface {
         // pour qu'un pourcentage de largeur retombe sur les débords que la v1
         // calculait en largeurs d'espace.
         for (largeur, attendu) in [(1920, 108), (1280, 72), (3840, 215)] {
-            var p = ProfilHabillage.nonpHistorique
+            var p = ProfilHabillage.bandeauColore
             p.bandeauMargeTexteRatioLargeur = 0.0561
             let retrait = GeometrieSousTitres.retraitDuTexte(
                 profil: p, largeurVideo: largeur)
@@ -127,7 +127,7 @@ enum ControlesInterface {
         }
 
         // Sans bandeau, aucun retrait : il n'y a pas de bord dont s'écarter.
-        var sansFond = ProfilHabillage.nonpHistorique
+        var sansFond = ProfilHabillage.bandeauColore
         sansFond.bandeauActif = false
         r.egal("sans bandeau, aucun retrait", GeometrieSousTitres.retraitDuTexte(
             profil: sansFond, largeurVideo: w), 0)
@@ -158,7 +158,7 @@ enum ControlesInterface {
         // Les valeurs des deux préréglages, et leur raison.
         r.egal("le préréglage NONP porte 5,61 % — le débord que ses espaces "
                + "latéraux produisaient en 16:9",
-               ProfilHabillage.nonpHistorique.bandeauMargeTexteRatioLargeur, 0.0561)
+               ProfilHabillage.bandeauColore.bandeauMargeTexteRatioLargeur, 0.0561)
         r.egal("le profil neutre garde SES 3 % — ceux de sa marge intérieure de v1",
                ProfilHabillage.neutre.bandeauMargeTexteRatioLargeur, 0.03)
     }
@@ -301,10 +301,10 @@ enum ControlesInterface {
         r.egal("profil neutre : le champ garde sa valeur",
                ProfilHabillage.neutre.bandeauHauteurFixeLignes, 2)
         r.egal("le préréglage NONP garde la sienne",
-               ProfilHabillage.nonpHistorique.bandeauHauteurFixeLignes, 0)
+               ProfilHabillage.bandeauColore.bandeauHauteurFixeLignes, 0)
 
         let nonp = AppState()
-        nonp.profil = .nonpHistorique
+        nonp.profil = .bandeauColore
         r.verifier("préréglage NONP : la case est décochée", !nonp.hauteurConstante)
 
         // Cocher reprend « Lignes maximum ». Décocher rend la hauteur au texte.
@@ -1430,7 +1430,7 @@ enum ControlesInterface {
                PolicesSures.disponibles.count, PolicesSures.recommandees.count)
         r.verifier("les polices des deux profils livrés sont dans la liste sûre",
                    PolicesSures.estSure(ProfilHabillage.neutre.police)
-                   && PolicesSures.estSure(ProfilHabillage.nonpHistorique.police))
+                   && PolicesSures.estSure(ProfilHabillage.bandeauColore.police))
         r.verifier("le choix « autre police » propose tout le système",
                    PolicesSures.toutes.count > PolicesSures.recommandees.count)
         r.verifier("une police hors liste est signalée comme risquée",
@@ -1440,7 +1440,7 @@ enum ControlesInterface {
     // MARK: - Avertissements
 
     private static func avertissements(_ r: Rapport) {
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         profil.logoActif = true
         profil.logoFichier = URL(fileURLWithPath: "/x.png")
         let (w, h) = (1920, 1080)
@@ -1511,7 +1511,7 @@ enum ControlesInterface {
 
     private static func troisUsages(_ r: Rapport) {
         guard let fond = fondDeControle() else { return }
-        var avecLogo = ProfilHabillage.nonpHistorique
+        var avecLogo = ProfilHabillage.bandeauColore
         avecLogo.logoActif = false   // pas de fichier : on éprouve la composition seule
 
         // Sous-titres seuls.

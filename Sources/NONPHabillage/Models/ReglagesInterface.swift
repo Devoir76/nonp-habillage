@@ -49,8 +49,8 @@ enum TailleNommee: String, CaseIterable, Identifiable {
     /// ligne et taille de police redeviennent DEUX réglages distincts, et la
     /// taille nommée doit porter les deux.
     ///
-    /// « Grande » vaut exactement le 7,2 % du prototype : le préréglage NONP
-    /// tombe dessus sans rien changer à l'existant.
+    /// « Grande » vaut exactement le 7,2 % du prototype : le préréglage
+    /// « Bandeau coloré » tombe dessus sans rien changer à l'existant.
     var tailleRatio: Double {
         switch self {
         case .petite: return 0.054

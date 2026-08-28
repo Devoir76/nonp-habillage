@@ -67,6 +67,20 @@ enum ProfilJSON {
     /// c'est donc celui que la conversion doit laisser intact.
     static let formatDeReference = (largeur: 1920, hauteur: 1080)
 
+    /// Le dossier des profils d'EXEMPLE livrés avec l'application.
+    ///
+    /// Des fichiers à importer, pas des préréglages câblés. C'est la
+    /// distinction tranchée le 28/08/2026 : un préréglage livré décrit une
+    /// apparence — « Neutre », « Bandeau coloré » —, jamais une organisation.
+    /// L'habillage d'une association vit ici, dans un fichier qu'on s'échange,
+    /// et c'est l'usage même que l'ADR §2 décrit.
+    ///
+    /// Le panneau « Importer… » s'ouvre dessus : un exemple qu'on ne trouve pas
+    /// n'est pas un exemple.
+    static var dossierExemples: URL? {
+        Bundle.main.url(forResource: "profils-exemples", withExtension: nil)
+    }
+
     // MARK: - Lecture
 
     /// Lit un profil depuis un fichier.
@@ -259,7 +273,7 @@ enum ProfilJSON {
             err.append(Textes.Profil.champTexteNonVide("logo", "fichier"))
         } else if p.logoActif {
             // Le prototype en fait une erreur. Ici c'est un profil sans image
-            // choisie — état parfaitement normal du préréglage NONP livré —,
+            // choisie — état normal des deux préréglages livrés —,
             // et l'interface propose d'en déposer une.
             p.logoActif = false
         }

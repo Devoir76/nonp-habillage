@@ -155,13 +155,47 @@ aucun sous-titre n'est encore chargé :
   sans refonte si l'app trouve un public au-delà — les textes seront donc
   centralisés dès le départ, pas dispersés dans les vues.
 
-**Profil par défaut : neutre, NONP en préréglage.** Au premier lancement, l'app
-n'applique **aucun logo** (l'utilisateur n'en a pas encore fourni) et un
-habillage de sous-titres sobre et lisible : texte blanc, contour noir, bandeau
-pleine largeur. L'habillage **NONP** est livré comme **préréglage sélectionnable**,
-au même titre que d'autres. Motif : l'app s'adressant à tous, imposer le logo
-d'une association à l'ouverture serait déroutant. Le dernier profil utilisé est
-mémorisé — l'usage quotidien d'Éric n'est donc pas alourdi d'un clic.
+**Profil par défaut : neutre.** Au premier lancement, l'app n'applique **aucun
+logo** (l'utilisateur n'en a pas encore fourni) et un habillage de sous-titres
+sobre et lisible : texte blanc, contour noir, bandeau pleine largeur. Le dernier
+profil utilisé est mémorisé — l'usage quotidien d'Éric n'est donc pas alourdi
+d'un clic.
+
+**Les préréglages livrés décrivent une APPARENCE, pas une organisation**
+(amendé le 28/08/2026 — voir ci-dessous). Deux sont livrés : « Neutre » et
+« Bandeau coloré ». L'habillage **NONP** est livré comme **fichier d'exemple**
+(`Resources/profils-exemples/nonp.json`), à importer.
+
+> ##### Amendement du 28/08 — « NONP en préréglage » ne tient plus
+>
+> La formulation du 23/08 livrait l'habillage NONP comme préréglage
+> sélectionnable, « au même titre que d'autres ». Le motif tenait au logo :
+> imposer celui d'une association à l'ouverture serait déroutant. Le motif était
+> juste, la conclusion trop courte — **elle ne regardait que le logo, alors que
+> c'est le bouton lui-même qui pose le problème.**
+>
+> Une application destinée au téléchargement public ne peut pas offrir, dans sa
+> colonne de réglages, un bouton au nom d'une association. Le nom de
+> l'application dit déjà son origine ; un préréglage qui la répète impose une
+> identité visuelle à quelqu'un qui ne la connaît pas, et ne lui dit même pas ce
+> qu'il choisit — « NONP » ne décrit aucune apparence.
+>
+> **Règle retenue** : un préréglage livré porte un nom qui décrit ce qu'il rend.
+> « Bandeau coloré » remplace « NONP », **aux mêmes valeurs exactement** — ce
+> sont toujours les constantes de `nonp_habille.py`, et le profil de référence
+> des tests de parité n'a pas bougé d'une décimale.
+>
+> **Et l'habillage NONP y gagne sa vraie place.** Livré comme fichier
+> d'exemple, il devient la démonstration de ce que le paragraphe « Profils »
+> ci-dessous annonce : « le mécanisme qui permet à une association de figer son
+> habillage et de le diffuser à ses bénévoles ». Un fichier qu'on s'échange le
+> démontre ; un bouton câblé dans l'application ne le démontrait pas, il
+> l'imposait. Le panneau « Importer… » s'ouvre sur le dossier des exemples.
+>
+> **Aucun profil enregistré n'est touché.** Le nom d'un profil mémorisé,
+> importé ou exporté est une donnée de l'utilisateur : renommer un préréglage
+> livré ne renomme rien chez personne, et les réglages en cours survivent au
+> changement. Contrôlé.
 
 **Profils** : enregistrer, charger, partager (`.json`). C'est le mécanisme qui
 permet à une association de figer son habillage et de le diffuser à ses
@@ -185,7 +219,8 @@ largeur saute d'une réplique à l'autre.
 - **Mode `pleine-largeur`** (défaut du profil neutre) : bande de largeur
   constante sur toute la vidéo, texte centré avec une marge intérieure réglable.
 - **Mode `ajuste`** : comportement historique, conservé — c'est le rendu NONP
-  actuel, et le préréglage « NONP » le garde pour ne rien changer à l'existant.
+  actuel, et le préréglage « Bandeau coloré » le garde pour ne rien changer à
+  l'existant.
 - **Hauteur stabilisable** : option de hauteur fixée à *n* lignes, pour que la
   bande ne saute pas entre une réplique d'une ligne et une réplique de deux.
 - Marges et marge intérieure réglables dans les deux modes.
@@ -306,7 +341,8 @@ différentes :
 
 La **taille nommée de l'interface porte les deux** : chacune pose une cible ET un
 ratio de taille — 5,4 %, 6,3 %, 7,2 % et 8,4 % de la hauteur. « Grande » vaut
-exactement le **7,2 % du prototype**, pour que le préréglage NONP ne bouge pas
+exactement le **7,2 % du prototype**, pour que le préréglage « Bandeau coloré »
+ne bouge pas
 d'un pixel.
 
 **Ce qui ne change pas.** La réduction reste, comme filet de sécurité, et elle
@@ -425,8 +461,9 @@ en ligne de commande avant toute interface : la valeur arrive tôt.
 
 Public visé (tout public), deux usages de premier rang (logo seul compris),
 app compagnon distincte, interface simple + volet repliable, profil par défaut
-neutre avec NONP en préréglage, bandeau pleine largeur par défaut, liste de
-polices sûres, interface en français, entrées MP4/MOV/M4V.
+neutre (préréglages livrés amendés le 28/08 : ils décrivent une apparence, pas
+une organisation), bandeau pleine largeur par défaut, liste de polices sûres,
+interface en français, entrées MP4/MOV/M4V.
 
 ## Tranché le 24/08
 
@@ -523,7 +560,8 @@ de la LARGEUR vidéo, valeur par défaut 5,61 %.** `espaces_lateraux` et
 
 **Motif d'Éric.** L'argument de compatibilité qui plaidait pour la v1 est caduc
 depuis la décision nº5 : le prototype ne relit déjà plus les profils sortant du
-préréglage NONP. L'option B reconduirait le désordre qu'on cherche à finir, avec
+préréglage « Bandeau coloré ». L'option B reconduirait le désordre qu'on cherche
+à finir, avec
 deux champs décrivant la même chose « pendant la transition ». Et le coût d'une
 v2 est presque nul maintenant : aucun profil ne circule, rien n'est publié.
 C'est la fenêtre repérée le 23/08, et elle se referme à la première diffusion

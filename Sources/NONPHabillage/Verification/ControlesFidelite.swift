@@ -86,10 +86,10 @@ enum ControlesFidelite {
         // mot parce que le format a changé.
         for (nom, w, h) in [("16:9", 1920, 1080), ("9:16", 1080, 1920)] {
             let p = MoteurMiseEnPage.calculer(
-                profil: .nonpHistorique, largeur: w, hauteur: h)
+                profil: .bandeauColore, largeur: w, hauteur: h)
             let graves = Segmenteur.segmenter(
                 cues, maxCaracteres: p.maxCaracteres,
-                lignesMax: ProfilHabillage.nonpHistorique.lignesMax)
+                lignesMax: ProfilHabillage.bandeauColore.lignesMax)
             r.egal("\(intitule) — \(nom) : mots identiques et dans l'ordre",
                    mots(de: graves), mots(source: cues))
         }
@@ -112,10 +112,10 @@ enum ControlesFidelite {
         var toutBon = true
         for (_, w, h) in [("16:9", 1920, 1080), ("9:16", 1080, 1920)] {
             let p = MoteurMiseEnPage.calculer(
-                profil: .nonpHistorique, largeur: w, hauteur: h)
+                profil: .bandeauColore, largeur: w, hauteur: h)
             let graves = Segmenteur.segmenter(
                 cues, maxCaracteres: p.maxCaracteres,
-                lignesMax: ProfilHabillage.nonpHistorique.lignesMax)
+                lignesMax: ProfilHabillage.bandeauColore.lignesMax)
             if mots(de: graves) != attendus { toutBon = false }
         }
         r.verifier("\(nom) : \(attendus.count) mots préservés en 16:9 et en 9:16", toutBon)

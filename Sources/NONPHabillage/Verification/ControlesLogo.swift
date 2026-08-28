@@ -48,7 +48,7 @@ enum ControlesLogo {
 
     private static func quatreCoins(_ r: Rapport) {
         for (nomFormat, w, h) in formats {
-            var profil = ProfilHabillage.nonpHistorique
+            var profil = ProfilHabillage.bandeauColore
             profil.logoActif = true
             let p = MoteurMiseEnPage.calculer(profil: profil, largeur: w, hauteur: h)
             let marge = Double(p.margeLogo)
@@ -85,7 +85,7 @@ enum ControlesLogo {
     // MARK: - Coordonnées libres
 
     private static func coordonneesLibres(_ r: Rapport) {
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         profil.logoActif = true
         let (w, h) = (1920, 1080)
         let p = MoteurMiseEnPage.calculer(profil: profil, largeur: w, hauteur: h)
@@ -123,7 +123,7 @@ enum ControlesLogo {
     // MARK: - Taille et ratio
 
     private static func tailleEtRatio(_ r: Rapport) {
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         profil.logoActif = true
         let (w, h) = (1920, 1080)
         let p = MoteurMiseEnPage.calculer(profil: profil, largeur: w, hauteur: h)
@@ -172,7 +172,7 @@ enum ControlesLogo {
     private static func parite(_ r: Rapport) {
         // Sur un logo CARRÉ, la position doit être exactement celle du
         // prototype. C'est le cas du logo NONP, un disque dans une image carrée.
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         profil.logoActif = true
         let cote = CGSize(width: 512, height: 512)
 
@@ -209,7 +209,7 @@ enum ControlesLogo {
         }
         defer { try? FileManager.default.removeItem(at: fichier) }
 
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         profil.logoActif = true
         profil.logoFichier = fichier
         let p = MoteurMiseEnPage.calculer(profil: profil, largeur: 640, hauteur: 360)
@@ -255,10 +255,10 @@ enum ControlesLogo {
         // Les trois combinaisons de l'ADR, au niveau du profil : c'est la
         // présence du fichier de sous-titres et celle du logo qui les
         // distinguent, et les deux sont indépendantes.
-        var avecLogo = ProfilHabillage.nonpHistorique
+        var avecLogo = ProfilHabillage.bandeauColore
         avecLogo.logoActif = true
         avecLogo.logoFichier = URL(fileURLWithPath: "/x.png")
-        var sansLogo = ProfilHabillage.nonpHistorique
+        var sansLogo = ProfilHabillage.bandeauColore
         sansLogo.logoActif = false
         let srt = URL(fileURLWithPath: "/x.srt")
 

@@ -46,7 +46,7 @@ enum CommandeExport {
         let sousTitres = chemins.count >= 3
             ? URL(fileURLWithPath: chemins[1]) : nil
 
-        var profil = ProfilHabillage.nonpHistorique
+        var profil = ProfilHabillage.bandeauColore
         if let p = args.firstIndex(of: "--profil"), p + 1 < args.count,
            args[p + 1].lowercased() == "neutre" {
             profil = .neutre

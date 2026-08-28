@@ -44,14 +44,14 @@ enum CommandeProfils {
             return 1
         }
 
-        var nonpAvecLogo = ProfilHabillage.nonpHistorique
+        var nonpAvecLogo = ProfilHabillage.bandeauColore
         nonpAvecLogo.logoActif = true
         nonpAvecLogo.logoFichier = logo
 
         // Un profil réglé à la main, mais qui reste dans ce que le prototype
         // sait rendre : c'est le cas d'usage courant, et le plus exigeant sur
         // l'écriture des nombres.
-        var regle = ProfilHabillage.nonpHistorique
+        var regle = ProfilHabillage.bandeauColore
         regle.nom = "Réglé à la main"
         regle.police = "Georgia"
         regle.tailleRatio = 0.0567
@@ -72,7 +72,7 @@ enum CommandeProfils {
         // profils lus par l'app, reste sans restriction.
         let aEcrire: [(String, ProfilHabillage)] = [
             ("amende-nonp.json", nonpAvecLogo),
-            ("amende-nonp-sans-logo.json", .nonpHistorique),
+            ("amende-nonp-sans-logo.json", .bandeauColore),
             ("amende-regle-a-la-main.json", regle),
             ("amende-neutre.json", .neutre),
         ]

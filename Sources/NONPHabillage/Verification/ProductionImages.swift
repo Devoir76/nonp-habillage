@@ -83,7 +83,7 @@ enum ProductionImages {
         // Découpage tel que le prototype le ferait : c'est lui qui fixe les
         // minutages gravés, donc l'instant où extraire l'image des deux côtés.
         let paramsHistoriques = MoteurMiseEnPage.calculerCommeLePrototype(
-            profil: .nonpHistorique, largeur: largeur, hauteur: hauteur)
+            profil: .bandeauColore, largeur: largeur, hauteur: hauteur)
         // Une vidéo peut être un extrait : la réplique retenue doit tomber
         // dedans, sinon l'image extraite ne montre pas ce qu'on croit.
         let duree = try ImagesReference.duree(de: source.video)
@@ -140,7 +140,7 @@ enum ProductionImages {
         let cues = try ParseurSousTitres.analyser(fichier: source.sousTitres)
         let (l, h) = try ImagesReference.dimensions(de: source.video)
         let params = MoteurMiseEnPage.calculerCommeLePrototype(
-            profil: .nonpHistorique, largeur: l, hauteur: h)
+            profil: .bandeauColore, largeur: l, hauteur: h)
         let duree = try ImagesReference.duree(de: source.video)
         let choisie = try repliqueLaPlusDecoupee(
             cues, maxCaracteres: params.maxCaracteres, avantMs: Int(duree * 1000))
@@ -204,7 +204,7 @@ enum ProductionImages {
         for cue in cues where cue.finMs <= avantMs {
             let morceaux = Segmenteur.segmenter(
                 [cue], maxCaracteres: maxCaracteres,
-                lignesMax: ProfilHabillage.nonpHistorique.lignesMax)
+                lignesMax: ProfilHabillage.bandeauColore.lignesMax)
             guard let premier = morceaux.first else { continue }
             let candidat = Choix(source: cue, gravee: premier, morceaux: morceaux.count)
             if let actuel = meilleur {

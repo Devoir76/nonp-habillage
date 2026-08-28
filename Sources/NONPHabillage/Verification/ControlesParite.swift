@@ -111,7 +111,7 @@ enum ControlesParite {
 
     private static func comparerParametres(_ r: Rapport, _ ref: ReferencePython) {
         let p = MoteurMiseEnPage.calculer(
-            profil: .nonpHistorique, largeur: ref.largeur, hauteur: ref.hauteur)
+            profil: .bandeauColore, largeur: ref.largeur, hauteur: ref.hauteur)
         r.egal("paramètres : taille de police", p.taille, ref.parametres.size)
         r.egal("paramètres : capacité de ligne", p.maxCaracteres, ref.parametres.maxchars)
         r.egal("paramètres : marge latérale", p.margeLaterale, ref.parametres.margin_lr)

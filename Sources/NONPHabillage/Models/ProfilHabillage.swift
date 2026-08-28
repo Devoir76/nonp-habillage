@@ -77,7 +77,7 @@ enum PositionLogo: Equatable {
 /// Comportement du fond derrière le texte (schéma : `sous_titre.bandeau.mode`).
 enum ModeBandeau: String, Equatable {
     /// Le fond épouse la longueur de chaque ligne. Comportement historique,
-    /// conservé par le préréglage NONP.
+    /// conservé par le préréglage « Bandeau coloré ».
     case ajuste = "ajuste"
     /// Bande de largeur constante sur toute la vidéo, texte centré. Défaut du
     /// profil neutre : masque un sous-titre déjà incrusté dans la source et
@@ -188,13 +188,33 @@ struct ProfilHabillage: Equatable {
 
     // MARK: - Préréglages livrés
 
-    /// Le profil **NONP**, repris des constantes de `nonp_habille.py`.
+    /// Le préréglage **Bandeau coloré** — les constantes de `nonp_habille.py`.
     ///
-    /// C'est le profil de référence des tests de parité : celui que le
-    /// prototype applique quand on ne lui passe pas de `--profil`. Il conserve
-    /// le bandeau `ajuste`, pour ne rien changer à l'existant (ADR §4).
-    static let nonpHistorique = ProfilHabillage(
-        nom: "NONP",
+    /// Les VALEURS viennent bien du prototype, et n'ont pas bougé : c'est le
+    /// profil de référence des tests de parité, celui que le prototype applique
+    /// quand on ne lui passe pas de `--profil`. Il conserve le bandeau
+    /// `ajuste`, pour ne rien changer à l'existant (ADR §4).
+    ///
+    /// **Seul son NOM a changé, le 28/08/2026.** Il s'appelait « NONP ». Un
+    /// préréglage livré décrit une APPARENCE, pas une organisation : dans une
+    /// application destinée au téléchargement public, un bouton au nom d'une
+    /// association impose une identité visuelle à quelqu'un qui ne la connaît
+    /// pas. Le nom de l'application dit déjà son origine ; ses préréglages
+    /// n'ont pas à la répéter.
+    ///
+    /// L'habillage NONP n'est pas perdu pour autant : il est livré comme
+    /// **fichier d'exemple** (`Resources/profils-exemples/nonp.json`), à
+    /// importer. C'est mieux à sa place — l'ADR §2 décrit précisément cet
+    /// usage, « une association fige son habillage et le diffuse à ses
+    /// bénévoles ». Un fichier qu'on s'échange le démontre ; un bouton câblé
+    /// dans l'application ne le démontrait pas, il l'imposait.
+    ///
+    /// **Ce changement ne touche AUCUN profil enregistré** : le nom d'un profil
+    /// mémorisé, importé ou exporté est une donnée de l'utilisateur, relue
+    /// telle quelle. Renommer un préréglage livré ne renomme rien chez
+    /// personne.
+    static let bandeauColore = ProfilHabillage(
+        nom: "Bandeau coloré",
         logoActif: true,
         logoFichier: nil,                // fourni à l'usage (--logo)
         logoTailleRatio: 0.115,          // DIAM_RATIO

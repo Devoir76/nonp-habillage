@@ -458,6 +458,14 @@ enum Textes {
         static let importer = "Importer…"
         static let exporter = "Exporter…"
         static let preregle = "Préréglage"
+        /// Dit, à l'ouverture du panneau d'import, ce qu'on y trouve.
+        ///
+        /// Les préréglages livrés décrivent une APPARENCE ; l'habillage d'une
+        /// organisation est un fichier qu'on s'échange. Le panneau s'ouvre sur
+        /// les exemples pour que la distinction se voie plutôt que se lise.
+        static let ouExemples =
+            "Profils d'exemple livrés avec l'application. Un profil reçu d'une "
+            + "association s'importe de la même façon."
         static func importe(_ nom: String) -> String {
             "Profil « \(nom) » importé."
         }

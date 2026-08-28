@@ -59,7 +59,7 @@ enum ControlesExport {
             let bilan = try bloquant {
                 try await ExportateurVideo().exporter(
                     video: video, sousTitres: fichierSousTitresDEssai(),
-                    profil: .nonpHistorique, vers: sortie,
+                    profil: .bandeauColore, vers: sortie,
                     progression: { avancements.append($0.fraction) })
             }
             r.verifier("l'export aboutit", true)
@@ -108,7 +108,7 @@ enum ControlesExport {
                 // avoir éprouvé. Ici, l'interruption tombe forcément en cours
                 // de route.
                 return try await exportateur.exporter(
-                    video: video, sousTitres: nil, profil: .nonpHistorique,
+                    video: video, sousTitres: nil, profil: .bandeauColore,
                     vers: sortie, progression: { _ in exportateur.annuler() })
             }
         } catch ErreurExport.annule {
@@ -139,7 +139,7 @@ enum ControlesExport {
         do {
             let bilan = try bloquant {
                 try await ExportateurVideo().exporter(
-                    video: video, sousTitres: nil, profil: .nonpHistorique,
+                    video: video, sousTitres: nil, profil: .bandeauColore,
                     vers: sortie, progression: { _ in })
             }
             r.verifier("un export sans sous-titres aboutit", bilan.octets > 0)
@@ -164,7 +164,7 @@ enum ControlesExport {
         do {
             _ = try bloquant {
                 try await ExportateurVideo().exporter(
-                    video: bidon, sousTitres: nil, profil: .nonpHistorique,
+                    video: bidon, sousTitres: nil, profil: .bandeauColore,
                     vers: sortie, progression: { _ in })
             }
         } catch {
@@ -184,7 +184,7 @@ enum ControlesExport {
         do {
             let bilan = try bloquant {
                 try await ExportateurVideo().exporter(
-                    video: video, sousTitres: nil, profil: .nonpHistorique,
+                    video: video, sousTitres: nil, profil: .bandeauColore,
                     vers: sortie, progression: { _ in })
             }
             r.verifier("l'export déclare l'audio recopié", bilan.audioRecopie)

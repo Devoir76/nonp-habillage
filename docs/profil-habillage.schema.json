@@ -120,7 +120,7 @@
             "mode": {
               "enum": ["ajuste", "pleine-largeur"],
               "default": "ajuste",
-              "description": "AJOUT 2026-08-23, conservé en v2. « ajuste » : le fond épouse la longueur de chaque ligne (comportement historique, conservé par défaut — préréglage NONP). « pleine-largeur » : bande de largeur constante sur toute la vidéo, texte centré ; masque un sous-titre déjà incrusté dans la source et évite que la largeur saute d'une réplique à l'autre. Défaut du profil neutre livré avec l'app native."
+              "description": "AJOUT 2026-08-23, conservé en v2. « ajuste » : le fond épouse la longueur de chaque ligne (comportement historique, conservé par défaut — préréglage « Bandeau coloré »). « pleine-largeur » : bande de largeur constante sur toute la vidéo, texte centré ; masque un sous-titre déjà incrusté dans la source et évite que la largeur saute d'une réplique à l'autre. Défaut du profil neutre livré avec l'app native."
             },
             "couleur": { "$ref": "#/$defs/couleur", "default": "#000000" },
             "opacite": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
