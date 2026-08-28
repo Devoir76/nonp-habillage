@@ -461,22 +461,47 @@ enum ControlesInterface {
                        .localizedCaseInsensitiveContains("aperçu")
                    && Textes.Interface.fondApercuSeulement
                        .localizedCaseInsensitiveContains("export"))
-        r.verifier("elle tient sur une ligne de menu — moins de 60 caractères "
-                   + "(\(Textes.Interface.fondApercuSeulement.count))",
-                   Textes.Interface.fondApercuSeulement.count < 60)
         r.verifier("le conseil d'usage garde le critère de contraste de l'ADR §2",
                    Textes.Interface.fondDeLApercuConseil
                        .contains(Textes.Interface.fondLePlusSombre)
                    && Textes.Interface.fondDeLApercuConseil
                        .contains(Textes.Interface.fondLePlusClair))
+
+        // Les deux phrases ont quitté la ligne pour l'infobulle du menu. Elles
+        // n'ont pas été RÉSUMÉES : les perdre en chemin serait la seule façon
+        // de rater cet allègement, puisque plus rien à l'écran ne les rappelle.
+        let infobulle = Textes.Interface.fondDeLApercuInfobulle
+        r.verifier("l'infobulle du menu porte la réserve, mot pour mot",
+                   infobulle.contains(Textes.Interface.fondApercuSeulement))
+        r.verifier("elle porte aussi le conseil d'usage, mot pour mot",
+                   infobulle.contains(Textes.Interface.fondDeLApercuConseil))
+        r.verifier("et rien d'autre — l'infobulle est la somme des deux "
+                   + "(\(infobulle.count) caractères)",
+                   infobulle.count == Textes.Interface.fondApercuSeulement.count
+                   + Textes.Interface.fondDeLApercuConseil.count + 1)
+
+        // Ce qui autorisait à les retirer de la ligne : les libellés du menu
+        // disent déjà le sens du réglage. On ne survole pas pour savoir ce
+        // qu'on choisit — seulement pour lever un doute.
+        r.verifier("les libellés du menu suffisent sans l'infobulle : ils "
+                   + "nomment les deux extrêmes",
+                   Textes.Interface.nomFond(index: 0, total: 6, luminosite: 0)
+                       .hasSuffix(Textes.Interface.fondLePlusSombre)
+                   && Textes.Interface.nomFond(index: 5, total: 6, luminosite: 1)
+                       .hasSuffix(Textes.Interface.fondLePlusClair))
     }
 
-    /// La réserve est sur la MÊME LIGNE que le menu : encore faut-il que la
-    /// ligne tienne dans la colonne de l'aperçu à sa largeur minimale.
+    /// **La ligne sous l'aperçu tient sur UNE ligne**, et dans la largeur
+    /// minimale du volet.
     ///
     /// C'est la seule façon de savoir : une ligne trop chargée ne produit pas
-    /// d'erreur, elle rogne le menu ou repousse la navigation entre répliques
-    /// hors du volet.
+    /// d'erreur, elle se replie en paragraphe — et le paragraphe prend sa place
+    /// sur l'image, qui est la valeur du volet.
+    ///
+    /// L'ancien contrôle mesurait le volet entier et concluait que sa hauteur
+    /// était « supérieure à zéro » : il ne pouvait rien dire. `BarreChoixApercu`
+    /// étant devenue une vue à part entière, sa hauteur RÉELLE se mesure, et se
+    /// compare à celle d'un menu seul — la hauteur d'une ligne de commandes.
     @MainActor
     private static func dispositionBarreDeChoix(_ r: Rapport) {
         _ = NSApplication.shared
@@ -502,11 +527,62 @@ enum ControlesInterface {
                    + "rogné (\(Int(taille.width)) points pour \(Int(largeurUtile)))",
                    taille.width <= largeurUtile + 1)
 
-        // Sans sous-titres chargés, la ligne porte le menu, la réserve et la
-        // mention « phrase de référence » : c'est son cas le plus chargé.
-        r.verifier("la ligne du menu reste une ligne de commandes, pas un "
-                   + "paragraphe (\(Int(taille.height)) points de volet)",
-                   taille.height > 0)
+        // La hauteur d'un menu seul : l'étalon d'une ligne de commandes.
+        let menuSeul = NSHostingView(
+            rootView: Picker("", selection: .constant(0)) { Text("1/6").tag(0) }
+                .pickerStyle(.menu).labelsHidden())
+        menuSeul.layoutSubtreeIfNeeded()
+        let uneLigne = menuSeul.fittingSize.height
+
+        // Sans sous-titres chargés : le menu et la mention « phrase de
+        // référence ». C'est l'état où la ligne portait le plus de texte.
+        let ligne = NSHostingView(
+            rootView: BarreChoixApercu().environmentObject(etat)
+                .frame(width: largeurUtile))
+        ligne.layoutSubtreeIfNeeded()
+        r.verifier("sans sous-titres : la ligne du menu reste une ligne de "
+                   + "commandes (\(Int(ligne.fittingSize.height)) points pour "
+                   + "\(Int(uneLigne)) qu'en prend un menu seul)",
+                   ligne.fittingSize.height <= uneLigne + 1)
+
+        // Avec un fichier chargé — l'état COURANT : le menu, les chevrons et le
+        // compteur. C'est là que la barre faisait une ligne et demie, « la plus
+        // longue du fichier » s'écrivant sous le compteur.
+        let avecST = AppState()
+        avecST.voletOuvert = true
+        avecST.poserFondsDeControle((0..<6).map { i in
+            (instant: Double(i), image: i < 3 ? sombre : clair,
+             luminosite: Double(i) / 5)
+        })
+        avecST.poserRepliquesDeControle((0..<57).map { i in
+            Cue(debutMs: i * 2000, finMs: i * 2000 + 1800, texte: texteDEssai)
+        })
+        let ligneST = NSHostingView(
+            rootView: BarreChoixApercu().environmentObject(avecST)
+                .frame(width: largeurUtile))
+        ligneST.layoutSubtreeIfNeeded()
+        r.verifier("sous-titres chargés, première réplique : toujours une seule "
+                   + "ligne (\(Int(ligneST.fittingSize.height)) points pour "
+                   + "\(Int(uneLigne)))",
+                   ligneST.fittingSize.height <= uneLigne + 1)
+
+        // Et elle ne se replie pas quand on la serre : à la largeur minimale du
+        // volet, elle garde la hauteur qu'elle a sans aucune contrainte.
+        let libre = NSHostingView(
+            rootView: BarreChoixApercu().environmentObject(etat))
+        libre.layoutSubtreeIfNeeded()
+        r.verifier("elle ne se replie pas à la largeur minimale du volet "
+                   + "(\(Int(ligne.fittingSize.height)) points contre "
+                   + "\(Int(libre.fittingSize.height)) sans contrainte)",
+                   ligne.fittingSize.height <= libre.fittingSize.height + 0.5)
+
+        // Plus rien n'escorte le menu : les deux phrases sont dans l'infobulle.
+        // On le vérifie par la LARGEUR NATURELLE de la ligne — une phrase de
+        // plus la ferait bondir de plusieurs centaines de points.
+        r.verifier("la ligne ne traîne plus de phrase avec elle : elle réclame "
+                   + "\(Int(libre.fittingSize.width)) points, moins que la "
+                   + "largeur minimale du volet (\(Int(largeurUtile)))",
+                   libre.fittingSize.width <= largeurUtile)
     }
 
     // MARK: - Deux colonnes

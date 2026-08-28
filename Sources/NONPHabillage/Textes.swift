@@ -222,21 +222,31 @@ enum Textes {
         /// comprendre.
         ///
         /// « Image de fond », puis « Image de la vidéo » : ni l'un ni l'autre ne
-        /// disait à quoi le choix sert, et l'explication vivait en bas du volet
-        /// d'aperçu — trop loin du menu pour être lue. Le lot 5 renonce à
-        /// expliquer et rend le contrôle explicite : son nom dit qu'il ne touche
-        /// que l'aperçu, chaque entrée dit ce qu'elle vaut, et la réserve
-        /// « jamais la vidéo exportée » tient sur la MÊME LIGNE que le menu.
+        /// disait à quoi le choix sert. Le lot 5 renonce à expliquer et rend le
+        /// contrôle explicite : son nom dit qu'il ne touche que l'aperçu, et
+        /// chaque entrée du menu dit ce qu'elle vaut.
+        ///
+        /// C'est ce qui a permis d'ALLÉGER la ligne. Le menu a d'abord traîné
+        /// deux phrases avec lui : la réserve sur la même ligne, le conseil
+        /// d'usage en dessous sur toute la largeur. Trois textes autour d'un
+        /// petit menu, dans un volet dont la valeur est l'IMAGE — et l'image y
+        /// perdait la place. Les deux phrases sont devenues l'INFOBULLE du
+        /// menu : à portée du pointeur pour qui doute, invisibles pour les
+        /// autres. Ce que le réglage fait, ses libellés le disent déjà.
         static let fondDeLApercu = "Fond de l'aperçu"
-        /// Sur la même ligne que le menu : la seule chose qu'on puisse craindre
-        /// en y touchant, démentie là où on la craint.
+        /// La seule chose qu'on puisse craindre en touchant au menu.
         static let fondApercuSeulement = "N'affecte que l'aperçu, pas la vidéo exportée."
-        /// Sous le menu : ce qu'il faut EN FAIRE. C'est le critère de contraste
-        /// de l'ADR §2 — regarder les deux extrêmes —, tout ce qui restait
-        /// d'utile dans l'ancienne explication.
+        /// Ce qu'il faut EN FAIRE. C'est le critère de contraste de l'ADR §2 —
+        /// regarder les deux extrêmes —, tout ce qui restait d'utile dans
+        /// l'ancienne explication.
         static let fondDeLApercuConseil =
             "Regardez le plus sombre et le plus clair : c'est ainsi qu'on vérifie "
             + "que le texte reste lisible sur toute la vidéo."
+        /// L'infobulle du menu : la réserve, puis le conseil. Les deux phrases
+        /// restent mot pour mot — elles ont seulement quitté la ligne.
+        static var fondDeLApercuInfobulle: String {
+            fondApercuSeulement + " " + fondDeLApercuConseil
+        }
 
         /// Libellé d'une entrée du menu : son rang, puis ce qu'elle vaut.
         ///

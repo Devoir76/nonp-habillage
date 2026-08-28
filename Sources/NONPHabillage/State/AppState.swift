@@ -257,6 +257,19 @@ final class AppState: ObservableObject {
         rafraichirApercu()
     }
 
+    /// Pose des répliques sans passer par un fichier.
+    ///
+    /// Même porte, et même raison, que `poserFondsDeControle` : `repliques` est
+    /// en lecture seule pour les vues, et le seul chemin normal —
+    /// `chargerSousTitres` — est asynchrone et exige un vrai fichier. Sans
+    /// cette porte, la barre de choix ne pourrait être MESURÉE que dans son
+    /// état sans sous-titres, alors que l'état COURANT est l'autre : un fichier
+    /// chargé, la navigation entre répliques affichée.
+    func poserRepliquesDeControle(_ cues: [Cue]) {
+        repliques = cues
+        indexReplique = 0
+    }
+
     /// Recalcule l'aperçu. Appelé à chaque réglage — c'est instantané, aucune
     /// vidéo n'est écrite.
     func rafraichirApercu() {
