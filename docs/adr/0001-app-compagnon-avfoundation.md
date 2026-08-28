@@ -504,51 +504,183 @@ pire, un profil qu'on ne peut pas rendre avec l'ancien outil.
 - **le panneau d'enregistrement le dit** quand un profil emploie un de ces
   champs : découvrir le refus au moment de s'en servir serait le pire moment.
 
-### Décision nº6 — `espaces_lateraux`, un héritage de l'ASS inadapté au relatif
+### Décision nº6 — qui commande la largeur de la colonne de texte ?
 
-**Constat, lot 3.** `sous_titre.bandeau.espaces_lateraux` élargit le fond du
-mode `ajuste` en collant *n* espaces durs `\h` de chaque côté du texte. C'est
-un procédé d'ASS : faute de pouvoir dessiner un rectangle, libass n'avait que
-le texte pour agir sur la boîte. L'unité qui en découle est la **largeur d'une
-espace**, donc une fraction de la **taille de police** — elle-même dérivée de
-la **hauteur** de la vidéo. Or ce que cette marge consomme, c'est de la
-**largeur**. Le réglage est adossé à la mauvaise dimension : c'est le même
-défaut de conception que celui corrigé au §5, à un autre endroit.
+**Instruite au lot 6 (temps 2), le 28/08/2026. Non tranchée.** Tous les chiffres
+qui suivent se refont par `NONPHabillage --mesures-decision6` ; aucun n'est
+recopié à la main.
 
-**Mesure** (Arial, profil NONP, `espaces_lateraux: 4`, donc 8 espaces au
-total). À la taille que le profil demande, avant toute réduction :
+#### Le constat de départ (lot 3)
 
-| Format | Taille nominale | Largeur utile | Coût des 8 espaces | |
+`sous_titre.bandeau.espaces_lateraux` élargit le fond du mode `ajuste` en
+collant *n* espaces durs de chaque côté du texte. C'est un procédé d'ASS : faute
+de pouvoir dessiner un rectangle, libass n'avait que le texte pour agir sur la
+boîte. L'unité qui en découle est la **largeur d'une espace**, donc une fraction
+de la **taille de police**, elle-même dérivée de la **hauteur** de la vidéo. Or
+ce que cette marge consomme, c'est de la **largeur**. Le réglage est adossé à la
+mauvaise dimension — même défaut de conception que celui corrigé au §5, à un
+autre endroit.
+
+#### Ce que la mesure ajoute au constat
+
+Quatre réglages prétendent gouverner la largeur de la colonne de texte :
+
+| réglage | unité | mode concerné | au schéma ? |
+|---|---|---|---|
+| `sous_titre.marge_laterale_pct_largeur` | % de la largeur | `ajuste` seul | oui |
+| `bandeau.espaces_lateraux` | largeur d'espace (→ hauteur) | `ajuste` | oui |
+| `bandeau.marge_interieure_pct_largeur` | % de la largeur | `pleine-largeur` | oui |
+| `longueurLigneCible` | caractères | les deux | **non** |
+
+**Premier résultat — la longueur de ligne cible les bat tous les trois.** En
+16:9 1080p, profil NONP, en balayant chaque réglage sur toute sa course et en
+comptant les IMAGES distinctes (taille de police appliquée et endroits de
+césure — pas la capacité de ligne, nombre intermédiaire qui bouge sans que rien
+ne change à l'écran) :
+
+| réglage, course entière | 16:9 1080p | 9:16 1080×1920 |
+|---|---|---|
+| `espaces_lateraux` 0 → 12 | **aucun effet**, 1 image | 13 images, effet dès 1 |
+| `marge_interieure` 0 → 25 % | 7 images, 1er effet à **23,2 %** | 37 images, 1er effet à 3,5 % |
+| `marge_laterale` 0 → 20 %, `ajuste` | 7 images, 1er effet à **17,9 %** | 28 images, 1er effet à 1,4 % |
+| `marge_laterale` 0 → 20 %, `pleine-largeur` | **aucun effet** | 29 images, 1er effet à 3,5 % |
+| `longueurLigneCible` 28 → 42 | 5 images, effet dès 29 | **15 images sur 15** |
+
+En 16:9 — le format de référence — `espaces_lateraux` ne produit **aucun effet
+visible sur la totalité de sa course**, et les deux marges n'en produisent que
+dans leur dernier dixième. Une seule commande agit partout : la longueur de
+ligne cible, celle qui n'a pas de champ au schéma.
+
+La raison est mécanique. La taille demandée n'est réduite que si la capacité de
+ligne n'atteint pas la cible. En 16:9 elle l'atteint largement — 49 caractères
+pour 32 visés — et tant qu'elle l'atteint, retirer de la largeur ne change
+rien. En 9:16 la police, dérivée de la hauteur, vaut 138 px demandés : la cible
+n'est jamais atteinte, la taille est réduite à 61 px, et **chaque pixel de
+largeur repris se lit sur la taille du texte**.
+
+Corrigé au passage : la mesure du lot 5 concluait que 89 % de la course de la
+marge intérieure était inerte. Elle ne regardait que la largeur de découpe. En
+regardant l'image, le chiffre exact est **93 % en 16:9** (premier effet à
+23,2 % sur 25) — et **14 % en 9:16**. Le réglage n'est pas inutile : il est
+inutile *sur un seul format*.
+
+**Deuxième résultat — le coût de l'unité mal choisie, chiffré.** Débord du fond
+en mode `ajuste`, profil NONP, décomposé en `padding + 4 × largeur d'espace` :
+
+| format | taille | padding | 4 × espace | côté | % de la largeur |
+|---|---|---|---|---|---|
+| 16:9 1920×1080 | 78 px | 21 px | 87 px | 108 px | **5,61 %** |
+| 9:16 1080×1920 | 61 px | 36 px | 68 px | 104 px | **9,61 %** |
+| 1:1 1080×1080 | 63 px | 21 px | 70 px | 91 px | 8,43 % |
+| 4:5 1080×1350 | 63 px | 26 px | 70 px | 96 px | 8,89 % |
+
+Le même réglage coûte **5,61 % de la largeur en 16:9 et 9,61 % en 9:16**.
+
+**Troisième résultat — la question posée au lot 3 a une réponse.** « Quelle
+valeur par défaut donne, en 16:9, un fond visuellement identique ? » →
+**5,61 % de la largeur.** Et voici ce que ce défaut donnerait ailleurs :
+
+| format | côté aujourd'hui | côté à 5,61 % | taille aujourd'hui | taille alors |
 |---|---|---|---|---|
-| 16:9 1080p | 78 px | 1804 px | 173 px — **9,6 %** | supportable |
-| 9:16 1080×1920 | 138 px | 1016 px | 307 px — **30,2 %** | intenable |
+| 16:9 1920×1080 | 108 px | 108 px | 78 px | 78 px — inchangé |
+| 9:16 1080×1920 | 104 px | 61 px | 61 px | **68 px** |
+| 1:1 1080×1080 | 91 px | 61 px | 63 px | **68 px** |
+| 4:5 1080×1350 | 96 px | 61 px | 63 px | **68 px** |
 
-Trois fois plus cher en vertical, pour un réglage que personne n'a modifié :
-la vidéo est plus étroite alors que la police, dérivée de la hauteur, est plus
-grande.
+Le 16:9 ne bouge pas — c'est la condition. Les formats étroits récupèrent la
+largeur que l'unité « largeur d'espace » leur prenait, et la police y remonte
+de 11 %.
 
-**Conséquence observée.** En 9:16, le moteur réduit la police jusqu'à ce que la
-longueur de ligne cible tienne dans ce qui reste. Elle descend à **61 px** —
-elle atteint bien ses 32 caractères, c'est justement pour les atteindre qu'elle
-descend si bas, mais le texte est nettement plus petit qu'il n'aurait besoin de
-l'être. Environ un cinquième de la largeur utile part en marge de fond.
+#### Les deux réglages sans champ
 
-**Piste.** Exprimer cette marge comme tout le reste du schéma : un pourcentage
-de la largeur vidéo — `bandeau.marge_laterale_pct_largeur`, symétrique du
-`marge_interieure_pct_largeur` déjà défini pour le mode `pleine-largeur`.
-`espaces_lateraux` resterait **accepté en lecture** pour compatibilité, converti
-à l'ouverture, et cesserait d'être écrit.
+**`longueurLigneCible`.** Le lot 6 lui a donné une règle provisoire : elle se
+DÉDUIT de `taille_pct_hauteur` par la table des quatre tailles nommées. Ne rien
+déduire laissait un profil importé porter la police du fichier et la longueur de
+ligne de la session précédente — deux réglages qui ne se sont jamais rencontrés.
+Ce que la déduction coûte, mesuré en 16:9 1080p :
 
-**À vérifier au moment de trancher**, car cela touche le contrat partagé
-(invariant nº6) :
+| `taille_pct` | taille nommée déduite | cible posée | capacité réelle | écart |
+|---|---|---|---|---|
+| 4,2 % | Petite | 42 | 90 | +48 |
+| 6,0 % | Normale | 37 | 60 | +23 |
+| 7,2 % | Grande | 32 | 49 | +17 |
+| 9,0 % | Très grande | 28 | 39 | +11 |
 
-- le prototype Python consomme `espaces_lateraux` ; un profil écrit par l'app
-  doit rester lisible par lui tant qu'il fait foi (invariant nº5) ;
-- l'ajout doit rester **facultatif, avec une valeur par défaut qui reproduit le
-  rendu actuel**, pour que le schéma reste en version 1 ;
-- quelle valeur par défaut donne, en 16:9, un fond visuellement identique à
-  celui d'aujourd'hui — c'est la condition pour que le préréglage NONP ne
-  change pas.
+L'écart est toujours positif : en 16:9 la cible est atteinte de très loin, donc
+la déduction ne fait aucun mal — quelle que soit la valeur déduite, le rendu est
+le même. **C'est en 9:16 qu'elle décide de tout**, puisque la cible y commande la
+taille. Un profil venu du prototype, qui n'a jamais entendu parler de longueur de
+ligne, y reçoit donc une cible que personne n'a choisie.
+
+**`logo.recadre_en_cercle`.** Il vit dans `reglages_app` de la mémoire locale et
+**ne part pas** avec un profil partagé : le destinataire obtient un logo carré là
+où l'expéditeur voyait un rond, et rien ne le dit. À noter, parce que cela
+oriente : le prototype en faisait une propriété du **fichier** (`--make-logo`
+fabriquait une image ronde à côté), jamais du profil. L'app en a fait un réglage
+réversible (lot 5, D-8) — c'est ce changement, et non un oubli, qui crée le
+besoin d'un champ.
+
+#### Trois options
+
+**Option A — ne rien ajouter au schéma.**
+
+- *Rendu* : inchangé partout, aujourd'hui comme demain.
+- *Prototype* : compatibilité maximale — l'app n'écrit rien de neuf, et le
+  tableau de D-9 ne s'allonge pas.
+- *Schéma v1* : trivialement tenu.
+- *Ce que cela laisse* : `espaces_lateraux` reste adossé à la hauteur, et les
+  formats verticaux gardent une police 11 % plus petite qu'elle n'aurait besoin
+  d'être. La longueur de ligne cible reste déduite, donc un profil partagé ne
+  porte pas la cible que son auteur a choisie. Le recadrage rond ne voyage pas.
+
+**Option B — trois champs facultatifs, schéma toujours en version 1.**
+
+`bandeau.marge_laterale_pct_largeur`, `sous_titre.longueur_ligne_cible`,
+`logo.recadre_en_cercle`. La règle de la v1 s'applique à chacun : **absent =
+comportement d'aujourd'hui.** Donc `marge_laterale_pct_largeur` absente ⇒ on
+retombe sur `espaces_lateraux` ; `longueur_ligne_cible` absente ⇒ on la déduit
+comme aujourd'hui ; `recadre_en_cercle` absent ⇒ faux.
+
+- *Rendu* : strictement inchangé tant que les champs ne sont pas écrits. Un
+  profil qui les écrit rend mieux en vertical (+11 % de taille) et porte enfin sa
+  cible et son rond.
+- *Prototype* : chaque champ écrit rend le profil illisible pour lui. D-9
+  s'allonge de trois lignes. Assumé par la décision nº5.
+- *Schéma v1* : tenable, mais au prix d'une **double commande** pendant toute la
+  transition — `espaces_lateraux` et la nouvelle marge décrivent la même chose,
+  et il faut dire lequel gagne. C'est exactement le désordre que la question
+  cherchait à finir.
+
+**Option C — un seul champ commande la colonne, schéma en version 2.**
+
+`sous_titre.largeur_colonne_pct_largeur` : la largeur de la colonne de texte, en
+pourcentage de la largeur vidéo, **quel que soit le mode de bandeau**. Elle
+remplace à l'écriture `espaces_lateraux` et `marge_interieure_pct_largeur`, tous
+deux conservés **en lecture** et convertis à l'ouverture.
+`longueur_ligne_cible` et `recadre_en_cercle` entrent avec elle.
+
+- *Rendu* : identique si la conversion est exacte — c'est à vérifier format par
+  format, et c'est le vrai travail de cette option. Le passage de
+  `espaces_lateraux: 4` à 5,61 % de largeur laisse le 16:9 au pixel près (mesuré
+  ci-dessus) ; les autres formats changent, dans le sens voulu.
+- *Prototype* : un profil écrit par l'app lui devient **systématiquement**
+  illisible, plus seulement quand il emploie le bandeau pleine largeur. C'est le
+  coût le plus lourd — et le moins grave depuis la décision nº5 : le prototype
+  part à la retraite, et le sens qui compte (ses profils lus par l'app) reste
+  intact.
+- *Schéma* : **v2**. Prétendre le contraire serait un mensonge de forme — l'app
+  écrirait toujours le nouveau champ, donc l'absence ne serait plus jamais le cas
+  courant. Une v2 assumée coûte une migration (v1 → v2 à la lecture), qui est
+  simple ici puisque la conversion est arithmétique.
+
+#### Ce que je retiens de la mesure, sans trancher
+
+Le désordre n'est pas dans le nombre de réglages : il est dans le fait que
+**trois d'entre eux sont muets sur le format de référence** et que le seul qui
+parle partout n'est pas au fichier. Une décision qui ne ferait qu'ajouter des
+champs sans dire qui commande laisserait ce défaut intact.
+
+*Décision d'Éric attendue.*
 
 **Hors périmètre du lot 3**, qui n'a touché à aucun profil : le rendu actuel
 applique `espaces_lateraux` tel que le schéma le définit. Seule la façon de
