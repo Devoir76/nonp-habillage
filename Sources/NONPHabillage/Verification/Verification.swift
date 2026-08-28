@@ -32,11 +32,6 @@ enum Verification {
             exit(MainActor.assumeIsolated { CaptureInterface.executer(arguments: args) })
         }
 
-        // Les chiffres qui instruisent la décision nº6 (lot 6, temps 2).
-        if args.contains("--mesures-decision6") {
-            exit(CommandeMesures.executer(arguments: args))
-        }
-
         // Profils écrits pour relecture par le prototype (lot 6).
         if args.contains("--profils") {
             exit(CommandeProfils.executer(arguments: args))
@@ -87,6 +82,7 @@ enum Verification {
         ControlesLogo.executer(r)
         ControlesInterface.executer(r)
         ControlesProfils.executer(r)
+        ControlesRegressionV2.executer(r, corpus: corpus)
         ControlesExport.executer(r, videoReelle: videoReelle)
         ControlesParite.executer(r, referenceJSON: referenceJSON)
         return r.conclure()

@@ -13,14 +13,14 @@
 // ── Le nom des fichiers PORTE l'attente ──────────────────────────────────────
 //
 // `accepte-*` : le prototype doit les lire sans une remarque.
-// `amende-*`  : il doit les REFUSER, et seulement pour les trois champs ajoutés
-//               au schéma le 23/08 — `mode`, `hauteur_fixe_lignes`,
-//               `marge_interieure_pct_largeur`. Ce refus est exact : le
-//               prototype ne sait pas rendre un bandeau pleine largeur, et un
-//               fichier qui tairait le mode lui ferait rendre autre chose que
-//               ce qu'il décrit. Le jour où le prototype recevra l'amendement,
-//               ces fichiers passeront dans l'autre catégorie sans changer
-//               d'une virgule.
+// `amende-*`  : il doit les REFUSER, et seulement pour ce que la version 2 du
+//               schéma a changé — la version elle-même, qu'il vérifie avant
+//               tout le reste, et les champs qui n'existent qu'en v2.
+//
+// Depuis la décision nº6 du 28/08, TOUS les profils écrits par l'app sont dans
+// la seconde catégorie. Ce refus est exact : le prototype ne sait rendre ni un
+// bandeau pleine largeur, ni une marge de texte en pourcentage de largeur. Un
+// fichier qui le tairait lui ferait rendre autre chose que ce qu'il décrit.
 
 import Foundation
 import CoreGraphics
@@ -61,13 +61,19 @@ enum CommandeProfils {
         regle.couleurTexte = CouleurProfil(hex: "#FFD400")
         regle.contourRatio = 0.011
         regle.bandeauCouleur = CouleurProfil(hex: "#0067F6", opacite: 0.42)
-        regle.bandeauEspacesLateraux = 7
+        regle.bandeauMargeTexteRatioLargeur = 0.07
         regle.logoPosition = .libre(xPct: 12.5, yPct: 87.5)
 
+        // TOUS « amende- » depuis la version 2 du schéma : le prototype
+        // vérifie `schema_version == 1` avant tout le reste et refuse donc
+        // n'importe quel profil écrit par l'app. C'est le coût accepté de
+        // l'option C (décision nº6), pesé par la décision nº5 — le prototype
+        // prend sa retraite avec l'app native, et le sens qui compte, ses
+        // profils lus par l'app, reste sans restriction.
         let aEcrire: [(String, ProfilHabillage)] = [
-            ("accepte-nonp.json", nonpAvecLogo),
-            ("accepte-nonp-sans-logo.json", .nonpHistorique),
-            ("accepte-regle-a-la-main.json", regle),
+            ("amende-nonp.json", nonpAvecLogo),
+            ("amende-nonp-sans-logo.json", .nonpHistorique),
+            ("amende-regle-a-la-main.json", regle),
             ("amende-neutre.json", .neutre),
         ]
 

@@ -26,13 +26,16 @@ enum ControlesProfils {
         r.section("Profils — un profil du prototype, accepté sans retouche")
         profilDuPrototype(r)
 
+        r.section("Profils — conversion d'un profil version 1")
+        conversionV1(r)
+
         r.section("Profils — validation : champs inconnus refusés")
         validation(r)
 
         r.section("Profils — écriture et aller-retour")
         allerRetour(r)
 
-        r.section("Profils — ce que l'app écrit reste dans ce que le prototype lit")
+        r.section("Profils — ce que l'app écrit, et ce que le prototype en fait")
         ecritureEtroite(r)
 
         r.section("Profils — préréglages livrés")
@@ -106,7 +109,10 @@ enum ControlesProfils {
         r.egal("lignes maximum", p.lignesMax, 2)
         r.egal("couleur du bandeau : le bleu NONP",
                ProfilJSON.hex(p.bandeauCouleur), "#0067F6")
-        r.egal("espaces latéraux", p.bandeauEspacesLateraux, 4)
+        r.verifier("ses 4 espaces latéraux sont convertis en marge de texte "
+                   + "(\(String(format: "%.2f", p.bandeauMargeTexteRatioLargeur * 100)) % "
+                   + "de la largeur)",
+                   abs(p.bandeauMargeTexteRatioLargeur - 0.0561) < 0.0005)
         r.egal("logo : 11,5 % de la hauteur", p.logoTailleRatio, 0.115)
         r.egal("logo : coin haut-gauche", p.logoPosition, .coin(.hautGauche))
 
@@ -118,8 +124,8 @@ enum ControlesProfils {
                p.bandeauMode, .ajuste)
         r.egal("hauteur_fixe_lignes absent → 0, hauteur automatique",
                p.bandeauHauteurFixeLignes, 0)
-        r.egal("marge_interieure absente → 3 %, la valeur par défaut du schéma",
-               p.bandeauMargeInterieureRatioLargeur, 0.03)
+        r.egal("longueur de ligne cible absente du v1 → déduite de la taille",
+               p.longueurLigneCible, 32)
 
         // Le chemin du logo est RELATIF au fichier de profil, comme le schéma le
         // dit et comme le prototype le résout.
@@ -141,6 +147,99 @@ enum ControlesProfils {
             r.nonExecute("comparaison avec le fichier réel du prototype",
                          motif: "prototype absent de \(vrai.path)")
         }
+    }
+
+    // MARK: - Conversion d'un profil version 1
+
+    /// Un profil v1 est LU, converti, et la conversion est DITE.
+    private static func conversionV1(_ r: Rapport) {
+        guard let lecture = try? ProfilJSON.decoderDetaille(
+            Data(profilPrototype.utf8),
+            base: URL(fileURLWithPath: "/prototype")) else {
+            r.verifier("un profil v1 est lu", false); return
+        }
+        r.verifier("un profil version 1 est lu et converti, pas refusé",
+                   lecture.migration != nil)
+        let m = lecture.migration ?? ""
+        r.verifier("la conversion DIT ce qu'elle a fait — une conversion "
+                   + "silencieuse est une modification silencieuse",
+                   m.contains("espaces_lateraux") && m.contains("marge_texte_pct_largeur"))
+        r.verifier("elle dit POURQUOI : l'unité était adossée à la hauteur",
+                   m.localizedCaseInsensitiveContains("hauteur")
+                   && m.localizedCaseInsensitiveContains("largeur"))
+        r.verifier("elle nomme le format de référence de la conversion",
+                   m.contains("16:9 1080p"))
+
+        // Mode « pleine-largeur » : conversion exacte, sans convention.
+        let pleine = """
+        {"schema_version": 1, "nom": "P",
+         "sous_titre": {"police": "Arial", "taille_pct_hauteur": 7.2,
+                        "couleur_texte": "#FFFFFF",
+                        "bandeau": {"actif": true, "mode": "pleine-largeur",
+                                    "marge_interieure_pct_largeur": 8}}}
+        """
+        let lu = try? ProfilJSON.decoderDetaille(Data(pleine.utf8), base: nil)
+        r.egal("mode « pleine-largeur » : la marge intérieure devient la marge "
+               + "du texte, à l'identique",
+               lu?.profil.bandeauMargeTexteRatioLargeur, 0.08)
+        r.verifier("et la conversion le dit sans invoquer de convention",
+                   lu?.migration?.localizedCaseInsensitiveContains(
+                    "le rendu ne change pas") == true)
+
+        // Refus MOTIVÉ : convertir des espaces exige de mesurer une espace
+        // dans la police du profil. Absente, on ne convertit pas.
+        let policeAbsente = """
+        {"schema_version": 1, "nom": "P",
+         "sous_titre": {"police": "Police Absolument Absente", "taille_pct_hauteur": 7.2,
+                        "couleur_texte": "#FFFFFF",
+                        "bandeau": {"actif": true, "espaces_lateraux": 4}}}
+        """
+        var refus: [String] = []
+        do { _ = try ProfilJSON.decoder(Data(policeAbsente.utf8), base: nil) }
+        catch let e as ErreurProfil { refus = e.anomalies }
+        catch { refus = ["\(error)"] }
+        r.verifier("police absente : la conversion est refusée, pas bricolée",
+                   !refus.isEmpty)
+        r.verifier("et le refus est MOTIVÉ — il nomme la police et l'invariant "
+                   + "qui l'interdit (\(refus.first ?? "aucun message"))",
+                   refus.first?.contains("Police Absolument Absente") == true
+                   && refus.first?.contains("nº4") == true)
+
+        // Une version qu'on ne sait pas lire : ce qui a changé, pas « inconnue ».
+        var v3: [String] = []
+        do {
+            _ = try ProfilJSON.decoder(Data(##"{"schema_version": 3, "nom": "P", "sous_titre": {"police": "Arial", "taille_pct_hauteur": 7.2, "couleur_texte": "#FFFFFF"}}"##.utf8), base: nil)
+        } catch let e as ErreurProfil { v3 = e.anomalies } catch {}
+        r.verifier("une version inconnue est refusée en disant lesquelles sont "
+                   + "lues (\(v3.first ?? "aucun message"))",
+                   v3.first?.contains("convertis automatiquement") == true)
+
+        // Les champs disparus sont REFUSÉS dans un fichier v2 : sans quoi deux
+        // champs décriraient encore la même chose.
+        for disparu in ["espaces_lateraux", "marge_interieure_pct_largeur"] {
+            let json = """
+            {"schema_version": 2, "nom": "P",
+             "sous_titre": {"police": "Arial", "taille_pct_hauteur": 7.2,
+                            "couleur_texte": "#FFFFFF",
+                            "bandeau": {"actif": true, "\(disparu)": 4}}}
+            """
+            var e: [String] = []
+            do { _ = try ProfilJSON.decoder(Data(json.utf8), base: nil) }
+            catch let err as ErreurProfil { e = err.anomalies } catch {}
+            r.verifier("« \(disparu) » dans un fichier v2 est refusé",
+                       e.contains { $0.contains(disparu) })
+        }
+        // Et réciproquement, les champs de la v2 sont refusés dans un v1.
+        let v2DansV1 = """
+        {"schema_version": 1, "nom": "P",
+         "sous_titre": {"police": "Arial", "taille_pct_hauteur": 7.2,
+                        "couleur_texte": "#FFFFFF", "longueur_ligne_cible": 32}}
+        """
+        var e: [String] = []
+        do { _ = try ProfilJSON.decoder(Data(v2DansV1.utf8), base: nil) }
+        catch let err as ErreurProfil { e = err.anomalies } catch {}
+        r.verifier("« longueur_ligne_cible » dans un fichier v1 est refusé",
+                   e.contains { $0.contains("longueur_ligne_cible") })
     }
 
     // MARK: - Lecture
@@ -254,7 +353,7 @@ enum ControlesProfils {
              ##"{"schema_version": 1, "nom": "P", "logo": {"actif": false, "position": {"preset": "milieu"}}, "sous_titre": {"police": "A", "taille_pct_hauteur": 5, "couleur_texte": "#FFFFFF"}}"##,
              "preset"),
             ("version de schéma inattendue",
-             ##"{"schema_version": 2, "nom": "P", "sous_titre": {"police": "A", "taille_pct_hauteur": 5, "couleur_texte": "#FFFFFF"}}"##,
+             ##"{"schema_version": 3, "nom": "P", "sous_titre": {"police": "A", "taille_pct_hauteur": 5, "couleur_texte": "#FFFFFF"}}"##,
              "schema_version"),
         ] {
             let e = anomalies(json)
@@ -296,7 +395,6 @@ enum ControlesProfils {
             var attendu = profil
             attendu.logoActif = false
             attendu.logoFichier = nil
-            attendu.logoRecadreEnCercle = false
             r.egal("\(profil.nom) : le profil relu est identique à l'écrit",
                    relu, attendu)
         }
@@ -329,8 +427,9 @@ enum ControlesProfils {
         fin.bandeauCouleur = CouleurProfil(hex: "#0067F6", opacite: 0.42)
         fin.bandeauMode = .pleineLargeur
         fin.bandeauPaddingRatio = 0.031
-        fin.bandeauEspacesLateraux = 7
-        fin.bandeauMargeInterieureRatioLargeur = 0.08
+        fin.bandeauMargeTexteRatioLargeur = 0.08
+        fin.longueurLigneCible = 38
+        fin.logoRecadreEnCercle = true
         fin.bandeauHauteurFixeLignes = 3
         fin.logoPosition = .libre(xPct: 12.5, yPct: 87.5)
         fin.logoTailleRatio = 0.2
@@ -343,31 +442,27 @@ enum ControlesProfils {
         var attendu = fin
         attendu.logoActif = false
         attendu.logoFichier = nil
-        attendu.longueurLigneCible = TailleNommee
-            .laPlusProche(deTaille: fin.tailleRatio).longueurLigneCible
         r.egal("un profil réglé finement revient à l'identique", relu, attendu)
     }
 
-    /// Ce que l'app écrit doit rester dans ce que le prototype sait lire.
+    /// Ce que l'app écrit, et ce que le prototype en fait.
     ///
-    /// Le prototype ignore les trois champs ajoutés le 23/08 — son `_controler`
-    /// les REFUSERAIT comme inconnus. Ils ne sont donc écrits que lorsqu'ils
-    /// s'écartent du comportement historique, ce qui est aussi la règle que le
-    /// schéma se donne à lui-même : un facultatif à sa valeur par défaut n'a
-    /// rien à faire dans le fichier.
+    /// **La réponse a changé le 28/08 avec la version 2 du schéma.** Au temps 1,
+    /// l'app s'astreignait à n'écrire un champ facultatif que s'il s'écartait de
+    /// sa valeur par défaut, pour qu'un profil resté dans ce que le prototype
+    /// sait rendre lui demeure lisible. La décision nº6 a rendu cette
+    /// gymnastique sans objet : le prototype vérifie `schema_version == 1` avant
+    /// tout le reste, donc il refuse désormais TOUT profil écrit par l'app.
+    ///
+    /// C'est le coût accepté de l'option C, et la décision nº5 l'avait déjà
+    /// pesé : le prototype prend sa retraite avec l'app native, et le sens qui
+    /// compte — ses profils lus par l'app — reste sans restriction.
+    ///
+    /// Ce qui se contrôle ici, c'est donc l'INVERSE de ce qu'on contrôlait :
+    /// que l'app écrive bien du v2, et que l'avertissement d'enregistrement le
+    /// dise. La preuve que le prototype refuse, elle, se fait chez lui —
+    /// `Scripts/profils_python.py`.
     private static func ecritureEtroite(_ r: Rapport) {
-        /// Les champs que le prototype connaît, section par section.
-        let connusDuPrototype: [String: Set<String>] = [
-            "": ["schema_version", "nom", "logo", "sous_titre"],
-            "logo": ["actif", "fichier", "position", "taille_pct_hauteur",
-                     "marge_pct_hauteur", "opacite"],
-            "sous_titre": ["police", "taille_pct_hauteur", "couleur_texte", "contour",
-                           "bandeau", "marge_basse_pct_hauteur",
-                           "marge_laterale_pct_largeur", "lignes_max"],
-            "bandeau": ["actif", "couleur", "opacite", "padding_pct_hauteur",
-                        "espaces_lateraux"],
-        ]
-
         func champsEcrits(_ profil: ProfilHabillage) -> [String: Set<String>] {
             guard let d = try? ProfilJSON.encoder(profil, cheminLogo: "logo.png"),
                   let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
@@ -381,77 +476,58 @@ enum ControlesProfils {
             ]
         }
 
-        // Le préréglage NONP est, par construction, ce que le prototype rend :
-        // son fichier ne doit contenir AUCUN champ posté-amendement.
-        let nonp = champsEcrits(.nonpHistorique)
-        for (section, connus) in connusDuPrototype {
-            let ecrits = nonp[section] ?? []
-            let inconnus = ecrits.subtracting(connus).sorted()
-            r.verifier("préréglage NONP, section « \(section.isEmpty ? "profil" : section) » : "
-                       + "rien que le prototype ne connaisse"
-                       + (inconnus.isEmpty ? "" : " — \(inconnus.joined(separator: ", "))"),
-                       inconnus.isEmpty)
+        // La version, et les champs qui n'existent qu'en v2.
+        for profil in [ProfilHabillage.nonpHistorique, .neutre] {
+            guard let d = try? ProfilJSON.encoder(profil, cheminLogo: nil),
+                  let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
+            else { r.verifier("écriture de \(profil.nom)", false); continue }
+            r.egal("\(profil.nom) : écrit en version \(ProfilJSON.versionSchema)",
+                   (o["schema_version"] as? NSNumber)?.intValue, 2)
         }
+        let nonp = champsEcrits(.nonpHistorique)
+        r.verifier("la marge du texte est écrite — c'est la commande unique",
+                   nonp["bandeau"]?.contains("marge_texte_pct_largeur") == true)
+        r.verifier("la longueur de ligne cible est écrite — elle a un champ",
+                   nonp["sous_titre"]?.contains("longueur_ligne_cible") == true)
+        r.verifier("« espaces_lateraux » a disparu de ce que l'app écrit",
+                   nonp["bandeau"]?.contains("espaces_lateraux") == false)
+        r.verifier("« marge_interieure_pct_largeur » aussi",
+                   nonp["bandeau"]?.contains("marge_interieure_pct_largeur") == false)
 
-        // Le profil neutre, lui, emploie le bandeau pleine largeur : il ÉCRIT
-        // les champs de l'amendement, et le prototype le refusera. C'est exact
-        // — le prototype ne sait pas rendre ce bandeau-là. Le fichier ne ment
-        // pas ; il dit ce qu'il faut pour être rendu fidèlement.
-        let neutre = champsEcrits(.neutre)
+        // Le recadrage rond : écrit seulement quand il est demandé.
+        var rond = ProfilHabillage.nonpHistorique
+        rond.logoRecadreEnCercle = true
+        r.verifier("le recadrage rond n'est écrit que s'il est demandé",
+                   champsEcrits(.nonpHistorique)["logo"]?
+                       .contains("recadre_en_cercle") == false
+                   && champsEcrits(rond)["logo"]?
+                       .contains("recadre_en_cercle") == true)
+
+        // `mode` et `hauteur_fixe_lignes` gardent la règle du temps 1 : un
+        // fichier de profil ne porte que ce qu'on a réellement choisi.
+        r.verifier("« mode » reste tu quand il vaut « ajuste »",
+                   nonp["bandeau"]?.contains("mode") == false)
         r.verifier("profil neutre : « mode » est écrit, parce qu'il ne vaut plus "
                    + "« ajuste »",
-                   neutre["bandeau"]?.contains("mode") == true)
-        r.verifier("profil neutre : « hauteur_fixe_lignes » est écrit, parce "
-                   + "qu'il ne vaut plus 0",
-                   neutre["bandeau"]?.contains("hauteur_fixe_lignes") == true)
-        r.verifier("profil neutre : « marge_interieure_pct_largeur » reste "
-                   + "TAIRE — elle vaut la valeur par défaut du schéma",
-                   neutre["bandeau"]?.contains("marge_interieure_pct_largeur") == false)
+                   champsEcrits(.neutre)["bandeau"]?.contains("mode") == true)
 
-        // Et dès qu'elle s'en écarte, elle est écrite.
-        var margee = ProfilHabillage.neutre
-        margee.bandeauMargeInterieureRatioLargeur = 0.08
-        r.verifier("une marge intérieure déplacée est écrite",
-                   champsEcrits(margee)["bandeau"]?
-                       .contains("marge_interieure_pct_largeur") == true)
-
-        // ── L'AVERTISSEMENT, calculé par la même règle que l'écriture ──────
+        // ── L'AVERTISSEMENT D'ENREGISTREMENT ───────────────────────────────
         //
-        // Décision nº5 tranchée le 28/08 : le prototype ne sera pas amendé.
-        // L'asymétrie reste, et l'enregistrement doit la DIRE. Ce qui compte
-        // ici, c'est que l'avertissement et le fichier ne puissent pas
-        // diverger : ce qu'il annonce est exactement ce que l'encodeur écrit.
-        r.egal("préréglage NONP : rien à annoncer, le prototype le lira",
-               ProfilJSON.champsInconnusDuPrototype(.nonpHistorique), [])
-        r.egal("profil neutre : les deux champs écrits sont annoncés",
-               ProfilJSON.champsInconnusDuPrototype(.neutre).sorted(),
-               ["hauteur_fixe_lignes", "mode"])
-        r.egal("une marge intérieure déplacée s'ajoute à l'annonce",
-               ProfilJSON.champsInconnusDuPrototype(margee).sorted(),
-               ["hauteur_fixe_lignes", "marge_interieure_pct_largeur", "mode"])
-
-        // Un profil qui n'emploie QUE la hauteur constante : le mode reste
-        // « ajuste », donc tu ne l'annonces pas.
-        var hauteurSeule = ProfilHabillage.nonpHistorique
-        hauteurSeule.bandeauHauteurFixeLignes = 2
-        r.egal("hauteur constante seule : elle seule est annoncée",
-               ProfilJSON.champsInconnusDuPrototype(hauteurSeule),
-               ["hauteur_fixe_lignes"])
-
-        // L'annonce et le fichier disent la MÊME chose, quel que soit le profil.
-        for (nom, profil) in [("NONP", ProfilHabillage.nonpHistorique),
-                              ("neutre", .neutre), ("margée", margee),
-                              ("hauteur seule", hauteurSeule)] {
-            let annonces = Set(ProfilJSON.champsInconnusDuPrototype(profil))
-            let ecrits = (champsEcrits(profil)["bandeau"] ?? [])
-                .intersection(["mode", "hauteur_fixe_lignes",
-                               "marge_interieure_pct_largeur"])
-            r.egal("\(nom) : l'annonce est exactement ce que le fichier porte",
-                   annonces, ecrits)
+        // Il ne dépend plus du profil : c'est la VERSION qui fait refuser.
+        for profil in [ProfilHabillage.nonpHistorique, .neutre, rond] {
+            let annonce = ProfilJSON.champsInconnusDuPrototype(profil)
+            r.verifier("\(profil.nom) : l'annonce commence par la version, "
+                       + "qui suffit à faire refuser (\(annonce.first ?? "rien"))",
+                       annonce.first == "schema_version 2")
         }
-        r.verifier("le message nomme les champs et ne bloque pas l'enregistrement",
-                   Textes.Profil.inconnuDuPrototype(["mode"]).contains("mode")
-                   && Textes.Profil.inconnuDuPrototype(["mode"])
+        r.verifier("l'annonce du neutre nomme aussi ses champs propres",
+                   Set(ProfilJSON.champsInconnusDuPrototype(.neutre))
+                       .isSuperset(of: ["mode", "hauteur_fixe_lignes",
+                                        "marge_texte_pct_largeur",
+                                        "longueur_ligne_cible"]))
+        r.verifier("le message nomme la version et ne bloque pas l'enregistrement",
+                   Textes.Profil.inconnuDuPrototype(["x"]).contains("version 2")
+                   && Textes.Profil.inconnuDuPrototype(["x"])
                        .localizedCaseInsensitiveContains("refusera"))
 
         // Le logo « actif » dit ce qui sera GRAVÉ : sans fichier, rien.
@@ -460,9 +536,7 @@ enum ControlesProfils {
               let logo = o["logo"] as? [String: Any] else {
             r.verifier("écriture d'un profil sans fichier de logo", false); return
         }
-        r.egal("sans fichier de logo, « actif » vaut faux — le prototype "
-               + "refuserait un logo actif sans fichier",
-               logo["actif"] as? Bool, false)
+        r.egal("sans fichier de logo, « actif » vaut faux", logo["actif"] as? Bool, false)
         r.verifier("et aucun « fichier » n'est inventé", logo["fichier"] == nil)
     }
 
@@ -533,14 +607,15 @@ enum ControlesProfils {
                 as? [String: Any] else {
             r.verifier("l'enveloppe est lisible", false); return
         }
-        r.verifier("l'enveloppe sépare le profil partagé des réglages de l'app",
-                   enveloppe["profil"] != nil && enveloppe["reglages_app"] != nil)
+        r.verifier("l'enveloppe ne porte plus que le profil : la section "
+                   + "« reglages_app » a disparu, ses deux réglages ayant un "
+                   + "champ au schéma v2",
+                   enveloppe["profil"] != nil && enveloppe["reglages_app"] == nil)
         let corps = enveloppe["profil"] as? [String: Any] ?? [:]
         let st = corps["sous_titre"] as? [String: Any] ?? [:]
-        r.verifier("le profil enveloppé reste un profil v1 pur — aucun champ "
-                   + "inventé n'y figure",
-                   st["longueur_ligne_cible"] == nil
-                   && (corps["logo"] as? [String: Any])?["recadre_en_cercle"] == nil)
+        r.verifier("les deux réglages sont dans le PROFIL, à leur place",
+                   st["longueur_ligne_cible"] != nil
+                   && (corps["logo"] as? [String: Any])?["recadre_en_cercle"] != nil)
         r.verifier("et il repasse par le validateur strict, sans passe-droit",
                    (try? ProfilJSON.decoder(
                        try JSONSerialization.data(withJSONObject: corps),

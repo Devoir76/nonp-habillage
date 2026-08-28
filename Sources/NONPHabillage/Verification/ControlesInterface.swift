@@ -59,8 +59,8 @@ enum ControlesInterface {
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
 
-        r.section("Interface — marge intérieure : retirée du volet, vivante au profil")
-        margeInterieure(r)
+        r.section("Interface — la marge du texte, unique commande de la colonne")
+        margeDuTexte(r)
 
         r.section("Interface — « Habiller » dans la barre d'action du bas")
         MainActor.assumeIsolated { barreAction(r) }
@@ -73,104 +73,104 @@ enum ControlesInterface {
         MainActor.assumeIsolated { dispositionBarreDeChoix(r) }
     }
 
-    // MARK: - Marge intérieure
+    // MARK: - La marge du texte, unique commande de la colonne (schéma v2)
 
-    /// Le curseur « Marge intérieure » a quitté le volet Personnaliser au lot 5 :
-    /// près de 90 % de sa course ne produisait aucun effet, et l'expliquer à
-    /// l'utilisateur revenait à s'excuser d'un réglage inutile. Le chiffre exact
-    /// est mesuré plus bas, et reporté dans le rapport plutôt que recopié —
-    /// l'estimation de départ, « 24 % de marge, donc 96 % de course inerte »,
-    /// était arrondie vers le haut.
+    /// Décision nº6, tranchée le 28/08/2026 — option C.
     ///
-    /// **Ce qui compte désormais, c'est que le CHAMP soit intact.** Il reste au
-    /// schéma partagé, dans le profil et dans la géométrie : un fichier de profil
-    /// venu du prototype doit rendre exactement comme avant, alors même que plus
-    /// aucune commande ne l'expose. C'est le genre de garantie qu'un retrait
-    /// d'interface casse en silence — d'où ces contrôles, qui vont jusqu'aux
-    /// pixels plutôt que de s'arrêter à la mise en page.
-    private static func margeInterieure(_ r: Rapport) {
-        var profil = ProfilHabillage.neutre
+    /// Trois réglages se partageaient la largeur de la colonne de texte :
+    /// `espaces_lateraux` en mode `ajuste`, `marge_interieure_pct_largeur` en
+    /// mode `pleine-largeur`, et la marge latérale du texte par-dessus. Un seul
+    /// les remplace, `bandeau.marge_texte_pct_largeur`, et il commande **les
+    /// deux modes**.
+    ///
+    /// Ce qui se contrôle ici, c'est qu'il commande VRAIMENT : dans les deux
+    /// modes, sur les deux orientations, et jusqu'aux pixels. La preuve de
+    /// non-régression, elle, vit dans `ControlesRegressionV2`.
+    private static func margeDuTexte(_ r: Rapport) {
         let (w, h) = (1920, 1080)
 
-        // Mode « ajuste » : sans effet, par définition du schéma.
-        profil.bandeauMode = .ajuste
-        let ajuste0 = largeurDecoupe(profil, marge: 0, w, h)
-        let ajuste20 = largeurDecoupe(profil, marge: 0.20, w, h)
-        r.egal("mode « ajuste » : la marge intérieure est ignorée (schéma v1)",
-               ajuste0, ajuste20)
+        // La colonne se mesure là où elle est CONTRAINTE. En 16:9 la longueur
+        // de ligne cible est atteinte de très loin — 49 caractères pour 32
+        // visés —, et c'est elle qui borne la colonne, pas la largeur : un
+        // contrôle posé là ne verrait rien bouger et ne prouverait rien. La
+        // mesure se fait donc en 9:16, le format où la largeur commande.
+        for (nomMode, mode) in [("ajuste", ModeBandeau.ajuste),
+                                ("pleine-largeur", ModeBandeau.pleineLargeur)] {
+            var profil = ProfilHabillage.neutre
+            profil.bandeauMode = mode
+            let large = largeurDecoupe(profil, marge: 0.02, 1080, 1920)
+            let serree = largeurDecoupe(profil, marge: 0.20, 1080, 1920)
+            r.verifier("mode « \(nomMode) » : la marge du texte borne la colonne "
+                       + "en 9:16 (\(Int(large)) → \(Int(serree)) px)",
+                       serree < large)
+        }
 
-        // Mode « pleine-largeur » : elle borne le texte, mais seulement quand
-        // elle passe sous la longueur de ligne cible.
-        profil.bandeauMode = .pleineLargeur
-        let large = largeurDecoupe(profil, marge: 0.03, w, h)
-        let serree = largeurDecoupe(profil, marge: 0.25, w, h)
-        r.verifier("sans curseur, le champ agit toujours : une marge serrée "
-                   + "réduit la colonne (\(Int(large)) → \(Int(serree)) px)",
-                   serree < large)
+        // C'est TOUT le changement de la v2 : en v1, ce champ n'agissait que
+        // dans un mode, et l'autre dépendait d'un nombre d'espaces durs.
+        var ajuste = ProfilHabillage.nonpHistorique
+        ajuste.logoActif = false
+        r.verifier("en mode « ajuste » aussi — ce que la v1 ne savait pas faire "
+                   + "autrement qu'en largeurs d'espace",
+                   largeurDecoupe(ajuste, marge: 0.20, 1080, 1920)
+                   < largeurDecoupe(ajuste, marge: 0.02, 1080, 1920))
+
+        // En PIXELS ENTIERS, comme le reste de la géométrie. C'est la condition
+        // pour qu'un pourcentage de largeur retombe sur les débords que la v1
+        // calculait en largeurs d'espace.
+        for (largeur, attendu) in [(1920, 108), (1280, 72), (3840, 215)] {
+            var p = ProfilHabillage.nonpHistorique
+            p.bandeauMargeTexteRatioLargeur = 0.0561
+            let retrait = GeometrieSousTitres.retraitDuTexte(
+                profil: p, largeurVideo: largeur)
+            r.egal("retrait à 5,61 % sur \(largeur) px de large, en pixels entiers",
+                   Int(retrait), attendu)
+        }
+
+        // Sans bandeau, aucun retrait : il n'y a pas de bord dont s'écarter.
+        var sansFond = ProfilHabillage.nonpHistorique
+        sansFond.bandeauActif = false
+        r.egal("sans bandeau, aucun retrait", GeometrieSousTitres.retraitDuTexte(
+            profil: sansFond, largeurVideo: w), 0)
 
         // Jusqu'aux PIXELS : la mise en page pourrait changer sans que le rendu
         // bouge. C'est la vraie promesse faite au fichier de profil.
-        if let fond = fondDeControle() {
-            var p = profil
-            p.bandeauMargeInterieureRatioLargeur = 0.03
-            let a = try? Apercu.composer(fond: fond, profil: p,
-                                         texte: texteDEssai, avecSousTitres: true)
-            p.bandeauMargeInterieureRatioLargeur = 0.25
-            let b = try? Apercu.composer(fond: fond, profil: p,
-                                         texte: texteDEssai, avecSousTitres: true)
-            let bouge: Bool
-            if let a = a?.image, let b = b?.image {
-                bouge = ImagesReference.differe(a, de: b)
-            } else {
-                bouge = false
+        if let fond = fondDeControle(largeur: 1080, hauteur: 1920) {
+            for mode in [ModeBandeau.ajuste, .pleineLargeur] {
+                var p = ProfilHabillage.neutre
+                p.bandeauMode = mode
+                p.bandeauMargeTexteRatioLargeur = 0.02
+                let a = try? Apercu.composer(fond: fond, profil: p,
+                                             texte: texteDEssai, avecSousTitres: true)
+                p.bandeauMargeTexteRatioLargeur = 0.20
+                let b = try? Apercu.composer(fond: fond, profil: p,
+                                             texte: texteDEssai, avecSousTitres: true)
+                let bouge: Bool
+                if let a = a?.image, let b = b?.image {
+                    bouge = ImagesReference.differe(a, de: b)
+                } else {
+                    bouge = false
+                }
+                r.verifier("mode « \(mode.rawValue) » : en 9:16, le champ va "
+                           + "jusqu'aux pixels", bouge)
             }
-            r.verifier("un profil qui pose une marge intérieure rend toujours "
-                       + "différemment — le champ va jusqu'aux pixels", bouge)
         }
 
-        // Les deux profils livrés gardent leur valeur : rien n'a bougé côté
-        // fichier, seul le volet a changé.
-        r.egal("le profil neutre garde sa marge intérieure",
-               ProfilHabillage.neutre.bandeauMargeInterieureRatioLargeur, 0.03)
-        r.egal("le préréglage NONP garde la sienne",
-               ProfilHabillage.nonpHistorique.bandeauMargeInterieureRatioLargeur, 0.03)
-
-        // POURQUOI le curseur est parti, en chiffres. Le seuil est cherché sur
-        // toute la course qu'aurait eue le curseur — 0 à 25 %.
-        let course = 0.25
-        var seuil = course
-        for pas in 0...250 {
-            let marge = course * Double(pas) / 250
-            var p = profil
-            p.bandeauMargeInterieureRatioLargeur = marge
-            guard let mep = try? MiseEnPageRendu.calculer(
-                profil: p, largeurVideo: w, hauteurVideo: h) else { continue }
-            if !mep.margeInterieureSansEffet { seuil = marge; break }
-        }
-        let inerte = Int((seuil / course * 100).rounded())
-        r.verifier("16:9 1080p : la marge ne mord qu'à partir de "
-                   + "\(String(format: "%.1f", seuil * 100)) %, soit \(inerte) % "
-                   + "d'une course de 0 à 25 % sans aucun effet — c'est ce qui a "
-                   + "retiré le curseur du volet", inerte >= 85)
-
-        // Sur une vidéo étroite, elle mord bien plus tôt : c'est là qu'elle
-        // servirait, et c'est ce que la décision nº6 devra trancher au lot 6.
-        profil.bandeauMargeInterieureRatioLargeur = 0.10
-        let verticale = try? MiseEnPageRendu.calculer(
-            profil: profil, largeurVideo: 1080, hauteurVideo: 1920)
-        r.verifier("en 9:16, la marge agirait dès 10 % — matière à la décision nº6",
-                   verticale?.margeInterieureSansEffet == false)
+        // Les valeurs des deux préréglages, et leur raison.
+        r.egal("le préréglage NONP porte 5,61 % — le débord que ses espaces "
+               + "latéraux produisaient en 16:9",
+               ProfilHabillage.nonpHistorique.bandeauMargeTexteRatioLargeur, 0.0561)
+        r.egal("le profil neutre garde SES 3 % — ceux de sa marge intérieure de v1",
+               ProfilHabillage.neutre.bandeauMargeTexteRatioLargeur, 0.03)
     }
 
     private static func largeurDecoupe(
         _ profil: ProfilHabillage, marge: Double, _ w: Int, _ h: Int
     ) -> Double {
         var p = profil
-        p.bandeauMargeInterieureRatioLargeur = marge
+        p.bandeauMargeTexteRatioLargeur = marge
         return (try? MiseEnPageRendu.calculer(
             profil: p, largeurVideo: w, hauteurVideo: h))?.largeurColonneTexte ?? 0
     }
-
 
     // MARK: - Barre d'action
 

@@ -472,8 +472,9 @@ libre au schéma ; seule la commande disparaît, comme pour la marge intérieure
 5. ~~**Amender le prototype Python** dès maintenant pour le bandeau pleine
    largeur (bénéfice immédiat sur l'outil de production), ou attendre l'app
    native ?~~ — **TRANCHÉE le 28/08/2026 : on n'amende pas.** Voir ci-dessous.
-6. **Remplacer `espaces_lateraux` par une marge en % de la largeur** — constaté
-   au lot 3, à trancher au lot 6. Voir ci-dessous.
+6. ~~**Remplacer `espaces_lateraux` par une marge en % de la largeur** —
+   constaté au lot 3, à trancher au lot 6.~~ — **TRANCHÉE le 28/08/2026 :
+   option C, un champ unique et un schéma en version 2.** Voir ci-dessous.
 
 ### Décision nº5 — le prototype ne sera pas amendé (tranchée le 28/08/2026)
 
@@ -506,11 +507,100 @@ pire, un profil qu'on ne peut pas rendre avec l'ancien outil.
 
 ### Décision nº6 — qui commande la largeur de la colonne de texte ?
 
-**Instruite au lot 6 (temps 2), le 28/08/2026. Non tranchée.** Tous les chiffres
-qui suivent se refont par `NONPHabillage --mesures-decision6` ; aucun n'est
-recopié à la main.
+**Instruite puis TRANCHÉE le 28/08/2026 (lot 6). Option C.** Les mesures qui
+suivent ont été produites sur le code d'alors par une commande
+`--mesures-decision6`, retirée après application — son sujet était la décision,
+et la décision est prise. Les chiffres qui comptent encore sont repris par les
+contrôles permanents : `ControlesRegressionV2` les refait à chaque exécution.
 
-#### Le constat de départ (lot 3)
+#### La décision
+
+**Un champ unique commande la largeur de la colonne de texte, dans les deux
+modes de bandeau : `sous_titre.bandeau.marge_texte_pct_largeur`, en pourcentage
+de la LARGEUR vidéo, valeur par défaut 5,61 %.** `espaces_lateraux` et
+`marge_interieure_pct_largeur` disparaissent. `longueur_ligne_cible` et
+`logo.recadre_en_cercle` deviennent des champs. **Le schéma passe en version 2.**
+
+**Motif d'Éric.** L'argument de compatibilité qui plaidait pour la v1 est caduc
+depuis la décision nº5 : le prototype ne relit déjà plus les profils sortant du
+préréglage NONP. L'option B reconduirait le désordre qu'on cherche à finir, avec
+deux champs décrivant la même chose « pendant la transition ». Et le coût d'une
+v2 est presque nul maintenant : aucun profil ne circule, rien n'est publié.
+C'est la fenêtre repérée le 23/08, et elle se referme à la première diffusion
+publique.
+
+**Ce que la taille nommée devient.** Pas un champ, et c'est délibéré : elle est
+entièrement déterminée par `taille_pct_hauteur` et `longueur_ligne_cible`, tous
+deux au fichier. Un champ de plus permettrait à un profil de se contredire —
+« Grande » avec une taille de 5 %. Elle reste ce qu'Éric en a dit : une
+commodité d'interface qui écrit ces deux valeurs.
+
+**Ce que le recadrage rond devient.** Un champ, `logo.recadre_en_cercle`. Il
+change ce qui est GRAVÉ : deux profils qui n'en diffèrent que par lui rendent
+différemment. Laissé hors du fichier, un profil partagé donnait un logo carré
+chez le destinataire sans que rien ne le dise — exactement ce que le schéma
+existe pour empêcher. L'argument contraire — le prototype en faisait une
+propriété du fichier, via `--make-logo` — décrit un outil qui fabriquait une
+image ; l'app, elle, laisse le fichier intact et applique le cercle au rendu.
+C'est donc une instruction de rendu, et les instructions de rendu sont le profil.
+
+#### Non-régression, mesurée
+
+**Le texte ne bouge à aucune définition 16:9.** Même taille de police, mêmes
+coupures, sur les **1 567 répliques gravées du corpus réel**, à cinq
+définitions — 1024×576, 1280×720, 1920×1080, 2560×1440, 3840×2160.
+
+**Le rendu, au pixel.** Sur 1024, 1280 et 1920, **aucun pixel ne bouge**. Sur
+2560 et 3840, le bord du bandeau se déplace de 1,4 px au plus : 1 180 pixels
+touchés sur 3,7 millions (0,032 %) en 1440p, 1 768 sur 8,3 millions (0,021 %) en
+2160p. Le contrôle est vérifié SENSIBLE — un seul pixel de retrait en plus, et
+il le voit.
+
+**Pourquoi cet écart, et pourquoi il n'était pas évitable.** La mesure a appris
+quelque chose qui n'était pas prévu : **le débord de la v1 n'était pas
+proportionnel à la largeur.** Il empruntait au `padding_pct_hauteur`, arrondi au
+pixel sur la HAUTEUR. 1080 × 1,9 % arrondit à 21 px (1,944 % de la hauteur),
+1440 × 1,9 % arrondit à 27 (1,875 %). Le débord valait donc 5,609 % de la
+largeur sur une 1080p et 5,569 % sur une 1440p : **la v1 dérivait avec la
+définition, sur un format pourtant identique**, jusqu'à 1,0 px d'écart à sa
+propre proportion. Aucun pourcentage unique ne peut donc retomber sur elle
+partout — rester à un demi-pixel sur une 1440p demanderait entre 5,551 et
+5,590 %, et sur une 1080p entre 5,583 et 5,635 % : les intervalles ne se
+recoupent pas. 5,61 % est exact aux définitions où le profil a été réglé, et
+la v2, elle, ne dérive plus.
+
+**Le gain en vertical, consigné.** Profil NONP :
+
+| format | v1 | v2 |
+|---|---|---|
+| 9:16 1080×1920 | 61 px | **68 px** (+11 %) |
+| 1:1 1080×1080 | 63 px | **68 px** (+7 %) |
+| 4:5 1080×1350 | 63 px | **68 px** (+7 %) |
+
+#### La correspondance arithmétique, pour un lecteur venu de la v1
+
+- **mode `pleine-largeur`** : `marge_texte_pct_largeur = marge_interieure_pct_largeur`.
+  Exact, sans condition — les deux étaient déjà des pourcentages de largeur.
+- **mode `ajuste`** :
+  `marge_texte_pct_largeur = 100 × (padding_px + espaces_lateraux × largeur_d_une_espace) / largeur_vidéo`,
+  calculé sur le format de référence **16:9 1920×1080**, avec la **police du
+  profil**. Pour NONP : `100 × (21 + 86,7) / 1920 = 5,61`.
+
+Un format de référence est nécessaire, et c'est tout le dossier : la v1
+exprimait ce retrait en largeurs d'espace, donc en fraction de la taille de
+police, donc de la hauteur. Le convertir en fraction de la largeur n'a de sens
+qu'à un format donné.
+
+**Le seul refus de conversion** est la police absente : mesurer une espace exige
+la police du profil, et la mesurer dans une autre donnerait un retrait faux —
+l'invariant nº4 interdit toute substitution silencieuse. Le message le dit et
+propose d'installer la police. Partout ailleurs la conversion est automatique,
+et **elle est annoncée** : une conversion silencieuse est une modification
+silencieuse.
+
+#### Ce qui a mené là — la mesure, avant la décision
+
+##### Le constat de départ (lot 3)
 
 `sous_titre.bandeau.espaces_lateraux` élargit le fond du mode `ajuste` en
 collant *n* espaces durs de chaque côté du texte. C'est un procédé d'ASS : faute
@@ -521,7 +611,7 @@ ce que cette marge consomme, c'est de la **largeur**. Le réglage est adossé à
 mauvaise dimension — même défaut de conception que celui corrigé au §5, à un
 autre endroit.
 
-#### Ce que la mesure ajoute au constat
+##### Ce que la mesure ajoute au constat
 
 Quatre réglages prétendent gouverner la largeur de la colonne de texte :
 
@@ -591,7 +681,7 @@ Le 16:9 ne bouge pas — c'est la condition. Les formats étroits récupèrent l
 largeur que l'unité « largeur d'espace » leur prenait, et la police y remonte
 de 11 %.
 
-#### Les deux réglages sans champ
+##### Les deux réglages sans champ
 
 **`longueurLigneCible`.** Le lot 6 lui a donné une règle provisoire : elle se
 DÉDUIT de `taille_pct_hauteur` par la table des quatre tailles nommées. Ne rien
@@ -620,7 +710,7 @@ fabriquait une image ronde à côté), jamais du profil. L'app en a fait un rég
 réversible (lot 5, D-8) — c'est ce changement, et non un oubli, qui crée le
 besoin d'un champ.
 
-#### Trois options
+##### Les trois options soumises à Éric
 
 **Option A — ne rien ajouter au schéma.**
 
@@ -673,14 +763,13 @@ deux conservés **en lecture** et convertis à l'ouverture.
   courant. Une v2 assumée coûte une migration (v1 → v2 à la lecture), qui est
   simple ici puisque la conversion est arithmétique.
 
-#### Ce que je retiens de la mesure, sans trancher
+##### Ce que la mesure retenait
 
 Le désordre n'est pas dans le nombre de réglages : il est dans le fait que
 **trois d'entre eux sont muets sur le format de référence** et que le seul qui
 parle partout n'est pas au fichier. Une décision qui ne ferait qu'ajouter des
-champs sans dire qui commande laisserait ce défaut intact.
-
-*Décision d'Éric attendue.*
+champs sans dire qui commande laisserait ce défaut intact. C'est ce qui a écarté
+l'option B.
 
 **Hors périmètre du lot 3**, qui n'a touché à aucun profil : le rendu actuel
 applique `espaces_lateraux` tel que le schéma le définit. Seule la façon de

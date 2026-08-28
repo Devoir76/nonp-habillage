@@ -158,13 +158,29 @@ struct ProfilHabillage: Equatable {
     var bandeauActif: Bool
     var bandeauCouleur: CouleurProfil
     var bandeauMode: ModeBandeau
-    /// Marge intérieure verticale du fond / hauteur. Prototype : `BOXPAD_RATIO`.
+    /// Marge intérieure VERTICALE du fond / hauteur. Prototype : `BOXPAD_RATIO`.
+    ///
+    /// Purement verticale depuis le schéma v2 : c'est ce que sa description
+    /// disait déjà, et ce qu'elle ne faisait pas — en v1 elle servait aussi de
+    /// retrait horizontal, mêlée aux espaces latéraux.
     var bandeauPaddingRatio: Double
-    /// Espaces durs de chaque côté, en mode `ajuste`. Prototype : `SIDEPAD`.
-    var bandeauEspacesLateraux: Int
-    /// Retrait du texte par rapport aux bords de la bande, en mode
-    /// `pleine-largeur`, / **largeur**. Ignoré en mode `ajuste`.
-    var bandeauMargeInterieureRatioLargeur: Double
+
+    /// **Retrait du texte par rapport au bord de la bande, de chaque côté, en
+    /// fraction de la LARGEUR vidéo.**
+    ///
+    /// L'unique commande de la largeur de la colonne de texte, dans les DEUX
+    /// modes de bandeau (schéma v2, décision nº6 tranchée le 28/08/2026). Elle
+    /// remplace `espaces_lateraux` — dont l'unité était la largeur d'une
+    /// espace, donc une fraction de la taille de police, donc de la HAUTEUR,
+    /// pour un réglage qui consomme de la LARGEUR — et
+    /// `marge_interieure_pct_largeur`, qui faisait la même chose dans le seul
+    /// mode `pleine-largeur`.
+    ///
+    /// Appliquée en PIXELS ENTIERS, comme toutes les autres grandeurs
+    /// géométriques du moteur. Ce n'est pas un détail : c'est ce qui fait que
+    /// 5,61 % de 1920 rendent exactement les 108 px que le profil NONP posait
+    /// en v1, au lieu de 107,7.
+    var bandeauMargeTexteRatioLargeur: Double
     /// 0 = hauteur automatique. 1 à 4 = hauteur constante correspondant à ce
     /// nombre de lignes, pour que la bande ne saute pas entre une réplique
     /// d'une ligne et une réplique de deux.
@@ -199,8 +215,10 @@ struct ProfilHabillage: Equatable {
         bandeauCouleur: .bleuNONP,
         bandeauMode: .ajuste,
         bandeauPaddingRatio: 0.019,      // BOXPAD_RATIO
-        bandeauEspacesLateraux: 4,       // SIDEPAD
-        bandeauMargeInterieureRatioLargeur: 0.03,
+        // 5,61 % : la valeur mesurée qui reproduit, au pixel entier, le débord
+        // que `espaces_lateraux: 4` produisait en 16:9 — 108 px de chaque côté
+        // sur 1920. Voir ADR, décision nº6.
+        bandeauMargeTexteRatioLargeur: 0.0561,
         bandeauHauteurFixeLignes: 0
     )
 
@@ -233,8 +251,10 @@ struct ProfilHabillage: Equatable {
         bandeauCouleur: CouleurProfil(hex: "#000000", opacite: 0.6),
         bandeauMode: .pleineLargeur,
         bandeauPaddingRatio: 0.019,
-        bandeauEspacesLateraux: 0,
-        bandeauMargeInterieureRatioLargeur: 0.03,
+        // Le neutre garde SES 3 %, ceux de sa marge intérieure de v1 : la
+        // valeur par défaut du schéma (5,61 %) reproduit le mode `ajuste`, pas
+        // le sien. Migrer sa propre valeur est ce qui laisse son rendu intact.
+        bandeauMargeTexteRatioLargeur: 0.03,
         bandeauHauteurFixeLignes: 2
     )
 }

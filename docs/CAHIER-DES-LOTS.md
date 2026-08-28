@@ -140,9 +140,12 @@ persistance se décide ici : `longueurLigneCible` (la taille nommée),
 taille nommée — le schéma stocke bien `taille_pct_hauteur`, mais le lien entre
 les deux reste à écrire.
 
-**À trancher dans ce lot** : `espaces_lateraux`, héritage de l'ASS adossé à la
-taille de police alors qu'il consomme de la largeur — 9,6 % de la largeur utile
-en 16:9, 30,2 % en 9:16. Voir ADR-0001, décision ouverte nº6.
+**Tranché dans ce lot** (28/08/2026) : `espaces_lateraux`, héritage de l'ASS
+adossé à la taille de police alors qu'il consomme de la largeur. Remplacé par un
+champ unique, `bandeau.marge_texte_pct_largeur`, qui commande la largeur de la
+colonne dans les deux modes de bandeau. **Le schéma passe en version 2** ;
+`longueur_ligne_cible` et `logo.recadre_en_cercle` y entrent avec lui. Voir
+ADR-0001, décisions nº5 et nº6, et `docs/divergences-prototype.md` D-9 et D-10.
 
 **Acceptation** — un profil écrit par le prototype Python est accepté sans
 retouche ; un profil produit par l'app est accepté par le prototype ; un fichier

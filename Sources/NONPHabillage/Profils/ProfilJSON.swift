@@ -43,11 +43,29 @@ struct ErreurProfil: Error {
     let anomalies: [String]
 }
 
+/// Ce qu'une lecture rapporte : le profil, et ce qu'il a fallu lui faire.
+struct LectureProfil {
+    let profil: ProfilHabillage
+    /// Non nul si le fichier était en v1 : ce qui a été converti, et pourquoi.
+    /// À DIRE à l'utilisateur — une conversion silencieuse est une modification
+    /// silencieuse.
+    let migration: String?
+}
+
 enum ProfilJSON {
 
-    /// Version du schéma partagé. Une seule pour l'instant, et c'est voulu :
-    /// les ajouts du 23/08 sont facultatifs, donc sans migration.
-    static let versionSchema = 1
+    /// Version du schéma partagé — **2** depuis la décision nº6 (28/08/2026).
+    static let versionSchema = 2
+    /// L'ancienne, encore LUE et convertie. Voir `migrer`.
+    static let versionPrecedente = 1
+    /// Le format de référence auquel se fait la conversion v1 → v2.
+    ///
+    /// Il en faut un : la v1 exprimait le retrait du texte en largeurs
+    /// d'espace, donc en fraction de la taille de police, donc de la HAUTEUR.
+    /// Le convertir en fraction de la LARGEUR n'a de sens que pour un format
+    /// donné. Le 16:9 1080p est celui sur lequel le profil NONP a été réglé, et
+    /// c'est donc celui que la conversion doit laisser intact.
+    static let formatDeReference = (largeur: 1920, hauteur: 1080)
 
     // MARK: - Lecture
 
@@ -60,6 +78,10 @@ enum ProfilJSON {
     /// choisir un autre, plutôt que de perdre tous les réglages parce qu'une
     /// image a changé de dossier.
     static func lire(_ url: URL) throws -> ProfilHabillage {
+        try lireDetaille(url).profil
+    }
+
+    static func lireDetaille(_ url: URL) throws -> LectureProfil {
         let donnees: Data
         do {
             donnees = try Data(contentsOf: url)
@@ -67,13 +89,19 @@ enum ProfilJSON {
             throw ErreurProfil(anomalies: [Textes.Profil.fichierIllisible(
                 url.lastPathComponent)])
         }
-        return try decoder(donnees, base: url.deletingLastPathComponent())
+        return try decoderDetaille(donnees, base: url.deletingLastPathComponent())
     }
 
     /// Lit un profil depuis des octets.
     ///
     /// - Parameter base: dossier auquel rapporter un chemin de logo relatif.
     static func decoder(_ donnees: Data, base: URL?) throws -> ProfilHabillage {
+        try decoderDetaille(donnees, base: base).profil
+    }
+
+    /// La lecture complète : profil, et compte rendu de conversion s'il y en a
+    /// eu une.
+    static func decoderDetaille(_ donnees: Data, base: URL?) throws -> LectureProfil {
         let brut: Any
         do {
             brut = try JSONSerialization.jsonObject(with: donnees)
@@ -92,11 +120,20 @@ enum ProfilJSON {
                   obligatoires: ["schema_version", "nom", "sous_titre"],
                   contexte: "profil", &err)
 
-        if let v = d["schema_version"] as? Int, v == versionSchema {
-            // Rien à faire : c'est la seule version.
-        } else {
-            err.append(Textes.Profil.versionSchema(d["schema_version"]))
+        // La version commande TOUT ce qui suit : les champs autorisés ne sont
+        // pas les mêmes, et un profil v1 doit être converti avant d'être rendu.
+        let version = (d["schema_version"] as? NSNumber).flatMap {
+            CFGetTypeID($0) == CFBooleanGetTypeID() ? nil : $0.intValue
         }
+        switch version {
+        case versionSchema, versionPrecedente:
+            break
+        default:
+            // Pas « version inconnue » : ce qui a changé, et pourquoi.
+            throw ErreurProfil(anomalies: [
+                Textes.Profil.versionSchema(d["schema_version"])])
+        }
+        let v1 = version == versionPrecedente
 
         if let nom = d["nom"] as? String, !nom.trimmingCharacters(
             in: .whitespacesAndNewlines).isEmpty {
@@ -105,16 +142,73 @@ enum ProfilJSON {
             err.append(Textes.Profil.nomVide)
         }
 
-        lireLogo(d["logo"], base: base, dans: &p, &err)
-        lireSousTitre(d["sous_titre"], dans: &p, &err)
+        lireLogo(d["logo"], base: base, v1: v1, dans: &p, &err)
+        lireSousTitre(d["sous_titre"], v1: v1, dans: &p, &err)
 
         if !err.isEmpty { throw ErreurProfil(anomalies: err) }
-        return p
+        guard v1 else { return LectureProfil(profil: p, migration: nil) }
+        return try migrer(p, v1: d)
+    }
+
+    // MARK: - Migration v1 → v2
+
+    /// Convertit un profil v1, ou explique pourquoi elle ne le peut pas.
+    ///
+    /// **Le mode « pleine-largeur » se convertit sans rien supposer** :
+    /// `marge_interieure_pct_largeur` était déjà un pourcentage de la largeur,
+    /// et devient la marge du texte telle quelle. Arithmétique exacte, rendu
+    /// rigoureusement inchangé.
+    ///
+    /// **Le mode « ajuste » demande une convention**, et c'est là tout le
+    /// dossier de la décision nº6 : `espaces_lateraux` s'exprimait en largeurs
+    /// d'espace — donc en fraction de la taille de police, donc de la HAUTEUR —
+    /// pour un réglage qui consomme de la LARGEUR. Le convertir en pourcentage
+    /// de largeur n'a de sens qu'à un format donné. Ce format est le 16:9 1080p
+    /// : celui sur lequel le profil NONP a été réglé, et donc celui que la
+    /// conversion laisse au pixel près.
+    ///
+    /// Mesurer une espace exige la POLICE du profil. Absente du système, la
+    /// conversion est impossible — et c'est le seul cas de refus. Il est
+    /// motivé, et c'est l'invariant nº4 qui parle : jamais de substitution
+    /// silencieuse, donc jamais de conversion faite avec une autre police que
+    /// celle que le profil demande.
+    private static func migrer(_ profil: ProfilHabillage,
+                               v1 d: [String: Any]) throws -> LectureProfil {
+        var p = profil
+        let bandeau = (d["sous_titre"] as? [String: Any])?["bandeau"] as? [String: Any]
+        let espaces = (bandeau?["espaces_lateraux"] as? NSNumber)?.intValue ?? 4
+        let margeInterieure =
+            (bandeau?["marge_interieure_pct_largeur"] as? NSNumber)?.doubleValue ?? 3.0
+
+        let detail: String
+        switch p.bandeauMode {
+        case .pleineLargeur:
+            p.bandeauMargeTexteRatioLargeur = ratio(depuisPourcent: margeInterieure)
+            detail = Textes.Profil.migrationPleineLargeur(margeInterieure)
+
+        case .ajuste:
+            let (w, h) = formatDeReference
+            let taille = max(12, TextePython.arrondi(Double(h) * p.tailleRatio))
+            let police: PoliceSousTitre
+            do {
+                police = try PoliceSousTitre(famille: p.police, taille: taille)
+            } catch {
+                throw ErreurProfil(anomalies: [
+                    Textes.Profil.migrationImpossible(p.police)])
+            }
+            let padding = max(4, TextePython.arrondi(Double(h) * p.bandeauPaddingRatio))
+            let debord = Double(padding) + Double(espaces) * police.largeurEspace
+            p.bandeauMargeTexteRatioLargeur = debord / Double(w)
+            detail = Textes.Profil.migrationAjuste(
+                espaces: espaces, debord: debord,
+                pourcent: pourcent(p.bandeauMargeTexteRatioLargeur))
+        }
+        return LectureProfil(profil: p, migration: detail)
     }
 
     // MARK: - Lecture — logo
 
-    private static func lireLogo(_ brut: Any?, base: URL?,
+    private static func lireLogo(_ brut: Any?, base: URL?, v1: Bool,
                                  dans p: inout ProfilHabillage, _ err: inout [String]) {
         // Section absente : pas de logo. C'est ce que dit le schéma, et le
         // profil neutre livré est dans ce cas.
@@ -126,9 +220,16 @@ enum ProfilJSON {
         guard let lg = brut as? [String: Any] else {
             err.append(Textes.Profil.doitEtreUnObjet("logo")); return
         }
-        controler(lg, autorises: ["actif", "fichier", "position",
-                                  "taille_pct_hauteur", "marge_pct_hauteur", "opacite"],
+        // `recadre_en_cercle` n'existe qu'en v2 : dans un fichier v1 c'est un
+        // champ inconnu, et il doit être refusé comme tel.
+        var autorises: Set<String> = ["actif", "fichier", "position",
+                                      "taille_pct_hauteur", "marge_pct_hauteur",
+                                      "opacite"]
+        if !v1 { autorises.insert("recadre_en_cercle") }
+        controler(lg, autorises: autorises,
                   obligatoires: ["actif"], contexte: "logo", &err)
+
+        p.logoRecadreEnCercle = (lg["recadre_en_cercle"] as? Bool) ?? false
 
         p.logoActif = (lg["actif"] as? Bool) ?? false
         if let v = nombre(lg, "taille_pct_hauteur", 1, 50, "logo", &err) {
@@ -188,15 +289,18 @@ enum ProfilJSON {
 
     // MARK: - Lecture — sous-titres
 
-    private static func lireSousTitre(_ brut: Any?, dans p: inout ProfilHabillage,
+    private static func lireSousTitre(_ brut: Any?, v1: Bool,
+                                      dans p: inout ProfilHabillage,
                                       _ err: inout [String]) {
         guard let brut else { return }   // l'absence est déjà signalée plus haut
         guard let st = brut as? [String: Any] else {
             err.append(Textes.Profil.doitEtreUnObjet("sous_titre")); return
         }
-        controler(st, autorises: ["police", "taille_pct_hauteur", "couleur_texte",
-                                  "contour", "bandeau", "marge_basse_pct_hauteur",
-                                  "marge_laterale_pct_largeur", "lignes_max"],
+        var autorises: Set<String> = ["police", "taille_pct_hauteur", "couleur_texte",
+                                      "contour", "bandeau", "marge_basse_pct_hauteur",
+                                      "marge_laterale_pct_largeur", "lignes_max"]
+        if !v1 { autorises.insert("longueur_ligne_cible") }
+        controler(st, autorises: autorises,
                   obligatoires: ["police", "taille_pct_hauteur", "couleur_texte"],
                   contexte: "sous_titre", &err)
 
@@ -238,27 +342,45 @@ enum ProfilJSON {
             }
         }
 
-        lireBandeau(st["bandeau"], dans: &p, &err)
+        lireBandeau(st["bandeau"], v1: v1, dans: &p, &err)
 
-        // La longueur de ligne cible n'a pas de champ au schéma : elle se
-        // DÉDUIT de la taille de police, par la table des tailles nommées.
-        // C'est provisoire et documenté comme tel — la question est posée à la
-        // décision nº6. Ne rien déduire laisserait un profil importé incohérent
-        // avec la taille qu'il porte : la police du fichier, la longueur de
-        // ligne de la session précédente.
-        p.longueurLigneCible = TailleNommee
-            .laPlusProche(deTaille: p.tailleRatio).longueurLigneCible
+        // **La longueur de ligne cible est un CHAMP depuis la v2** : c'est le
+        // seul réglage qui agisse sur tous les formats, mesuré à la décision
+        // nº6, et il n'avait pas de place au fichier.
+        //
+        // Absente — d'un profil v1, ou d'un v2 qui la tait —, elle se déduit de
+        // la taille de police par la table des tailles nommées. C'est la règle
+        // provisoire du temps 1, devenue la règle de repli : elle reproduit
+        // exactement ce que faisait la v1, ce qui est la condition pour qu'un
+        // profil converti rende à l'identique.
+        if let n = entier(st, "longueur_ligne_cible",
+                          MoteurMiseEnPage.longueurLigneMinimale,
+                          MoteurMiseEnPage.longueurLigneMaximale,
+                          "sous_titre", &err) {
+            p.longueurLigneCible = n
+        } else if st["longueur_ligne_cible"] == nil {
+            p.longueurLigneCible = TailleNommee
+                .laPlusProche(deTaille: p.tailleRatio).longueurLigneCible
+        }
     }
 
-    private static func lireBandeau(_ brut: Any?, dans p: inout ProfilHabillage,
+    private static func lireBandeau(_ brut: Any?, v1: Bool,
+                                    dans p: inout ProfilHabillage,
                                     _ err: inout [String]) {
         guard let brut else { p.bandeauActif = false; return }
         guard let bd = brut as? [String: Any] else {
             err.append(Textes.Profil.doitEtreUnObjet("sous_titre.bandeau")); return
         }
-        controler(bd, autorises: ["actif", "mode", "couleur", "opacite",
-                                  "padding_pct_hauteur", "espaces_lateraux",
-                                  "marge_interieure_pct_largeur", "hauteur_fixe_lignes"],
+        // Les deux jeux de champs. `espaces_lateraux` et
+        // `marge_interieure_pct_largeur` ont DISPARU de la v2 : les écrire dans
+        // un fichier v2 est une erreur, pas une nostalgie tolérée — sans quoi
+        // deux champs décriraient encore la même chose, ce que la décision nº6
+        // avait justement pour objet de finir.
+        let communs: Set<String> = ["actif", "mode", "couleur", "opacite",
+                                    "padding_pct_hauteur", "hauteur_fixe_lignes"]
+        controler(bd, autorises: communs.union(
+                    v1 ? ["espaces_lateraux", "marge_interieure_pct_largeur"]
+                       : ["marge_texte_pct_largeur"]),
                   obligatoires: ["actif"], contexte: "sous_titre.bandeau", &err)
 
         p.bandeauActif = (bd["actif"] as? Bool) ?? false
@@ -272,8 +394,13 @@ enum ProfilJSON {
         if let v = nombre(bd, "padding_pct_hauteur", 0, 10, "sous_titre.bandeau", &err) {
             p.bandeauPaddingRatio = ratio(depuisPourcent: v)
         }
-        if let v = entier(bd, "espaces_lateraux", 0, 12, "sous_titre.bandeau", &err) {
-            p.bandeauEspacesLateraux = v
+        // En v1 ces deux champs sont LUS puis convertis par `migrer` : leur
+        // valeur est reprise là-bas, sur le JSON brut. Ici on se contente de
+        // les valider, pour qu'un profil v1 mal formé soit refusé comme tel.
+        if v1 {
+            _ = entier(bd, "espaces_lateraux", 0, 12, "sous_titre.bandeau", &err)
+            _ = nombre(bd, "marge_interieure_pct_largeur", 0, 25,
+                       "sous_titre.bandeau", &err)
         }
 
         // Les trois ajouts du 23/08. Facultatifs, valeurs par défaut égales au
@@ -290,9 +417,11 @@ enum ProfilJSON {
         } else {
             p.bandeauMode = .ajuste
         }
-        p.bandeauMargeInterieureRatioLargeur = ratio(depuisPourcent:
-            nombre(bd, "marge_interieure_pct_largeur", 0, 25,
-                   "sous_titre.bandeau", &err) ?? 3.0)
+        if !v1 {
+            p.bandeauMargeTexteRatioLargeur = ratio(depuisPourcent:
+                nombre(bd, "marge_texte_pct_largeur", 0, 40,
+                       "sous_titre.bandeau", &err) ?? 5.61)
+        }
         p.bandeauHauteurFixeLignes =
             entier(bd, "hauteur_fixe_lignes", 0, 4, "sous_titre.bandeau", &err) ?? 0
     }
@@ -358,6 +487,9 @@ enum ProfilJSON {
         logo["taille_pct_hauteur"] = nombreJSON(pourcent(profil.logoTailleRatio))
         logo["marge_pct_hauteur"] = nombreJSON(pourcent(profil.logoMargeRatio))
         logo["opacite"] = nombreJSON(profil.logoOpacite)
+        // Le recadrage rond entre au schéma en v2 : il change ce qui est GRAVÉ,
+        // donc il appartient au profil. Écrit seulement s'il est demandé.
+        if profil.logoRecadreEnCercle { logo["recadre_en_cercle"] = true }
         d["logo"] = logo
 
         var bandeau: [String: Any] = [
@@ -365,24 +497,24 @@ enum ProfilJSON {
             "couleur": hex(profil.bandeauCouleur),
             "opacite": nombreJSON(profil.bandeauCouleur.opacite),
             "padding_pct_hauteur": nombreJSON(pourcent(profil.bandeauPaddingRatio)),
-            "espaces_lateraux": profil.bandeauEspacesLateraux,
+            "marge_texte_pct_largeur":
+                nombreJSON(pourcent(profil.bandeauMargeTexteRatioLargeur)),
         ]
-        // Les trois ajouts du 23/08 : écrits SEULEMENT s'ils s'écartent du
-        // comportement historique. Voir l'en-tête de ce fichier.
+        // `mode` et `hauteur_fixe_lignes` restent écrits SEULEMENT s'ils
+        // s'écartent du comportement historique — la règle du temps 1, qui n'a
+        // plus rien à voir avec la compatibilité (un profil v2 est de toute
+        // façon illisible pour le prototype) mais garde son autre vertu : un
+        // fichier de profil ne porte que ce qu'on a réellement choisi.
         if profil.bandeauMode != .ajuste {
             bandeau["mode"] = profil.bandeauMode.rawValue
         }
         if profil.bandeauHauteurFixeLignes != 0 {
             bandeau["hauteur_fixe_lignes"] = profil.bandeauHauteurFixeLignes
         }
-        if profil.bandeauMode == .pleineLargeur,
-           pourcent(profil.bandeauMargeInterieureRatioLargeur) != 3.0 {
-            bandeau["marge_interieure_pct_largeur"] =
-                nombreJSON(pourcent(profil.bandeauMargeInterieureRatioLargeur))
-        }
 
         d["sous_titre"] = [
             "police": profil.police,
+            "longueur_ligne_cible": profil.longueurLigneCible,
             "taille_pct_hauteur": nombreJSON(pourcent(profil.tailleRatio)),
             "couleur_texte": hex(profil.couleurTexte),
             "contour": [
@@ -401,26 +533,35 @@ enum ProfilJSON {
 
     // MARK: - Ce que le prototype ne saurait pas lire
 
-    /// Les champs que ce profil écrira et que le prototype Python refuse.
+    /// Les champs d'un profil écrit par l'app que le prototype Python refuse.
     ///
-    /// Décision nº5, tranchée le 28/08/2026 : le prototype ne sera pas amendé.
-    /// L'asymétrie est donc là pour de bon, et la seule chose à faire est de la
-    /// DIRE — au moment d'enregistrer, pas au moment de s'en servir. Découvrir
-    /// le refus en lançant le prototype sur un profil qu'on vient d'envoyer à
-    /// quelqu'un est le pire moment possible.
+    /// Depuis la version 2 du schéma, la réponse ne dépend plus du profil : le
+    /// prototype vérifie `schema_version == 1` avant tout le reste, et refuse
+    /// donc **tout** profil écrit par l'app. Les champs propres à la v2 —
+    /// `marge_texte_pct_largeur`, `longueur_ligne_cible`, `recadre_en_cercle`,
+    /// et les trois ajouts du 23/08 — s'y ajoutent, mais la version suffit.
     ///
-    /// La liste est calculée par la MÊME règle que l'écriture : un champ n'y
-    /// figure que s'il est effectivement écrit. Deux règles séparées auraient
-    /// fini par diverger, et l'avertissement aurait menti dans un sens ou dans
-    /// l'autre.
+    /// Décision nº5, tranchée le 28/08 : le prototype ne sera pas amendé, il
+    /// prend sa retraite avec l'app native. La seule chose à faire est de le
+    /// DIRE au moment d'enregistrer — découvrir le refus en lançant le
+    /// prototype sur un profil qu'on vient d'envoyer serait le pire moment.
+    ///
+    /// La fonction reste, et reste calculée sur ce que l'ENCODEUR écrit : c'est
+    /// elle qui dira la vérité si le prototype recevait un jour l'amendement.
     static func champsInconnusDuPrototype(_ profil: ProfilHabillage) -> [String] {
         guard let donnees = try? encoder(profil, cheminLogo: nil),
               let objet = (try? JSONSerialization.jsonObject(with: donnees))
                 as? [String: Any],
               let st = objet["sous_titre"] as? [String: Any],
               let bandeau = st["bandeau"] as? [String: Any] else { return [] }
-        return ["mode", "hauteur_fixe_lignes", "marge_interieure_pct_largeur"]
+        var champs = ["schema_version \(versionSchema)"]
+        champs += ["longueur_ligne_cible"].filter { st[$0] != nil }
+        champs += ["mode", "hauteur_fixe_lignes", "marge_texte_pct_largeur"]
             .filter { bandeau[$0] != nil }
+        if (objet["logo"] as? [String: Any])?["recadre_en_cercle"] != nil {
+            champs.append("recadre_en_cercle")
+        }
+        return champs
     }
 
     // MARK: - Conversions

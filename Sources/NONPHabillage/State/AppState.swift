@@ -280,9 +280,14 @@ final class AppState: ObservableObject {
     /// partiel.
     func importerProfil(_ url: URL) {
         do {
-            profil = try ProfilJSON.lire(url)
+            let lecture = try ProfilJSON.lireDetaille(url)
+            profil = lecture.profil
             erreur = nil
-            message = Textes.Profil.importe(profil.nom)
+            // Une conversion est une MODIFICATION : la taire reviendrait à
+            // changer les réglages de quelqu'un sans le lui dire.
+            message = lecture.migration.map {
+                Textes.Profil.importe(profil.nom) + "\n" + $0
+            } ?? Textes.Profil.importe(profil.nom)
         } catch let e as ErreurProfil {
             erreur = Textes.Profil.refus(url.lastPathComponent, e.anomalies)
         } catch {

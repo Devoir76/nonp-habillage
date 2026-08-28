@@ -82,10 +82,13 @@ enum MemoireProfil {
         let enveloppe: [String: Any] = [
             "version_enveloppe": versionEnveloppe,
             "profil": profilObjet,
-            "reglages_app": [
-                "longueur_ligne_cible": profil.longueurLigneCible,
-                "logo_recadre_en_cercle": profil.logoRecadreEnCercle,
-            ],
+            // PLUS DE « reglages_app ». La section portait les deux réglages
+            // que le contrat partagé ne nommait pas — longueur de ligne cible
+            // et recadrage rond. La version 2 du schéma leur a donné un champ
+            // (décision nº6), et l'enveloppe n'a plus rien à transporter à
+            // côté du profil. Elle reste pour sa version à elle : ce fichier
+            // est privé à l'application et pourra évoluer sans toucher au
+            // contrat.
         ]
         return try JSONSerialization.data(
             withJSONObject: enveloppe, options: [.prettyPrinted, .sortedKeys])
@@ -117,18 +120,7 @@ enum MemoireProfil {
         // écrit par une version future y sera refusé comme ailleurs, et
         // l'application repartira du profil neutre plutôt que d'appliquer un
         // réglage qu'elle ne comprend pas.
-        var profil = try ProfilJSON.decoder(corps, base: nil)
-
-        if let extras = enveloppe["reglages_app"] as? [String: Any] {
-            if let n = extras["longueur_ligne_cible"] as? Int,
-               n >= 10, n <= 80 {
-                profil.longueurLigneCible = n
-            }
-            if let rond = extras["logo_recadre_en_cercle"] as? Bool {
-                profil.logoRecadreEnCercle = rond
-            }
-        }
-        return profil
+        return try ProfilJSON.decoder(corps, base: nil)
     }
 
     /// Oublier. Sert au contrôle, et à repartir de zéro.

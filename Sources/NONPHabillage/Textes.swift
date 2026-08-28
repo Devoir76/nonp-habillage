@@ -351,9 +351,49 @@ enum Textes {
         static func champObligatoire(_ contexte: String, _ cle: String) -> String {
             "\(contexte) : champ obligatoire « \(cle) » absent"
         }
+        /// Une version qu'on ne sait pas lire.
+        ///
+        /// « Version inconnue » ne dit rien à personne. Le message nomme les
+        /// versions acceptées, dit ce que la 2 a changé, et pourquoi — c'est ce
+        /// qu'on veut lire quand un fichier est refusé.
         static func versionSchema(_ recu: Any?) -> String {
             "profil : schema_version doit valoir \(ProfilJSON.versionSchema) "
-            + "(reçu \(description(recu)))"
+            + "(reçu \(description(recu))). Les profils en version "
+            + "\(ProfilJSON.versionPrecedente) sont lus et convertis "
+            + "automatiquement ; aucune autre version n'existe."
+        }
+
+        // ── Conversion d'un profil version 1 ────────────────────────────────
+        //
+        // Une conversion silencieuse est une modification silencieuse. Ce qui
+        // suit se dit à l'utilisateur, à chaque profil converti.
+
+        static let migrationTitre = "Profil converti de la version 1 à la version 2."
+        static func migrationPleineLargeur(_ pourcent: Double) -> String {
+            migrationTitre + "\n"
+            + "« marge_interieure_pct_largeur » (\(ProfilJSON.lisible(pourcent)) %) "
+            + "devient « marge_texte_pct_largeur », à l'identique : les deux "
+            + "expriment déjà un pourcentage de la largeur. Le rendu ne change pas."
+        }
+        static func migrationAjuste(espaces: Int, debord: Double,
+                                    pourcent: Double) -> String {
+            migrationTitre + "\n"
+            + "« espaces_lateraux » (\(espaces)) devient "
+            + "« marge_texte_pct_largeur » (\(ProfilJSON.lisible(pourcent)) %). "
+            + "Les espaces se comptaient en largeurs d'espace, donc en fraction "
+            + "de la taille de police — donc de la HAUTEUR — pour un retrait qui "
+            + "consomme de la LARGEUR. La conversion se fait sur le 16:9 1080p, "
+            + "où ces \(espaces) espaces valaient \(Int(debord.rounded())) px : "
+            + "en 16:9 le rendu est inchangé, et les formats verticaux "
+            + "récupèrent la largeur que l'ancienne unité leur prenait."
+        }
+        static func migrationImpossible(_ police: String) -> String {
+            "Ce profil est en version 1 et ne peut pas être converti : la police "
+            + "« \(police) » n'est pas installée sur ce Mac.\n"
+            + "Convertir « espaces_lateraux » exige de MESURER une espace dans "
+            + "cette police — la faire avec une autre donnerait un retrait faux, "
+            + "et l'invariant nº4 interdit toute substitution silencieuse. "
+            + "Installez la police, ou corrigez le profil."
         }
         static let nomVide = "profil : « nom » doit être un texte non vide"
         static func champTexteNonVide(_ contexte: String, _ cle: String) -> String {
@@ -435,8 +475,11 @@ enum Textes {
         /// outil qui ne sait pas le rendre.
         static func inconnuDuPrototype(_ champs: [String]) -> String {
             let liste = champs.map { "« \($0) »" }.joined(separator: ", ")
-            return "Ce profil emploie \(liste) : le prototype Python le refusera. "
-                + "L'app, elle, le relira sans peine."
+            return "Profil en version \(ProfilJSON.versionSchema) : le prototype "
+                + "Python le refusera — il attend la version "
+                + "\(ProfilJSON.versionPrecedente), et \(liste) lui sont inconnus. "
+                + "L'app, elle, le relira sans peine, et lit toujours les profils "
+                + "du prototype."
         }
 
         /// PIÈGE Nº2 — un profil partagé ne peut pas porter un chemin local.

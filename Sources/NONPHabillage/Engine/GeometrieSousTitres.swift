@@ -53,17 +53,40 @@ enum GeometrieSousTitres {
         }
     }
 
+    /// **Le retrait du texte par rapport au bord de la bande**, de chaque côté.
+    ///
+    /// UNE seule commande, pour les deux modes de bandeau — schéma v2, décision
+    /// nº6 du 28/08/2026. Trois réglages se partageaient ce rôle en v1 :
+    /// `espaces_lateraux` en mode `ajuste`, `marge_interieure_pct_largeur` en
+    /// mode `pleine-largeur`, et la marge latérale du texte par-dessus. Mesuré
+    /// à l'ADR : sur le format de référence, aucun des trois ne produisait
+    /// d'effet visible sur la totalité de sa course.
+    ///
+    /// **En pixels entiers**, comme toutes les grandeurs géométriques du moteur.
+    /// C'est ce qui permet à un pourcentage de largeur de retomber exactement
+    /// sur les débords que la v1 calculait en largeurs d'espace : 5,61 % de
+    /// 1920 → 108 px, la valeur même du profil NONP.
+    ///
+    /// Sans bandeau, aucun retrait : il n'y a pas de bord dont s'écarter. C'est
+    /// le comportement de la v1, conservé tel quel.
+    static func retraitDuTexte(
+        profil: ProfilHabillage, largeurVideo: Int
+    ) -> Double {
+        guard profil.bandeauActif else { return 0 }
+        return Double(TextePython.arrondi(
+            Double(largeurVideo) * profil.bandeauMargeTexteRatioLargeur))
+    }
+
     /// De combien le fond déborde de chaque côté de sa ligne, en mode `ajuste`.
     ///
     /// Le prototype obtenait cet élargissement en collant `espaces_lateraux`
     /// espaces durs au texte lui-même. Ici c'est le rectangle qui s'élargit :
     /// la chaîne gravée n'est pas touchée (invariant nº1).
     static func debordDuFond(
-        profil: ProfilHabillage, parametres: ParametresMiseEnPage, police: PoliceSousTitre
+        profil: ProfilHabillage, largeurVideo: Int
     ) -> Double {
-        guard profil.bandeauActif, profil.bandeauMode == .ajuste else { return 0 }
-        return Double(parametres.paddingBandeau)
-            + Double(profil.bandeauEspacesLateraux) * police.largeurEspace
+        guard profil.bandeauMode == .ajuste else { return 0 }
+        return retraitDuTexte(profil: profil, largeurVideo: largeurVideo)
     }
 
     /// Largeur dans laquelle le texte doit tenir, selon le mode de bandeau.
@@ -73,6 +96,7 @@ enum GeometrieSousTitres {
         largeurVideo: Int,
         police: PoliceSousTitre
     ) -> Double {
+        let retrait = retraitDuTexte(profil: profil, largeurVideo: largeurVideo)
         switch profil.bandeauMode {
         case .ajuste:
             // Les marges latérales du profil, MOINS le débord du fond.
@@ -84,13 +108,12 @@ enum GeometrieSousTitres {
             // après le découpage, quand plus rien ne pouvait le rattraper.
             // Ici la contrainte est prise en compte AVANT la césure : le texte
             // se coupe un mot plus tôt, et le fond reste dans ses marges.
-            return Double(parametres.largeurUtile)
-                - 2 * debordDuFond(profil: profil, parametres: parametres, police: police)
+            return Double(parametres.largeurUtile) - 2 * retrait
         case .pleineLargeur:
-            // La bande occupe toute la largeur ; c'est sa marge intérieure qui
-            // borne le texte.
-            let marge = Double(largeurVideo) * profil.bandeauMargeInterieureRatioLargeur
-            return Double(largeurVideo) - 2 * marge
+            // La bande occupe toute la largeur ; c'est le retrait qui borne le
+            // texte. La marge latérale du profil n'y joue aucun rôle — elle
+            // n'en jouait déjà aucun en v1.
+            return Double(largeurVideo) - 2 * retrait
         }
     }
 
@@ -161,7 +184,7 @@ enum GeometrieSousTitres {
                 // rectangle qui s'élargit : le texte, lui, n'est pas touché
                 // (invariant nº1).
                 let debord = Self.debordDuFond(
-                    profil: profil, parametres: parametres, police: police)
+                    profil: profil, largeurVideo: largeurVideo)
                 bandeaux.append(CGRect(
                     x: x - debord,
                     y: y - police.descendante - padding,

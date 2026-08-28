@@ -240,45 +240,87 @@ intermédiaire relevés sur le pourtour), image rectangulaire ramenée au carré
 
 ---
 
-## D-9 — Un profil de l'app peut dépasser ce que le prototype sait lire (lot 6)
+## D-9 — L'app écrit un schéma que le prototype ne lit pas (lot 6)
 
 **Origine** : lot 6, mesuré le 28/08/2026 en faisant relire par
-`charger_profil()` des profils écrits par l'app.
+`charger_profil()` des profils écrits par l'app. **Élargie le même jour** par la
+décision nº6.
 
-**Le fait.** Le schéma de ce dépôt porte trois champs ajoutés le 23/08 —
-`bandeau.mode`, `bandeau.hauteur_fixe_lignes`,
-`bandeau.marge_interieure_pct_largeur`. Le prototype ne les connaît pas : ni son
-`profil-habillage.schema.json`, ni son `_controler()`, qui les refuse comme
-champs inconnus. L'amendement a été **proposé**, jamais appliqué au prototype.
+**Le fait, première version (matin du 28/08).** Le schéma de ce dépôt portait
+trois champs ajoutés le 23/08 — `bandeau.mode`, `bandeau.hauteur_fixe_lignes`,
+`bandeau.marge_interieure_pct_largeur` — que le prototype refusait comme
+inconnus : l'amendement avait été *proposé*, jamais appliqué. Seuls les profils
+employant le bandeau pleine largeur étaient concernés.
 
-**Ce que l'app fait.** Elle n'écrit un champ facultatif que s'il s'écarte de sa
-valeur par défaut. C'est la règle que le schéma se donne à lui-même, et elle
-suffit pour que le critère d'acceptation du lot soit tenu partout où il peut
-l'être :
+**Le fait, depuis la décision nº6.** Le schéma est passé en **version 2**. Le
+prototype vérifie `schema_version == 1` avant tout le reste : il refuse donc
+**tout** profil écrit par l'app, plus seulement ceux qui sortaient du préréglage
+NONP.
 
 | Profil écrit par l'app | Relu par le prototype |
 |---|---|
-| préréglage **NONP** | accepté sans retouche |
-| NONP sans logo | accepté |
-| profil réglé à la main, bandeau `ajuste` | accepté |
-| préréglage **Neutre** (bandeau pleine largeur) | **refusé** — `mode`, `hauteur_fixe_lignes` |
+| préréglage NONP | refusé — version 2, `marge_texte_pct_largeur`, `longueur_ligne_cible` |
+| NONP sans logo | refusé, mêmes motifs |
+| profil réglé à la main | refusé, mêmes motifs |
+| préréglage Neutre | refusé, mêmes motifs + `mode`, `hauteur_fixe_lignes` |
 
-**Pourquoi ce refus est juste.** Le prototype ne sait pas rendre un bandeau
-pleine largeur. Taire `mode` pour lui faire accepter le fichier lui ferait rendre
-autre chose que ce que le fichier décrit — un bandeau ajusté là où l'on a
-demandé une bande. Mieux vaut un refus lisible qu'un rendu faux.
+**Pourquoi c'est assumé.** Décision nº5, tranchée le 28/08 : le prototype ne
+sera pas amendé — il prend sa retraite quand l'app native sera complète, et le
+modifier reviendrait à toucher l'outil de production quotidien pour un besoin
+transitoire. Décision nº6, tranchée le même jour : l'argument de compatibilité
+qui plaidait pour rester en v1 était déjà caduc, puisque le prototype ne relisait
+plus les profils sortant du préréglage NONP.
 
-**Ce que cela coûte.** Un profil « Neutre » exporté depuis l'app n'est pas
-utilisable dans le prototype. Un profil issu du prototype, lui, est toujours lu
-par l'app — ce sens-là n'a aucune restriction.
+**Le sens qui compte n'a aucune restriction** : **tout profil du prototype est lu
+par l'app**, converti automatiquement de la v1 vers la v2, et la conversion est
+annoncée. Elle n'échoue que si la police du profil est absente du système —
+convertir `espaces_lateraux` exige de mesurer une espace dans cette police, et
+l'invariant nº4 interdit d'en substituer une autre.
 
-**Comment cela se referme.** Le jour où le prototype reçoit l'amendement du
-23/08, ces fichiers passent sans changer d'une virgule. C'est la décision
-ouverte nº5 de l'ADR (« amender le prototype dès maintenant, ou attendre »).
+**Ce que cela coûte.** Un profil produit par l'app n'est pas utilisable dans le
+prototype. En pratique : on règle dans l'app, on grave dans l'app.
 
 **Contrôlé par** : `Scripts/profils_python.py`, appelé par `./Scripts/verifier.sh`
 quand le prototype est présent. Le nom des fichiers porte l'attente — `accepte-*`
-doit passer, `amende-*` doit être refusé **et seulement** sur ces trois champs.
+doit passer, `amende-*` doit être refusé **et seulement** pour ce que la version 2
+a changé. Depuis le 28/08, l'app n'écrit plus que des `amende-*`.
+
+---
+
+## D-10 — Le retrait du texte n'est plus adossé à la taille de police (lot 6)
+
+**Origine** : ADR-0001, décision nº6, tranchée le 28/08/2026.
+
+**Ce que fait le prototype.** Il élargit le fond du mode `ajuste` en collant
+`espaces_lateraux` espaces durs de chaque côté du texte. L'unité est la largeur
+d'une espace, donc une fraction de la taille de police, donc de la **hauteur**
+de la vidéo — pour un retrait qui consomme de la **largeur**.
+
+**Ce que fait l'app native.** Un pourcentage de la largeur,
+`bandeau.marge_texte_pct_largeur`, appliqué en pixels entiers, et le même dans
+les deux modes de bandeau. Défaut 5,61 % : la valeur mesurée qui reproduit, sur
+le format de référence 16:9 1080p, le débord que `espaces_lateraux: 4`
+produisait.
+
+**Ce que cela change, mesuré.**
+
+- **16:9** : le texte est identique à toutes les définitions — même taille, mêmes
+  coupures, sur les 1 567 répliques du corpus réel. Le rendu est identique au
+  pixel sur 1024, 1280 et 1920 ; sur 2560 et 3840 le bord du bandeau se déplace
+  de 1,4 px au plus, soit 0,03 % des pixels de l'image.
+- **Vertical** : la police remonte de 61 à 68 px en 9:16 (+11 %), de 63 à 68 en
+  1:1 et en 4:5 (+7 %). C'est la largeur que l'ancienne unité prenait à des
+  formats qu'elle n'avait pas été réglée pour.
+
+**Pourquoi l'écart en 2560 et 3840 n'était pas évitable.** Le débord de la v1
+n'était pas proportionnel à la largeur : il empruntait au `padding_pct_hauteur`,
+arrondi au pixel sur la hauteur. Il valait 5,609 % de la largeur sur une 1080p et
+5,569 % sur une 1440p — la v1 dérivait avec la définition, sur un format pourtant
+identique. Aucun pourcentage unique ne peut retomber sur elle partout ; la v2, en
+revanche, ne dérive plus.
+
+**Contrôlé par** : `ControlesRegressionV2`, à chaque exécution de
+`./Scripts/verifier.sh`.
 
 ---
 
