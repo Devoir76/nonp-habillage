@@ -415,6 +415,45 @@ enum ControlesProfils {
                    champsEcrits(margee)["bandeau"]?
                        .contains("marge_interieure_pct_largeur") == true)
 
+        // ── L'AVERTISSEMENT, calculé par la même règle que l'écriture ──────
+        //
+        // Décision nº5 tranchée le 28/08 : le prototype ne sera pas amendé.
+        // L'asymétrie reste, et l'enregistrement doit la DIRE. Ce qui compte
+        // ici, c'est que l'avertissement et le fichier ne puissent pas
+        // diverger : ce qu'il annonce est exactement ce que l'encodeur écrit.
+        r.egal("préréglage NONP : rien à annoncer, le prototype le lira",
+               ProfilJSON.champsInconnusDuPrototype(.nonpHistorique), [])
+        r.egal("profil neutre : les deux champs écrits sont annoncés",
+               ProfilJSON.champsInconnusDuPrototype(.neutre).sorted(),
+               ["hauteur_fixe_lignes", "mode"])
+        r.egal("une marge intérieure déplacée s'ajoute à l'annonce",
+               ProfilJSON.champsInconnusDuPrototype(margee).sorted(),
+               ["hauteur_fixe_lignes", "marge_interieure_pct_largeur", "mode"])
+
+        // Un profil qui n'emploie QUE la hauteur constante : le mode reste
+        // « ajuste », donc tu ne l'annonces pas.
+        var hauteurSeule = ProfilHabillage.nonpHistorique
+        hauteurSeule.bandeauHauteurFixeLignes = 2
+        r.egal("hauteur constante seule : elle seule est annoncée",
+               ProfilJSON.champsInconnusDuPrototype(hauteurSeule),
+               ["hauteur_fixe_lignes"])
+
+        // L'annonce et le fichier disent la MÊME chose, quel que soit le profil.
+        for (nom, profil) in [("NONP", ProfilHabillage.nonpHistorique),
+                              ("neutre", .neutre), ("margée", margee),
+                              ("hauteur seule", hauteurSeule)] {
+            let annonces = Set(ProfilJSON.champsInconnusDuPrototype(profil))
+            let ecrits = (champsEcrits(profil)["bandeau"] ?? [])
+                .intersection(["mode", "hauteur_fixe_lignes",
+                               "marge_interieure_pct_largeur"])
+            r.egal("\(nom) : l'annonce est exactement ce que le fichier porte",
+                   annonces, ecrits)
+        }
+        r.verifier("le message nomme les champs et ne bloque pas l'enregistrement",
+                   Textes.Profil.inconnuDuPrototype(["mode"]).contains("mode")
+                   && Textes.Profil.inconnuDuPrototype(["mode"])
+                       .localizedCaseInsensitiveContains("refusera"))
+
         // Le logo « actif » dit ce qui sera GRAVÉ : sans fichier, rien.
         guard let sansFichier = try? ProfilJSON.encoder(.nonpHistorique, cheminLogo: nil),
               let o = (try? JSONSerialization.jsonObject(with: sansFichier)) as? [String: Any],

@@ -399,6 +399,30 @@ enum ProfilJSON {
             withJSONObject: d, options: [.prettyPrinted, .sortedKeys])
     }
 
+    // MARK: - Ce que le prototype ne saurait pas lire
+
+    /// Les champs que ce profil écrira et que le prototype Python refuse.
+    ///
+    /// Décision nº5, tranchée le 28/08/2026 : le prototype ne sera pas amendé.
+    /// L'asymétrie est donc là pour de bon, et la seule chose à faire est de la
+    /// DIRE — au moment d'enregistrer, pas au moment de s'en servir. Découvrir
+    /// le refus en lançant le prototype sur un profil qu'on vient d'envoyer à
+    /// quelqu'un est le pire moment possible.
+    ///
+    /// La liste est calculée par la MÊME règle que l'écriture : un champ n'y
+    /// figure que s'il est effectivement écrit. Deux règles séparées auraient
+    /// fini par diverger, et l'avertissement aurait menti dans un sens ou dans
+    /// l'autre.
+    static func champsInconnusDuPrototype(_ profil: ProfilHabillage) -> [String] {
+        guard let donnees = try? encoder(profil, cheminLogo: nil),
+              let objet = (try? JSONSerialization.jsonObject(with: donnees))
+                as? [String: Any],
+              let st = objet["sous_titre"] as? [String: Any],
+              let bandeau = st["bandeau"] as? [String: Any] else { return [] }
+        return ["mode", "hauteur_fixe_lignes", "marge_interieure_pct_largeur"]
+            .filter { bandeau[$0] != nil }
+    }
+
     // MARK: - Conversions
 
     /// Ratio → pourcentage lisible : 0.072 → 7.2, pas 7.199999999999999.

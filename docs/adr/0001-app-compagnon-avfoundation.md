@@ -469,10 +469,40 @@ libre au schéma ; seule la commande disparaît, comme pour la marge intérieure
 3. **Sortie HEVC** en plus de H.264 : fichiers plus légers, compatibilité moindre.
 4. **Aperçu animé** (lecture avec habillage) : confortable, mais coûteux — à
    trancher au lot 5, l'aperçu sur image fixe étant le minimum retenu.
-5. **Amender le prototype Python** dès maintenant pour le bandeau pleine largeur
-   (bénéfice immédiat sur l'outil de production), ou attendre l'app native ?
+5. ~~**Amender le prototype Python** dès maintenant pour le bandeau pleine
+   largeur (bénéfice immédiat sur l'outil de production), ou attendre l'app
+   native ?~~ — **TRANCHÉE le 28/08/2026 : on n'amende pas.** Voir ci-dessous.
 6. **Remplacer `espaces_lateraux` par une marge en % de la largeur** — constaté
    au lot 3, à trancher au lot 6. Voir ci-dessous.
+
+### Décision nº5 — le prototype ne sera pas amendé (tranchée le 28/08/2026)
+
+**Le constat qui force la décision.** Le lot 6 a fait relire par
+`charger_profil()` des profils écrits par l'app. Le prototype refuse les trois
+champs ajoutés au schéma le 23/08 — `bandeau.mode`,
+`bandeau.hauteur_fixe_lignes`, `bandeau.marge_interieure_pct_largeur` — comme
+champs inconnus : l'amendement avait été *proposé*, jamais appliqué. Un profil
+« Neutre » exporté depuis l'app n'est donc pas lisible par le prototype.
+
+**Décision d'Éric : l'asymétrie est assumée, le prototype reste intact.**
+
+**Motif.** Le prototype prend sa retraite quand l'app native sera complète. Le
+modifier reviendrait à toucher l'outil de production quotidien — celui qui fait
+foi (invariant nº5) — pour un besoin transitoire. Le risque est du mauvais
+côté : une régression y coûterait un travail réel, alors que le manque coûte, au
+pire, un profil qu'on ne peut pas rendre avec l'ancien outil.
+
+**Conséquences, toutes tenues :**
+
+- l'asymétrie est **documentée** (`docs/divergences-prototype.md`, D-9) et
+  **mesurée à chaque exécution** de `./Scripts/verifier.sh` ;
+- le sens qui compte reste sans restriction : **tout profil du prototype est lu
+  par l'app**, sans retouche ;
+- l'app n'écrit un champ facultatif que s'il s'écarte de sa valeur par défaut,
+  de sorte qu'un profil resté dans ce que le prototype sait rendre lui reste
+  lisible ;
+- **le panneau d'enregistrement le dit** quand un profil emploie un de ces
+  champs : découvrir le refus au moment de s'en servir serait le pire moment.
 
 ### Décision nº6 — `espaces_lateraux`, un héritage de l'ASS inadapté au relatif
 

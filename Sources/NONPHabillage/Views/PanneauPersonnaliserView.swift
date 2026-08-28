@@ -279,6 +279,17 @@ struct PanneauPersonnaliserView: View {
         let panneau = NSSavePanel()
         panneau.allowedContentTypes = [.json]
         panneau.nameFieldStringValue = Self.nomDeFichier(etat.profil.nom) + ".json"
+
+        // L'avertissement vit DANS le panneau, pas après. Un profil qui emploie
+        // le bandeau pleine largeur ne sera pas lu par le prototype (décision
+        // nº5, tranchée le 28/08) : le dire ici, c'est le dire avant que le
+        // fichier parte. L'enregistrement n'est pas empêché — le profil est
+        // juste, c'est l'ancien outil qui ne sait pas le rendre.
+        let inconnus = ProfilJSON.champsInconnusDuPrototype(etat.profil)
+        if !inconnus.isEmpty {
+            panneau.message = Textes.Profil.inconnuDuPrototype(inconnus)
+        }
+
         if panneau.runModal() == .OK, let url = panneau.url {
             etat.exporterProfil(vers: url)
         }

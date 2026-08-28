@@ -426,6 +426,19 @@ enum Textes {
             return "Profil enregistré dans « \(nom) », avec une copie du logo "
                 + "(« \(logo) ») pour qu'il reste lisible sur une autre machine."
         }
+        /// Ce profil emploie des champs que le prototype Python ne connaît pas.
+        ///
+        /// Dit À L'ENREGISTREMENT, et sur UNE ligne. Décision nº5 du 28/08 : le
+        /// prototype ne sera pas amendé, l'asymétrie est assumée — reste à ne
+        /// pas la laisser découvrir au moment de s'en servir. L'enregistrement
+        /// n'est pas empêché pour autant : le profil est juste, c'est l'ancien
+        /// outil qui ne sait pas le rendre.
+        static func inconnuDuPrototype(_ champs: [String]) -> String {
+            let liste = champs.map { "« \($0) »" }.joined(separator: ", ")
+            return "Ce profil emploie \(liste) : le prototype Python le refusera. "
+                + "L'app, elle, le relira sans peine."
+        }
+
         /// PIÈGE Nº2 — un profil partagé ne peut pas porter un chemin local.
         static let logoRecopieExplication =
             "Le logo est recopié à côté du profil et son chemin est écrit "
