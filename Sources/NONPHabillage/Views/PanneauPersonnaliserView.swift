@@ -33,14 +33,13 @@ struct PanneauPersonnaliserView: View {
 
             // Tailles NOMMÉES plutôt qu'un pourcentage : l'utilisateur choisit
             // une apparence, le moteur en déduit la taille selon le format.
-            Picker(Textes.Interface.taille, selection: Binding(
+            Self.choixSegmente(Textes.Interface.taille, selection: Binding(
                 get: { etat.tailleNommee },
                 set: { etat.tailleNommee = $0 })) {
                 ForEach(TailleNommee.allCases) { t in
                     Text(Textes.Interface.nomTaille(t)).tag(t)
                 }
             }
-            .pickerStyle(.segmented)
 
             if let mep = etat.miseEnPage {
                 Text(Textes.Interface.tailleEtLongueurLigne(
@@ -50,22 +49,9 @@ struct PanneauPersonnaliserView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack {
-                Picker(Textes.Interface.police, selection: Binding(
-                    get: { etat.profil.police },
-                    set: { etat.profil.police = $0 })) {
-                    ForEach(PolicesSures.disponibles, id: \.self) { f in
-                        Text(f).font(.custom(f, size: 13)).tag(f)
-                    }
-                    Divider()
-                    // « Autre police du système » reste accessible, signalée
-                    // comme risquée pour le partage (ADR §2).
-                    ForEach(PolicesSures.toutes, id: \.self) { f in
-                        Text(f).tag(f)
-                    }
-                }
-                .frame(maxWidth: 280)
-            }
+            Self.choixPolice(selection: Binding(
+                get: { etat.profil.police },
+                set: { etat.profil.police = $0 }))
 
             if !PolicesSures.estSure(etat.profil.police) {
                 Label(Textes.Interface.policeRisquee, systemImage: "exclamationmark.triangle")
@@ -74,22 +60,17 @@ struct PanneauPersonnaliserView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 18) {
-                selecteurCouleur(Textes.Interface.couleurTexte,
-                                 valeur: $etat.profil.couleurTexte)
-                selecteurCouleur(Textes.Interface.couleurContour,
-                                 valeur: $etat.profil.contourCouleur)
-            }
+            Self.selecteurCouleur(Textes.Interface.couleurTexte,
+                                  valeur: $etat.profil.couleurTexte)
+            Self.selecteurCouleur(Textes.Interface.couleurContour,
+                                  valeur: $etat.profil.contourCouleur)
 
             // Passe par `etat.lignesMax`, pas par `etat.profil.lignesMax` : la
             // case « Hauteur constante » du bandeau reprend cette valeur, et
             // doit la suivre quand elle change.
-            Stepper(value: Binding(
+            Self.pasAPas(Textes.Interface.lignesMax, valeur: Binding(
                 get: { etat.lignesMax },
-                set: { etat.lignesMax = $0 }), in: 1...4) {
-                Text("\(Textes.Interface.lignesMax) : \(etat.lignesMax)")
-            }
-            .frame(maxWidth: 220)
+                set: { etat.lignesMax = $0 }), de: 1, a: 4)
         }
     }
 
@@ -99,21 +80,20 @@ struct PanneauPersonnaliserView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(Textes.Interface.bandeau).font(.headline)
 
-            Toggle(Textes.Interface.bandeauActif, isOn: Binding(
+            Self.interrupteur(Textes.Interface.bandeauActif, actif: Binding(
                 get: { etat.profil.bandeauActif },
                 set: { etat.profil.bandeauActif = $0 }))
 
             if etat.profil.bandeauActif {
-                Picker(Textes.Interface.modeBandeau, selection: Binding(
+                Self.choixSegmente(Textes.Interface.modeBandeau, selection: Binding(
                     get: { etat.profil.bandeauMode },
                     set: { etat.profil.bandeauMode = $0 })) {
                     Text(Textes.Interface.modePleineLargeur).tag(ModeBandeau.pleineLargeur)
                     Text(Textes.Interface.modeAjuste).tag(ModeBandeau.ajuste)
                 }
-                .pickerStyle(.segmented)
 
-                selecteurCouleur(Textes.Interface.couleurBandeau,
-                                 valeur: $etat.profil.bandeauCouleur)
+                Self.selecteurCouleur(Textes.Interface.couleurBandeau,
+                                      valeur: $etat.profil.bandeauCouleur)
 
                 // Hauteur constante : ce qui empêche la bande de sauter entre
                 // une réplique d'une ligne et une réplique de deux.
@@ -136,7 +116,7 @@ struct PanneauPersonnaliserView: View {
                 // C'est exactement ce que le schéma recommandait déjà : « même
                 // valeur que lignes_max ».
                 VStack(alignment: .leading, spacing: 2) {
-                    Toggle(Textes.Interface.hauteurFixe, isOn: Binding(
+                    Self.interrupteur(Textes.Interface.hauteurFixe, actif: Binding(
                         get: { etat.hauteurConstante },
                         set: { etat.hauteurConstante = $0 }))
                     Text(etat.hauteurConstante
@@ -148,8 +128,9 @@ struct PanneauPersonnaliserView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                curseurPourcent(Textes.Interface.margeBasse,
-                                valeur: $etat.profil.margeBasseRatio, de: 0, a: 0.30)
+                Self.curseurPourcent(Textes.Interface.margeBasse,
+                                     valeur: $etat.profil.margeBasseRatio,
+                                     de: 0, a: 0.30)
 
                 // PAS de curseur « Marge intérieure » ici, et c'est délibéré.
                 // Mesuré au lot 5 : sur une 16:9, la marge doit atteindre 22,3 %
@@ -193,17 +174,7 @@ struct PanneauPersonnaliserView: View {
                 // Les quatre coins en UN clic, comme le veut l'ADR — le
                 // placement libre à la souris ne doit pas rendre les coins
                 // pénibles à retrouver.
-                HStack(spacing: 6) {
-                    Text(Textes.Interface.positionLogo)
-                    ForEach(CoinLogo.allCases, id: \.self) { coin in
-                        Button(Textes.Interface.nomCoin(coin)) {
-                            etat.profil.logoPosition = .coin(coin)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(estCoinChoisi(coin) ? .accentColor : nil)
-                    }
-                }
-                .font(.caption)
+                Self.coinsDuLogo(position: $etat.profil.logoPosition)
 
                 Text(Textes.Interface.deplacerLogo)
                     .font(.caption)
@@ -213,7 +184,7 @@ struct PanneauPersonnaliserView: View {
                 // on coche, l'aperçu montre le rond, on décoche. Inutile si le
                 // PNG fourni est déjà détouré.
                 VStack(alignment: .leading, spacing: 2) {
-                    Toggle(Textes.Interface.logoRond, isOn: Binding(
+                    Self.interrupteur(Textes.Interface.logoRond, actif: Binding(
                         get: { etat.profil.logoRecadreEnCercle },
                         set: { etat.profil.logoRecadreEnCercle = $0 }))
                     Text(Textes.Interface.logoRondExplication)
@@ -222,19 +193,15 @@ struct PanneauPersonnaliserView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                curseurPourcent(Textes.Interface.tailleLogo,
-                                valeur: $etat.profil.logoTailleRatio, de: 0.01, a: 0.50)
-                curseurPourcent(Textes.Interface.opaciteLogo,
-                                valeur: $etat.profil.logoOpacite, de: 0, a: 1)
+                Self.curseurPourcent(Textes.Interface.tailleLogo,
+                                     valeur: $etat.profil.logoTailleRatio,
+                                     de: 0.01, a: 0.50)
+                Self.curseurPourcent(Textes.Interface.opaciteLogo,
+                                     valeur: $etat.profil.logoOpacite, de: 0, a: 1)
             } else {
                 Button(Textes.Interface.choisirLogo) { choisirLogo() }
             }
         }
-    }
-
-    private func estCoinChoisi(_ coin: CoinLogo) -> Bool {
-        if case .coin(let c) = etat.profil.logoPosition { return c == coin }
-        return false
     }
 
     private func choisirLogo() {
@@ -248,10 +215,65 @@ struct PanneauPersonnaliserView: View {
 
     // MARK: - Petits contrôles
 
+    /// Un choix segmenté : le libellé AU-DESSUS du sélecteur, jamais à sa
+    /// gauche.
+    ///
+    /// `Picker(titre, …)` range son libellé à GAUCHE du contrôle et lui donne
+    /// ce qui reste une fois le sélecteur servi. Dans une colonne de 360 points
+    /// dont l'ascenseur prend sa part, il ne restait presque rien : « Taille »
+    /// se cassait en « Ta / ill / e », trois lignes verticales à côté d'un
+    /// sélecteur qui, lui, tenait très bien. Le seuil est net — le sélecteur
+    /// tient sur une ligne à 328 points, se casse en deux à 313, en quatre à
+    /// 300 —, et la colonne se tenait juste au-dessus.
+    ///
+    /// Élargir la colonne n'aurait fait que repousser le seuil. Le libellé
+    /// au-dessus le supprime : il a toute la largeur de la colonne, le
+    /// sélecteur aussi, et aucun des deux ne prend sa place sur l'autre. C'est
+    /// aussi la disposition la plus lisible pour un choix segmenté, qui se lit
+    /// comme une rangée d'options et non comme la valeur d'un champ.
+    ///
+    /// `static` : le contrôle de disposition mesure CETTE fonction, pas une
+    /// copie de sa disposition écrite à côté.
+    @MainActor
+    static func choixSegmente<Valeur: Hashable, Options: View>(
+        _ titre: String,
+        selection: Binding<Valeur>,
+        @ViewBuilder options: () -> Options) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(titre)
+            Picker("", selection: selection, content: options)
+                .pickerStyle(.segmented)
+                .labelsHidden()
+        }
+    }
+
+    /// Le choix de la police. Libellé à gauche, comme tout menu déroulant.
+    @MainActor
+    static func choixPolice(selection: Binding<String>) -> some View {
+        Picker(Textes.Interface.police, selection: selection) {
+            ForEach(PolicesSures.disponibles, id: \.self) { f in
+                Text(f).font(.custom(f, size: 13)).tag(f)
+            }
+            Divider()
+            // « Autre police du système » reste accessible, signalée
+            // comme risquée pour le partage (ADR §2).
+            ForEach(PolicesSures.toutes, id: \.self) { f in
+                Text(f).tag(f)
+            }
+        }
+        .frame(maxWidth: 280)
+    }
+
     /// Sélecteur macOS, avec opacité — le schéma sépare couleur et opacité, et
     /// l'interface doit rester capable d'un fond semi-transparent.
-    private func selecteurCouleur(_ titre: String,
-                                  valeur: Binding<CouleurProfil>) -> some View {
+    ///
+    /// Les deux couleurs des sous-titres étaient côte à côte sur une même ligne :
+    /// 313 points partagés en deux, moins deux pastilles, ne laissaient pas de
+    /// quoi écrire « Couleur du texte ». L'une sous l'autre, chacune a la
+    /// colonne entière.
+    @MainActor
+    static func selecteurCouleur(_ titre: String,
+                                 valeur: Binding<CouleurProfil>) -> some View {
         ColorPicker(titre, selection: Binding(
             get: { valeur.wrappedValue.couleurSwiftUI },
             set: { valeur.wrappedValue = CouleurProfil(couleurSwiftUI: $0) }),
@@ -259,10 +281,53 @@ struct PanneauPersonnaliserView: View {
         .frame(maxWidth: 210)
     }
 
-    private func curseurPourcent(_ titre: String, valeur: Binding<Double>,
-                                 de min: Double, a max: Double) -> some View {
+    /// Une case à cocher.
+    @MainActor
+    static func interrupteur(_ titre: String, actif: Binding<Bool>) -> some View {
+        Toggle(titre, isOn: actif)
+    }
+
+    /// Un pas-à-pas dont le libellé porte la valeur : « Lignes maximum : 2 ».
+    @MainActor
+    static func pasAPas(_ titre: String, valeur: Binding<Int>,
+                        de min: Int, a max: Int) -> some View {
+        Stepper(value: valeur, in: min...max) {
+            Text("\(titre) : \(valeur.wrappedValue)")
+        }
+        .frame(maxWidth: 220)
+    }
+
+    /// Les quatre coins, en un clic.
+    ///
+    /// Libellé en ligne, et il y reste : mesuré, il tient. Les boutons bordés
+    /// se compriment sans que le texte se replie — c'est la dégradation
+    /// acceptable, et le contrôle de disposition la distingue d'un repli.
+    @MainActor
+    static func coinsDuLogo(position: Binding<PositionLogo>) -> some View {
+        HStack(spacing: 6) {
+            Text(Textes.Interface.positionLogo)
+            ForEach(CoinLogo.allCases, id: \.self) { coin in
+                Button(Textes.Interface.nomCoin(coin)) {
+                    position.wrappedValue = .coin(coin)
+                }
+                .buttonStyle(.bordered)
+                .tint(position.wrappedValue == .coin(coin) ? .accentColor : nil)
+            }
+        }
+        .font(.caption)
+    }
+
+    /// Un curseur en pourcentage : libellé, course, valeur.
+    ///
+    /// Le libellé a une colonne À LUI, de largeur fixe — c'est ce qui le met à
+    /// l'abri : la course du curseur prend ce qui reste, jamais sa place. Cette
+    /// largeur doit rester supérieure au plus long libellé de curseur, et le
+    /// contrôle de disposition le vérifie.
+    @MainActor
+    static func curseurPourcent(_ titre: String, valeur: Binding<Double>,
+                                de min: Double, a max: Double) -> some View {
         HStack {
-            Text(titre).frame(width: 130, alignment: .leading)
+            Text(titre).frame(width: Fenetre.largeurLibelleCurseur, alignment: .leading)
             Slider(value: valeur, in: min...max)
             Text("\(Int((valeur.wrappedValue * 100).rounded())) %")
                 .font(.caption.monospacedDigit())

@@ -79,6 +79,22 @@ enum Fenetre {
     /// Largeur de la colonne des réglages : assez pour un curseur et son
     /// libellé sans que le texte se replie ligne à ligne.
     static let largeurReglages: CGFloat = 360
+    /// Marge intérieure de cette colonne, de chaque côté.
+    static let margeReglages: CGFloat = 16
+    /// Place que prend l'ascenseur quand le système affiche des barres de
+    /// défilement permanentes (Réglages Système › Apparence). La colonne DÉFILE :
+    /// cette place lui est prise, et les réglages doivent tenir sans elle.
+    ///
+    /// C'est ce qui manquait aux contrôles : ils mesuraient à 328 points, la
+    /// colonne moins ses marges, en oubliant l'ascenseur. Or « Taille » se
+    /// cassait précisément entre les deux.
+    static let largeurBarreDefilement: CGFloat = 15
+    /// La largeur la plus étroite qu'un réglage puisse recevoir. C'est à
+    /// celle-ci que se mesure la disposition de la colonne.
+    static let largeurUtileReglages: CGFloat =
+        largeurReglages - 2 * margeReglages - largeurBarreDefilement
+    /// Colonne réservée au libellé d'un curseur, à gauche de sa course.
+    static let largeurLibelleCurseur: CGFloat = 130
     /// En deçà, l'aperçu ne montrerait plus rien d'utile.
     static let largeurMinimaleApercu: CGFloat = 560
     /// Idem en hauteur.
@@ -247,7 +263,7 @@ struct ContenuFenetre: View {
             // Défilante, donc TOUS atteignables quelle que soit la hauteur.
             ScrollView {
                 PanneauPersonnaliserView()
-                    .padding(16)
+                    .padding(Fenetre.margeReglages)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(width: Fenetre.largeurReglages)

@@ -46,6 +46,9 @@ enum ControlesInterface {
         r.section("Interface — deux colonnes, aperçu entier, réglages atteignables")
         MainActor.assumeIsolated { dispositionDeuxColonnes(r) }
 
+        r.section("Interface — aucun libellé de la colonne ne se casse")
+        MainActor.assumeIsolated { libellesDeLaColonne(r) }
+
         r.section("Interface — l'accueil montre une image de la vidéo")
         imageDAccueil(r)
         MainActor.assumeIsolated { dispositionImageAccueil(r) }
@@ -586,13 +589,16 @@ enum ControlesInterface {
         etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
         let hote = NSHostingView(
             rootView: PanneauPersonnaliserView().environmentObject(etat)
-                .frame(width: Fenetre.largeurReglages - 32))
+                .frame(width: Fenetre.largeurUtileReglages))
         hote.layoutSubtreeIfNeeded()
         let taille = hote.fittingSize
+        // Cette mesure ne dit RIEN des libellés — `fittingSize` d'une vue
+        // contrainte rend la largeur qu'on lui a imposée. C'est
+        // `libellesDeLaColonne` qui s'en charge, ligne par ligne.
         r.verifier("les réglages tiennent dans la colonne sans être rognés "
                    + "(\(Int(taille.width)) points pour "
-                   + "\(Int(Fenetre.largeurReglages - 32)))",
-                   taille.width <= Fenetre.largeurReglages - 32 + 1)
+                   + "\(Int(Fenetre.largeurUtileReglages)))",
+                   taille.width <= Fenetre.largeurUtileReglages + 1)
         r.verifier("la colonne des réglages a une hauteur exploitable "
                    + "(\(Int(taille.height)) points, défilante)", taille.height > 200)
 
@@ -892,6 +898,161 @@ enum ControlesInterface {
         guard index + 3 < CFDataGetLength(donnees) else { return -1 }
         // Format premultipliedLast : l'alpha est le quatrième octet.
         return Int(base[index + 3])
+    }
+
+    // MARK: - Libellés de la colonne des réglages
+
+    /// **Aucun libellé de la colonne ne se casse à la largeur minimale.**
+    ///
+    /// C'est le défaut qu'aucun contrôle n'attrapait, et il était visible à
+    /// l'œil nu : « Taille » s'écrivait « Ta / ill / e », trois lignes
+    /// verticales à côté d'un sélecteur segmenté qui, lui, tenait très bien.
+    /// `Picker(titre, …)` range son libellé à gauche et lui laisse ce qui reste
+    /// une fois le contrôle servi ; quand il ne reste rien, le texte se replie
+    /// caractère par caractère plutôt que d'avertir.
+    ///
+    /// Pourquoi rien ne le voyait : les contrôles mesuraient le panneau ENTIER,
+    /// contraint à une largeur donnée. `fittingSize` d'une vue contrainte rend
+    /// la largeur qu'on lui a imposée — la vérification « les réglages tiennent
+    /// dans la colonne » était donc vraie par construction, quoi qu'il arrive
+    /// aux libellés. Et elle mesurait 328 points, la colonne moins ses marges,
+    /// en oubliant l'ascenseur : or « Taille » tenait à 328 et se cassait à 313.
+    ///
+    /// La mesure juste est LIGNE PAR LIGNE, et en HAUTEUR :
+    ///
+    /// > à la largeur la plus étroite que la colonne puisse offrir, chaque ligne
+    /// > doit garder la hauteur qu'elle a quand rien ne la contraint.
+    ///
+    /// Un libellé qui se replie ajoute une ligne de texte, donc de la hauteur :
+    /// il ne peut pas passer inaperçu. Un contrôle qui se comprime sans se
+    /// replier — un sélecteur segmenté qui raccourcit ses segments, un bouton
+    /// de coin qui rogne son titre — ne change pas de hauteur, et reste donc
+    /// permis : c'est la dégradation acceptable, celle qui n'écrit pas de
+    /// travers.
+    ///
+    /// Les lignes sont construites par les MÊMES fonctions que le volet
+    /// (`PanneauPersonnaliserView.choixSegmente`, `selecteurCouleur`,
+    /// `curseurPourcent`…), avec les MÊMES libellés, pris à `Textes`. Ce n'est
+    /// pas une copie de la disposition : c'est la disposition.
+    ///
+    /// **Ce que le contrôle suppose**, et qui est devenu la règle du volet :
+    /// un réglage par ligne, chacun ayant la colonne entière. Les deux couleurs
+    /// des sous-titres étaient côte à côte — 313 points partagés en deux, et
+    /// « Couleur du texte » se repliait, 32 points au lieu de 24. Mesurées
+    /// appariées, elles échouent ici ; l'une sous l'autre, elles passent. Mais
+    /// c'est la seule disposition que ce contrôle sache voir : remettre deux
+    /// réglages sur une même ligne le rendrait aveugle à leur étroitesse.
+    @MainActor
+    private static func libellesDeLaColonne(_ r: Rapport) {
+        _ = NSApplication.shared
+        let etroit = Fenetre.largeurUtileReglages
+
+        r.verifier("la largeur de mesure retranche l'ascenseur de la colonne "
+                   + "défilante (\(Int(etroit)) points, et non "
+                   + "\(Int(Fenetre.largeurReglages - 2 * Fenetre.margeReglages)))",
+                   etroit < Fenetre.largeurReglages - 2 * Fenetre.margeReglages)
+
+        for (nom, vue) in lignesDeLaColonne() {
+            let contrainte = hauteurLigne(vue, largeur: etroit)
+            let naturelle = hauteurLigne(vue, largeur: nil)
+            r.verifier("« \(nom) » garde sa hauteur d'une ligne à "
+                       + "\(Int(etroit)) points (\(Int(contrainte)) points "
+                       + "contre \(Int(naturelle)) sans contrainte)",
+                       contrainte <= naturelle + 0.5)
+        }
+
+        // Le libellé d'un curseur a une colonne à lui, de largeur fixe : elle
+        // doit rester plus large que le plus long d'entre eux, sans quoi c'est
+        // là, et non dans la colonne, que le repli se produirait.
+        for titre in [Textes.Interface.margeBasse, Textes.Interface.tailleLogo,
+                      Textes.Interface.opaciteLogo] {
+            let hote = NSHostingView(rootView: Text(titre))
+            hote.layoutSubtreeIfNeeded()
+            r.verifier("le libellé de curseur « \(titre) » tient dans sa colonne "
+                       + "(\(Int(hote.fittingSize.width)) points pour "
+                       + "\(Int(Fenetre.largeurLibelleCurseur)))",
+                       hote.fittingSize.width <= Fenetre.largeurLibelleCurseur)
+        }
+
+        // Et le volet entier, à cette même largeur : rien ne dépasse.
+        let etat = AppState()
+        etat.profil.logoActif = true
+        etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
+        let hote = NSHostingView(
+            rootView: PanneauPersonnaliserView().environmentObject(etat)
+                .frame(width: etroit))
+        hote.layoutSubtreeIfNeeded()
+        r.verifier("le volet entier tient à \(Int(etroit)) points sans être rogné "
+                   + "(\(Int(hote.fittingSize.width)))",
+                   hote.fittingSize.width <= etroit + 1)
+    }
+
+    /// Toutes les lignes de la colonne qui portent un libellé, y compris les
+    /// titres de section.
+    ///
+    /// Les explications en petits caractères n'y sont PAS : ce sont des
+    /// paragraphes, ils ont le droit — et le devoir — de se replier sur
+    /// plusieurs lignes. Le contrôle porte sur les libellés de commande.
+    @MainActor
+    private static func lignesDeLaColonne() -> [(String, AnyView)] {
+        typealias Volet = PanneauPersonnaliserView
+        let T = Textes.Interface.self
+
+        var lignes: [(String, AnyView)] = []
+        for titre in [T.sousTitres, T.bandeau, T.logo] {
+            lignes.append((titre, AnyView(Text(titre).font(.headline))))
+        }
+        lignes += [
+            (T.taille, AnyView(Volet.choixSegmente(
+                T.taille, selection: .constant(TailleNommee.allCases[0])) {
+                    ForEach(TailleNommee.allCases) { t in
+                        Text(T.nomTaille(t)).tag(t)
+                    }
+                })),
+            (T.police, AnyView(Volet.choixPolice(
+                selection: .constant(ProfilHabillage.neutre.police)))),
+            (T.couleurTexte, AnyView(Volet.selecteurCouleur(
+                T.couleurTexte, valeur: .constant(ProfilHabillage.neutre.couleurTexte)))),
+            (T.couleurContour, AnyView(Volet.selecteurCouleur(
+                T.couleurContour, valeur: .constant(ProfilHabillage.neutre.contourCouleur)))),
+            (T.lignesMax, AnyView(Volet.pasAPas(
+                T.lignesMax, valeur: .constant(2), de: 1, a: 4))),
+            (T.bandeauActif, AnyView(Volet.interrupteur(
+                T.bandeauActif, actif: .constant(true)))),
+            (T.modeBandeau, AnyView(Volet.choixSegmente(
+                T.modeBandeau, selection: .constant(ModeBandeau.pleineLargeur)) {
+                    Text(T.modePleineLargeur).tag(ModeBandeau.pleineLargeur)
+                    Text(T.modeAjuste).tag(ModeBandeau.ajuste)
+                })),
+            (T.couleurBandeau, AnyView(Volet.selecteurCouleur(
+                T.couleurBandeau, valeur: .constant(ProfilHabillage.neutre.bandeauCouleur)))),
+            (T.hauteurFixe, AnyView(Volet.interrupteur(
+                T.hauteurFixe, actif: .constant(true)))),
+            (T.margeBasse, AnyView(Volet.curseurPourcent(
+                T.margeBasse, valeur: .constant(0.10), de: 0, a: 0.30))),
+            (T.positionLogo, AnyView(Volet.coinsDuLogo(
+                position: .constant(.coin(.basDroit))))),
+            (T.logoRond, AnyView(Volet.interrupteur(
+                T.logoRond, actif: .constant(true)))),
+            (T.tailleLogo, AnyView(Volet.curseurPourcent(
+                T.tailleLogo, valeur: .constant(0.10), de: 0.01, a: 0.50))),
+            (T.opaciteLogo, AnyView(Volet.curseurPourcent(
+                T.opaciteLogo, valeur: .constant(1), de: 0, a: 1))),
+        ]
+        return lignes
+    }
+
+    /// Hauteur d'une ligne, contrainte à une largeur ou laissée libre.
+    @MainActor
+    private static func hauteurLigne(_ vue: AnyView, largeur: CGFloat?) -> CGFloat {
+        let hote: NSHostingView<AnyView>
+        if let largeur {
+            hote = NSHostingView(rootView: AnyView(vue.frame(width: largeur)))
+        } else {
+            hote = NSHostingView(rootView: vue)
+        }
+        hote.layoutSubtreeIfNeeded()
+        return hote.fittingSize.height
     }
 
     // MARK: - Disposition
