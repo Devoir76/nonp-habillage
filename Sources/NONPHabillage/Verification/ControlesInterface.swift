@@ -948,6 +948,42 @@ enum ControlesInterface {
                    + "(\(Int(hauteurFermee)) contre \(Int(hauteurOuverte)) points)",
                    hauteurOuverte > hauteurFermee)
         r.verifier("le volet est fermé au premier lancement", !AppState().voletOuvert)
+
+        // ── La fenêtre s'ouvre à la taille NATURELLE de son contenu ──────────
+        //
+        // « Tient sans défilement » ne suffisait pas : une fenêtre deux fois
+        // trop haute passait ce critère les yeux fermés. Elle s'ouvrait à 470
+        // points pour 377 de contenu, et l'accueil flottait au-dessus d'un vide
+        // que rien ne remplissait. Ce qui manquait, c'est la borne d'EN HAUT.
+        //
+        // `hauteurFermee` n'est plus une hauteur imposée — l'accueil nu ne pose
+        // aucun minimum, `ContenuFenetre.hauteurMinimale` rend `nil` — mais la
+        // taille d'ouverture demandée. Elle doit donc coller à ce que le contenu
+        // mesure vraiment. Trop basse, `.contentMinSize` la relève sans dommage ;
+        // trop haute, le vide revient. La marge tolérée est celle d'un arrondi,
+        // pas celle d'un choix.
+        //
+        // Le contrôle vaut aussi dans l'autre sens, et c'est ce qui le rend
+        // suffisant : `hauteurFermee` est ici la hauteur MESURÉE du contenu.
+        // Réimposer un minimum de 470 points la ferait remonter à 470 pour 380
+        // demandés, l'écart passerait sous zéro, et le contrôle échouerait.
+        let jeu = hauteurFenetre - hauteurFermee
+        r.verifier("la taille d'ouverture ne dépasse pas le contenu de plus de "
+                   + "10 points (\(Int(hauteurFenetre)) demandés pour "
+                   + "\(Int(hauteurFermee)) mesurés, soit \(Int(jeu)))",
+                   jeu >= 0 && jeu <= 10)
+
+        // La fenêtre grandit quand une vidéo arrive, et seulement alors : les
+        // trois hauteurs sont strictement croissantes, dans l'ordre où l'usage
+        // les rencontre.
+        r.verifier("une vidéo fait grandir la fenêtre "
+                   + "(\(Int(Fenetre.hauteurFermee)) → "
+                   + "\(Int(Fenetre.hauteurFermeeAvecVideo)) points)",
+                   Fenetre.hauteurFermeeAvecVideo > Fenetre.hauteurFermee)
+        r.verifier("l'ouverture du volet la fait grandir encore "
+                   + "(\(Int(Fenetre.hauteurFermeeAvecVideo)) → "
+                   + "\(Int(Fenetre.hauteurMinimaleOuverte)) points)",
+                   Fenetre.hauteurMinimaleOuverte > Fenetre.hauteurFermeeAvecVideo)
     }
 
     // MARK: - Aperçu

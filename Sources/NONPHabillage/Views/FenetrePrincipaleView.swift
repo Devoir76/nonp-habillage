@@ -48,8 +48,20 @@ enum Fenetre {
     static let hauteurBarreAction: CGFloat = 50
 
     /// Volet fermé, aucune vidéo : l'écran d'accueil seul.
+    ///
+    /// `hauteurFermee` est la hauteur NATURELLE de cet écran — deux zones de
+    /// dépôt et la barre d'action —, pas une hauteur choisie. Elle sert de
+    /// taille d'ouverture, et de rien d'autre : aucune hauteur minimale n'est
+    /// imposée dans cet état (voir `ContenuFenetre.hauteurMinimale`), de sorte
+    /// que le contenu ne peut pas être étiré. Elle valait 470 points pour 377
+    /// de contenu : 93 points de vide, imposés par la fenêtre elle-même.
+    ///
+    /// Le contrôle de disposition la compare à la hauteur MESURÉE du contenu :
+    /// si une zone de dépôt grandit, ce nombre doit suivre, et le contrôle le
+    /// dira. Le viser légèrement bas est sans danger — `.contentMinSize` relève
+    /// la fenêtre à la hauteur du contenu ; le viser haut rouvre le vide.
     static let largeurFermee: CGFloat = 620
-    static let hauteurFermee: CGFloat = 420 + hauteurBarreAction
+    static let hauteurFermee: CGFloat = 380
 
     /// Volet fermé, une vidéo chargée : la fenêtre grandit pour loger son
     /// image. Une hauteur inchangée n'aurait laissé qu'une vignette, qui ne
@@ -80,6 +92,56 @@ struct FenetrePrincipaleView: View {
     var body: some View {
         ContenuFenetre()
             .environmentObject(etat)
+            .background(CadreAuContenu())
+    }
+}
+
+/// Ouvre la fenêtre à la taille NATURELLE de son contenu.
+///
+/// macOS mémorise le cadre de chaque fenêtre et le restaure au lancement
+/// suivant ; SwiftUI l'y aide, sous la clé `NSWindow Frame …` des préférences.
+/// C'est en général bienvenu — ici c'était le défaut. Une fenêtre agrandie une
+/// fois, volet ouvert, revenait telle quelle au lancement suivant : 1080 × 1094
+/// points pour un accueil qui en occupe 377. Les deux zones de dépôt en haut,
+/// et sept cents points de vide jusqu'à la barre d'action.
+///
+/// `.contentMinSize` ne pouvait rien y faire : elle pose un PLANCHER, pas une
+/// taille. Elle fait bien grandir la fenêtre quand une vidéo arrive — c'est son
+/// rôle et il est intact — mais rien ne lui a jamais demandé de la faire
+/// rétrécir, et le cadre mémorisé passait avant `.defaultSize`.
+///
+/// D'où ce rappel à l'ordre, UNE FOIS, à l'ouverture : la fenêtre reprend la
+/// taille naturelle de son contenu, quelle que soit celle qu'on lui a laissée.
+/// La POSITION, elle, n'est pas touchée, et le bord SUPÉRIEUR ne bouge pas :
+/// c'était la taille qui était fausse, pas l'endroit. Redimensionner à la main
+/// reste évidemment possible — la fenêtre n'est contrainte à rien.
+struct CadreAuContenu: NSViewRepresentable {
+
+    func makeNSView(context: Context) -> NSView {
+        let temoin = NSView(frame: .zero)
+        // La vue n'est pas encore dans une fenêtre, et la mise en page SwiftUI
+        // pas encore faite : on repasse au tour de boucle suivant.
+        DispatchQueue.main.async { ajuster(temoin.window) }
+        return temoin
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private func ajuster(_ fenetre: NSWindow?) {
+        guard let fenetre else { return }
+        // `minSize` EST la taille naturelle du contenu : c'est ce que
+        // `.windowResizability(.contentMinSize)` vient d'y inscrire, à partir
+        // de la mise en page réelle. Rien n'est deviné ni recopié — et comme
+        // l'accueil nu n'impose aucune hauteur, cette taille est exactement
+        // celle que réclament les deux zones de dépôt et la barre d'action.
+        let naturelle = fenetre.minSize
+        guard naturelle.width > 0, naturelle.height > 0 else { return }
+
+        var cadre = fenetre.frame
+        let bordSuperieur = cadre.maxY
+        cadre.size = naturelle
+        cadre.origin.y = bordSuperieur - naturelle.height
+        fenetre.setFrame(cadre, display: true)
     }
 }
 
@@ -115,14 +177,21 @@ struct ContenuFenetre: View {
     ///
     /// La hauteur MINIMALE augmente quand une vidéo arrive : c'est elle qui fait
     /// grandir la fenêtre, l'idéale ne valant qu'à l'ouverture.
-    private var hauteurMinimale: CGFloat {
+    ///
+    /// **Accueil nu : AUCUNE hauteur imposée**, ni minimale ni idéale. Deux
+    /// zones de dépôt et une barre d'action ont une hauteur naturelle, et c'est
+    /// elle qui doit faire la fenêtre. Un minimum de 470 points y ajoutait 93
+    /// points de vide que rien ne remplissait — la fenêtre imposait sa hauteur
+    /// à un contenu qui n'en demandait pas tant. Ne rien imposer laisse
+    /// `.contentMinSize` faire ce qu'elle sait faire : suivre le contenu.
+    private var hauteurMinimale: CGFloat? {
         if etat.voletOuvert { return Fenetre.hauteurMinimaleOuverte }
-        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : Fenetre.hauteurFermee
+        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : nil
     }
 
-    private var hauteurIdeale: CGFloat {
+    private var hauteurIdeale: CGFloat? {
         if etat.voletOuvert { return Fenetre.hauteurIdealeOuverte }
-        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : Fenetre.hauteurFermee
+        return etat.video != nil ? Fenetre.hauteurFermeeAvecVideo : nil
     }
 
     // MARK: - Accueil
