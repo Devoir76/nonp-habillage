@@ -142,6 +142,18 @@ final class ExportateurVideo: @unchecked Sendable {
             throw ErreurExport.ecraseraitUneEntree(entree)
         }
 
+        // Le périmètre annoncé s'applique ici, au seul point que les deux
+        // portes traversent. La zone de dépôt refusait déjà un MKV ou un AVI ;
+        // la ligne de commande, elle, les passait au moteur, et un AVI y
+        // aboutissait — AVFoundation le lit. L'application avait deux
+        // périmètres, celui qu'elle annonce et celui qu'elle accepte.
+        //
+        // Le refus tombe AVANT le chargement : rien n'est ouvert, rien n'est
+        // écrit, et l'utilisateur ne l'apprend pas après cinq minutes de gravure.
+        guard FormatsVideo.accepte(video) else {
+            throw ErreurExport.videoRefusee(FormatsVideo.refus(video))
+        }
+
         let debut = Date()
         let asset = AVURLAsset(url: video)
 

@@ -194,6 +194,15 @@ final class AppState: ObservableObject {
     private var chargementCourant = UUID()
 
     func chargerVideo(_ url: URL) {
+        // Même règle que la zone de dépôt et que la ligne de commande, lue au
+        // même endroit. Cette porte-ci s'ouvre aussi par le sélecteur de
+        // fichiers et par un profil rejoué : rien ne garantit qu'elle n'ait pas
+        // été franchie autrement qu'en glissant un fichier.
+        guard FormatsVideo.accepte(url) else {
+            chargementCourant = UUID()
+            erreur = Textes.Export.message(pour: FormatsVideo.refus(url))
+            return
+        }
         let jeton = UUID()
         chargementCourant = jeton
         Task {

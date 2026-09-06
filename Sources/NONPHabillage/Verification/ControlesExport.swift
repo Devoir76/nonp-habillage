@@ -17,6 +17,7 @@ import Foundation
 import AVFoundation
 import CoreMedia
 import CoreVideo
+import UniformTypeIdentifiers
 
 enum ControlesExport {
 
@@ -42,6 +43,9 @@ enum ControlesExport {
 
         r.section("Export — la cause annoncée est la vraie")
         causeNommee(r, video: essai)
+
+        r.section("Export — un seul périmètre pour les deux portes")
+        perimetreUnique(r, video: essai)
 
         r.section("Export — les fichiers d'origine ne sont jamais remplacés")
         jamaisParDessusUneEntree(r, video: essai)
@@ -181,6 +185,63 @@ enum ControlesExport {
                    message?.contains("illisible") == true)
         r.verifier("aucun fichier de sortie n'est créé",
                    !FileManager.default.fileExists(atPath: sortie.path))
+    }
+
+    // MARK: - Un seul périmètre pour les deux portes
+
+    /// L'ADR §3 met MKV et AVI hors périmètre. La zone de dépôt les refusait,
+    /// la ligne de commande les acceptait : l'application avait deux
+    /// périmètres. Le contrôle éprouve la règle sur une vidéo **parfaitement
+    /// lisible**, seulement renommée — c'est le conteneur annoncé qui est
+    /// refusé, pas un contenu illisible, et rien d'autre ne peut expliquer le
+    /// refus.
+    private static func perimetreUnique(_ r: Rapport, video: URL) {
+        let dossier = dossierTemporaire()
+        let sortie = dossier.appendingPathComponent("jamais-perimetre.mp4")
+
+        func copie(_ nom: String) -> URL {
+            let url = dossier.appendingPathComponent(nom)
+            try? FileManager.default.removeItem(at: url)
+            try? FileManager.default.copyItem(at: video, to: url)
+            return url
+        }
+
+        for nom in ["renommee.avi", "renommee.mkv", "renommee.webm"] {
+            let url = copie(nom)
+            let message = messageDuRefus(video: url, vers: sortie)
+            r.verifier("une vidéo lisible nommée « \(nom) » est refusée",
+                       message != nil)
+            r.verifier("le refus de « \(nom) » nomme les formats acceptés",
+                       message?.contains("MP4, MOV et M4V") == true)
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        let sansPoint = copie("sans-extension")
+        let mSansPoint = messageDuRefus(video: sansPoint, vers: sortie)
+        r.verifier("un fichier sans extension est refusé", mSansPoint != nil)
+        r.verifier("le refus dit de le renommer, pas de le convertir",
+                   mSansPoint?.contains("renommez") == true
+                   && mSansPoint?.contains("Convertissez") == false)
+        try? FileManager.default.removeItem(at: sansPoint)
+
+        r.verifier("aucun de ces refus ne laisse de fichier de sortie",
+                   !FileManager.default.fileExists(atPath: sortie.path))
+
+        // Le revers : les trois conteneurs de l'ADR passent, y compris sous une
+        // extension que la règle accepte mais qu'on rencontre rarement.
+        for nom in ["accepte.mov", "accepte.m4v"] {
+            let url = copie(nom)
+            let destination = dossier.appendingPathComponent("sortie-\(nom).mp4")
+            r.verifier("« \(nom) » est accepté",
+                       messageDuRefus(video: url, vers: destination) == nil)
+            try? FileManager.default.removeItem(at: url)
+            try? FileManager.default.removeItem(at: destination)
+        }
+
+        // Et la règle est bien UNE : la liste que présente le sélecteur de
+        // fichiers est celle du moteur, pas une seconde liste à tenir à jour.
+        r.egal("la zone de dépôt lit la règle du moteur",
+               UTType.videosAcceptees, FormatsVideo.typesAcceptes)
     }
 
     // MARK: - La cause annoncée est la vraie

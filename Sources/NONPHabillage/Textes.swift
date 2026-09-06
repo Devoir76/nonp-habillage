@@ -594,6 +594,16 @@ enum Textes {
             + "informations), ou copiez la vidéo dans un dossier qui vous appartient."
         }
 
+        /// Un fichier sans extension du tout. Le conseil n'est pas de
+        /// convertir — le fichier est peut-être un MP4 parfaitement valide —
+        /// mais de le nommer, puisque c'est à l'extension que l'application
+        /// et le sélecteur de fichiers de macOS reconnaissent une vidéo.
+        static func sansExtension(_ nom: String) -> String {
+            "Le fichier « \(nom) » n'a pas d'extension. L'application reconnaît "
+            + "les vidéos à la leur : renommez-le en .mp4, .mov ou .m4v selon ce "
+            + "qu'il contient, puis réessayez."
+        }
+
         static func videoVide(_ nom: String) -> String {
             "Le fichier « \(nom) » est vide : il ne contient aucune donnée. La "
             + "copie ou le téléchargement qui l'a produit ne s'est probablement pas "
@@ -632,6 +642,8 @@ enum Textes {
                 return videoVide(url.lastPathComponent)
             case .formatNonPrisEnCharge(let url):
                 return formatNonPrisEnCharge(url.lastPathComponent)
+            case .sansExtension(let url):
+                return sansExtension(url.lastPathComponent)
             case .endommagee(let url):
                 return videoEndommagee(url.lastPathComponent)
             case .chargementImpossible(let url, let raison):

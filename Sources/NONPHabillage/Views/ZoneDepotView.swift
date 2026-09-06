@@ -97,10 +97,17 @@ struct ZoneDepotView: View {
 }
 
 extension UTType {
-    /// Les formats d'entrée de l'ADR §3 : MP4, MOV, M4V. MKV et AVI sont hors
-    /// périmètre — non pas par paresse, mais parce que le moteur vidéo de macOS
-    /// ne les lit pas, et qu'embarquer un second FFmpeg est exclu (invariant nº3).
-    static var videosAcceptees: [UTType] { [.mpeg4Movie, .quickTimeMovie] }
+    /// Les formats d'entrée de l'ADR §3 : MP4, MOV, M4V.
+    ///
+    /// La règle elle-même vit dans le MOTEUR (`FormatsVideo`), que la ligne de
+    /// commande traverse aussi : deux listes auraient fini par diverger, et
+    /// elles avaient commencé. Ici, seule la présentation — ce que le sélecteur
+    /// de fichiers laisse choisir.
+    ///
+    /// MKV et AVI sont hors périmètre par DÉCISION, pas par impuissance :
+    /// AVFoundation ouvre un AVI sans difficulté. Trois conteneurs éprouvés
+    /// valent mieux qu'une couverture partielle dépendante du codec (ADR §3).
+    static var videosAcceptees: [UTType] { FormatsVideo.typesAcceptes }
 
     /// SRT et VTT n'ont pas de type système déclaré : on les nomme.
     static var sousTitresAcceptes: [UTType] {

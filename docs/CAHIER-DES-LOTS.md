@@ -189,6 +189,16 @@ Voir `docs/divergences-prototype.md`, D-9.
 Campagne de comparaison prototype / natif sur vidéos réelles, corrections,
 `docs/release-checklist.md`, README public, textes d'aide.
 
+**Ce qu'un refus doit dire** (06/09/2026). Deux défauts trouvés en enquêtant sur
+un contrôle en échec, aucun là où on le cherchait. Le message « format non pris
+en charge » servait de fourre-tout à toute erreur de chargement — fichier
+introuvable, droits refusés, dossier déposé, fichier tronqué : chaque cause se
+nomme désormais elle-même, et le conseil de conversion est réservé au seul cas
+où il aide. Et le périmètre MP4/MOV/M4V, appliqué par la zone de dépôt seule,
+laissait passer un AVI par la ligne de commande : une seule règle vaut désormais
+pour les deux portes. Voir ADR-0001, « Tranché le 06/09 — ce qu'un refus doit
+dire ».
+
 **Acceptation** — Éric juge le rendu indiscernable à l'usage en 16:9 **et** en
 9:16 ; la checklist de release est déroulable de bout en bout.
 

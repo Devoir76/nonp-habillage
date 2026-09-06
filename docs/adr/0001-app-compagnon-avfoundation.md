@@ -46,6 +46,11 @@ rendent malgré tout indistribuable, et aucun ne se corrige par retouche :
 AVFoundation lit **moins de conteneurs** que FFmpeg : MKV n'est pas pris en
 charge, AVI l'est mal. C'est une perte réelle, tranchée ci-dessous.
 
+> ⚠︎ **Rectifié le 06/09.** « AVI l'est mal » était optimiste sur le mauvais
+> point : AVFoundation ouvre un AVI **sans difficulté** — vérifié. AVI reste
+> hors périmètre, mais par décision, pas par impuissance. Voir « Tranché le
+> 06/09 — ce qu'un refus doit dire ».
+
 ## Décision
 
 **Public visé** (précisé le 23/08) : **toute personne** souhaitant incruster des
@@ -263,6 +268,9 @@ explicite (« format non pris en charge par le moteur vidéo de macOS ») assort
 d'une marche à suivre — jamais un échec silencieux ni un plantage. Pas de remux
 automatique : couverture partielle, échecs dépendants du codec, code de repli à
 maintenir. À reconsidérer si l'usage réel le demande.
+
+> ⚠︎ **Amendé le 06/09 — le message nomme la cause, et le périmètre vaut pour
+> les deux portes.** Voir « Tranché le 06/09 — ce qu'un refus doit dire ».
 
 ### 4. Bandeau des sous-titres : deux modes, pleine largeur par défaut
 
@@ -922,3 +930,69 @@ l'option B.
 applique `espaces_lateraux` tel que le schéma le définit. Seule la façon de
 l'appliquer a changé — c'est le rectangle qui s'élargit, plus le texte (voir
 `docs/divergences-prototype.md`, D-4).
+
+## Tranché le 06/09 — ce qu'un refus doit dire
+
+Une enquête partie d'un contrôle en échec, et qui a trouvé deux défauts sans
+rapport avec ce qu'elle cherchait.
+
+### Le message nommait la mauvaise cause
+
+**Ce qui a été vérifié.** Le soupçon portait sur l'interopérabilité : si
+l'application ne relisait pas les vidéos produites par le prototype, c'est toute
+la bibliothèque existante qui lui échappait. Elle les relit. Le fichier mis en
+cause — un MP4 H.264/AAC sorti du prototype — s'ouvre sans réserve : `isPlayable`
+vrai, une piste `avc1` en 1920×1080 à 30 im/s, une piste `mp4a`, 105,0 s de
+durée, et un export complet avec l'audio recopié sans réencodage.
+
+**Le vrai défaut était dans le message.** Toute erreur de chargement sortait sous
+un seul texte : « format non pris en charge […] convertissez la vidéo ». Quatre
+causes reproduites, quatre fois le même message, faux dans trois cas :
+
+| Ce qui se passait vraiment | Ce que l'application annonçait |
+| --- | --- |
+| le fichier n'est plus là | format non pris en charge |
+| macOS refuse l'accès au fichier | format non pris en charge |
+| un dossier a été déposé | format non pris en charge |
+| le fichier est tronqué | format non pris en charge |
+
+Dans une application destinée au public, **un message qui nomme la mauvaise
+cause est un défaut à part entière** : l'utilisateur part convertir un fichier
+qui n'a aucun problème de format, et le vrai problème reste entier. Le §3
+exigeait « une marche à suivre » ; il faut lire aussi qu'elle doit mener quelque
+part.
+
+**Pourquoi le diagnostic ne peut pas venir d'AVFoundation seule.** Ses codes ne
+distinguent pas ce qui compte. À `loadTracks`, sur macOS 15 : un fichier
+introuvable ressort en `−11800` « erreur inconnue », un dossier en `−11828`
+« format not supported », un fichier de zéro octet en `−11828` lui aussi. L'état
+du **fichier**, lui, est sans ambiguïté. Le diagnostic interroge donc le disque
+d'abord — existe, est un fichier, est lisible, n'est pas vide — puis le code
+d'AVFoundation pour ce que le disque ne dit pas : `−11828` reste un problème de
+format, `−11829` un contenu illisible, `NSCocoaErrorDomain 257` un problème de
+droits. Faute de mieux, la raison rendue par macOS est **citée telle quelle** :
+une raison technique vaut mieux qu'une cause inventée.
+
+Le diagnostic ne tourne qu'**après** un échec — un chargement qui réussit ne paie
+rien — et il sert les deux portes d'entrée. Le conseil de conversion est réservé
+au seul cas où il aide, et un contrôle le tient.
+
+### Le périmètre annoncé n'était pas le périmètre appliqué
+
+Second écart, trouvé en chemin. La zone de dépôt refusait MKV et AVI ; la ligne
+de commande les passait au moteur, **et un AVI y aboutissait**. AVFoundation le
+lit sans difficulté — contrairement à ce qu'affirmait le commentaire du code, et
+à ce que laisse entendre « AVI l'est mal » plus haut. L'application avait donc
+deux périmètres : celui qu'elle annonce, et celui qu'une autre porte accepte.
+
+Ce qu'AVFoundation **sait** lire et ce que l'application **accepte** sont deux
+questions distinctes. La seconde est une décision d'architecture : trois
+conteneurs éprouvés plutôt qu'une couverture partielle dépendante du codec —
+c'est déjà l'argument du §3 contre le remux. Elle vit désormais en un seul
+endroit, que les deux portes lisent.
+
+Le refus se prononce sur l'**extension**, avant tout chargement : c'est la règle
+que l'utilisateur voit déjà — le sélecteur de fichiers grise les autres
+extensions — et refuser un conteneur après cinq minutes de gravure serait
+inutilement cruel. Un fichier sans extension du tout reçoit un autre conseil :
+le renommer, pas le convertir. Il est peut-être un MP4 valide.

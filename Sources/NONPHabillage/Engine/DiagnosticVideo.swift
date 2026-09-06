@@ -51,6 +51,8 @@ enum RefusVideo: Error, Equatable {
     case vide(URL)
     /// Le seul cas où « convertissez la vidéo » est le bon conseil.
     case formatNonPrisEnCharge(URL)
+    /// Aucune extension : l'application reconnaît les vidéos à la leur.
+    case sansExtension(URL)
     /// Un conteneur reconnu, mais un contenu illisible : troncature, corruption.
     case endommagee(URL)
     /// Tout le reste, avec la raison réelle citée plutôt que travestie.
