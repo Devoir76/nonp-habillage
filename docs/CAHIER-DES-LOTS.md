@@ -165,6 +165,16 @@ colonne dans les deux modes de bandeau. **Le schéma passe en version 2** ;
 `longueur_ligne_cible` et `logo.recadre_en_cercle` y entrent avec lui. Voir
 ADR-0001, décisions nº5 et nº6, et `docs/divergences-prototype.md` D-9 et D-10.
 
+**Retours d'usage sur exports réels** (06/09/2026). Trois corrections, aucune
+sur le rendu : le **nom proposé** à l'enregistrement vient du fichier de
+sous-titres quand il y en a un — la vidéo garde souvent le nom automatique de
+son téléchargement, le `.srt` porte le nom voulu ; le **suffixe** `_habillee`
+est confirmé et sa neutralité devient une règle écrite, la même que pour les
+préréglages ; une sortie **ne peut jamais remplacer un fichier d'entrée**, refus
+posé dans le moteur ; et « **Habiller une autre vidéo** » décharge la vidéo et
+ses sous-titres en gardant les réglages et le logo. Voir ADR-0001, « Tranché le
+06/09 ».
+
 **Acceptation** — un profil écrit par le prototype Python est accepté sans
 retouche ; un fichier corrompu produit un message clair et aucun rendu.
 

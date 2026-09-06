@@ -153,6 +153,18 @@ aucun sous-titre n'est encore chargé :
 > supprimé ne survit que le conseil d'usage — regarder les deux extrêmes —, qui
 > est le critère de contraste de ce même §2.
 
+> ⚠︎ **Amendé le 06/09 — le fichier produit, et le retour à l'accueil.** Trois
+> retours d'usage sur exports réels, tous sur ce qui encadre l'export plutôt que
+> sur le rendu lui-même. Le **nom proposé** vient désormais du fichier de
+> sous-titres quand il y en a un, et de la vidéo sinon : une vidéo garde souvent
+> le nom automatique de son téléchargement, quand le `.srt` porte un nom choisi
+> — celui de la personne filmée. Le **suffixe** `_habillee` est confirmé, et sa
+> neutralité devient une règle écrite, la même que pour les préréglages. Aucune
+> sortie ne peut plus **remplacer un fichier d'entrée**, quel que soit le chemin
+> saisi. Et « **Habiller une autre vidéo** » décharge la vidéo et ses
+> sous-titres, en gardant les réglages et le logo. Détail ci-dessous, « Tranché
+> le 06/09 ».
+
 - **Interface en français uniquement.** L'anglais pourra s'ajouter plus tard
   sans refonte si l'app trouve un public au-delà — les textes seront donc
   centralisés dès le départ, pas dispersés dans les vues.
@@ -539,6 +551,59 @@ est libellée, et la réserve « n'affecte que l'aperçu » passe sur la ligne d
 **§4 amendé — « Hauteur constante » devient une case à cocher** qui reprend la
 valeur de « Lignes maximum ». Le champ `hauteur_fixe_lignes` garde sa valeur
 libre au schéma ; seule la commande disparaît, comme pour la marge intérieure.
+
+## Tranché le 06/09 — retours d'usage du lot 6
+
+Trois retours issus d'exports réels. Aucun ne porte sur le rendu : tous portent
+sur ce qui l'entoure — le nom du fichier produit, et le retour à l'accueil.
+
+**§2 amendé — le nom proposé vient du fichier de sous-titres.** Il venait de la
+vidéo. Or une vidéo garde souvent le nom automatique que lui a donné son
+téléchargement (« 21 Atelier ORVA reunion publique extrait complet sans
+montage.mp4 ») quand le `.srt`, lui, porte un nom délibéré : celui de la personne
+filmée (« Atelier ORVA Exemple.srt »). **Quand les deux diffèrent, le second est
+presque toujours celui qu'on veut.** À défaut de sous-titres, la vidéo reprend
+la main. Une supposition inexacte ne coûte rien : le champ du panneau
+d'enregistrement reste libre, et il s'ouvre sur la proposition.
+
+Le **dossier**, lui, reste celui de la vidéo. Le retour ne porte que sur le nom,
+et le fichier de sous-titres vit souvent ailleurs que la vidéo : écrire dans son
+dossier déplacerait la sortie sans que rien ne le dise.
+
+**§2 amendé — le suffixe est neutre, et c'est une règle.** `_habillee` est
+confirmé : il reprend le verbe du bouton, et s'écrit sans accent ni espace, un
+nom qui traverse des dossiers partagés et des lignes de commande. Ce qui change
+est qu'il **ne peut plus dériver** : un suffixe `_NONP` est exclu au même titre
+qu'un préréglage « NONP » — rien, dans une application destinée au
+téléchargement public, n'applique l'identité d'une association aux fichiers d'un
+inconnu. C'est la règle de l'amendement du 28/08, étendue de ce que l'application
+*nomme* à ce qu'elle *écrit*. Une seule constante la porte, et un contrôle la
+tient.
+
+**§2 amendé — une sortie ne peut jamais remplacer une entrée.** L'export efface
+sa destination puis y déplace son résultat : pointée sur la vidéo source, cette
+destination est l'original, et il n'existe nulle part ailleurs. Le nom proposé
+ne tombe jamais dessus — le suffixe n'étant jamais vide, la base venue du `.srt`
+est ramenée à celle de la vidéo dans le seul cas où elle s'y rejoindrait. Mais
+le champ du panneau d'enregistrement est libre, et la ligne de commande prend
+n'importe quel chemin. **Le refus est donc dans le moteur**, le seul point que
+les deux traversent, et il compare les fichiers, pas les chaînes : un détour par
+`..` ou un lien symbolique ne le contourne pas. Le fichier de sous-titres est
+protégé de la même façon — c'est une entrée lui aussi.
+
+**§2 amendé — « Habiller une autre vidéo » remet l'application à zéro.** Le
+bouton de fin de course laissait la vidéo précédente chargée : il fallait
+cliquer « Retirer » pour déposer la suivante, ce qui contredisait son libellé et
+ajoutait deux gestes à chaque enchaînement — alors que les vidéos se traitent à
+la chaîne. **Partent avec la vidéo : ses sous-titres.** Une autre vidéo appelle
+un autre texte, et les garder ferait justement le rendu qu'on ne veut pas, celui
+de la précédente sur l'image de la suivante. **Restent : les réglages et le
+logo.** Ce sont l'habillage, pas le document ; ils ne changent pas d'une vidéo à
+l'autre, et les redemander à chaque fichier viderait de son sens la mémorisation
+du profil.
+
+Le bouton « Retirer » de chaque zone de dépôt ne bouge pas : il sert à corriger
+un dépôt, pas à enchaîner. Les deux gestes restent distincts.
 
 ## Décisions restant ouvertes
 
