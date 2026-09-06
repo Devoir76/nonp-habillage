@@ -277,13 +277,23 @@ enum ControlesRegressionV2 {
         }
 
         // Le chiffre annoncé à l'ADR, vérifié plutôt que recopié.
+        //
+        // Il a changé le 06/09 — 61 → 68 est devenu 57 → 63 — et le gain qu'il
+        // mesure n'a pas bougé d'un point. Tous les chiffres de la décision nº6
+        // avaient été calculés sur une graisse ROMAINE, alors que le rendu est
+        // gras depuis toujours du côté du prototype : un texte plus large tient
+        // en moins de caractères, donc la taille qui atteint la longueur de
+        // ligne cible est plus petite. La correction est dans `PoliceSousTitre`,
+        // le raisonnement dans l'ADR, « Tranché le 06/09 — la campagne de
+        // parité ». Ce qui était vrai reste vrai : c'est la mesure qui était
+        // faite sur la mauvaise graisse.
         var nonp = ProfilHabillage.bandeauColore
         nonp.logoActif = false
         let v1 = tailleVersion1(nonp, 1080, 1920) ?? 0
         let v2 = (try? MiseEnPageRendu.calculer(
             profil: nonp, largeurVideo: 1080, hauteurVideo: 1920))?.parametres.taille ?? 0
-        r.egal("9:16 : le 61 → 68 px annoncé à la décision nº6", "\(v1) → \(v2)",
-               "61 → 68")
+        r.egal("9:16 : le 57 → 63 px annoncé à la décision nº6, corrigé le 06/09",
+               "\(v1) → \(v2)", "57 → 63")
     }
 
     // MARK: - La géométrie de la version 1, reconstituée

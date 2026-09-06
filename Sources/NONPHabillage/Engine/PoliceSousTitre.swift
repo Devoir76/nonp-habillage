@@ -47,7 +47,34 @@ struct PoliceSousTitre {
         }
         self.famille = famille
         self.taille = taille
-        self.ctFont = CTFontCreateWithName(famille as CFString, CGFloat(taille), nil)
+        self.ctFont = Self.grasse(famille: famille, taille: taille)
+    }
+
+    /// La police, **en gras** — comme le prototype, toujours.
+    ///
+    /// Trouvé par la campagne de parité du 06/09, sur images comparées : le
+    /// texte du prototype est nettement plus épais que celui de l'app. La cause
+    /// est dans son style ASS, où le champ `Bold` vaut `-1` — vrai — pour les
+    /// deux styles qu'il écrit, `Box` et `Text`. Le gras n'est donc pas un
+    /// réglage : c'est le rendu, en dur, depuis toujours.
+    ///
+    /// Aucun champ du schéma ne le porte, et il n'y en aura pas : ajouter un
+    /// champ serait une décision d'Éric (invariant nº6), là où il n'y a rien à
+    /// décider. Le portage est fidèle par défaut, et une divergence qui n'est
+    /// pas au registre est un bug — celle-ci en était un.
+    ///
+    /// Le gras change aussi la MESURE, donc la césure : un texte plus large
+    /// tient en moins de caractères. C'est voulu — mesurer une graisse qu'on ne
+    /// dessine pas était la vraie erreur.
+    ///
+    /// Si la famille n'a pas de graisse grasse, la romaine est rendue telle
+    /// quelle. L'invariant nº4 porte sur la FAMILLE, qui est ici présente et
+    /// vérifiée juste au-dessus ; refuser d'habiller parce qu'il manque une
+    /// graisse serait un refus que le prototype ne fait pas non plus.
+    private static func grasse(famille: String, taille: Int) -> CTFont {
+        let romaine = CTFontCreateWithName(famille as CFString, CGFloat(taille), nil)
+        return CTFontCreateCopyWithSymbolicTraits(
+            romaine, CGFloat(taille), nil, .traitBold, .traitBold) ?? romaine
     }
 
     /// Les familles installées, calculées une fois — l'appel système est lent.

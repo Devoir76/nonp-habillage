@@ -15,7 +15,7 @@ import Foundation
 
 enum CommandeExport {
 
-    /// `--exporter <vidéo> [<sous-titres>] <sortie> [--profil neutre|nonp]`
+    /// `--exporter <vidéo> [<sous-titres>] <sortie> [--profil neutre|nonp|<fichier.json>]`
     ///
     /// Logo : `--logo <image>` `--logo-position haut-gauche|haut-droit|
     /// bas-gauche|bas-droit|<x>,<y>` `--logo-taille <% hauteur>`
@@ -46,10 +46,33 @@ enum CommandeExport {
         let sousTitres = chemins.count >= 3
             ? URL(fileURLWithPath: chemins[1]) : nil
 
+        // `--profil` prend un des deux préréglages, ou un FICHIER de profil.
+        //
+        // Le fichier est ce qui rend la campagne de parité possible : les deux
+        // moteurs doivent partir du même profil, au champ près, et le seul qui
+        // fasse foi est celui que le prototype emploie en production. Un
+        // préréglage de l'app en serait une transcription — donc une source de
+        // divergence, et précisément celle qu'on cherche à mesurer.
         var profil = ProfilHabillage.bandeauColore
-        if let p = args.firstIndex(of: "--profil"), p + 1 < args.count,
-           args[p + 1].lowercased() == "neutre" {
-            profil = .neutre
+        if let p = args.firstIndex(of: "--profil"), p + 1 < args.count {
+            let valeur = args[p + 1]
+            switch valeur.lowercased() {
+            case "neutre": profil = .neutre
+            case "nonp":   profil = .bandeauColore
+            default:
+                do {
+                    profil = try ProfilJSON.lire(URL(fileURLWithPath: valeur))
+                } catch let e as ErreurProfil {
+                    print("✗ Profil refusé : "
+                          + Textes.Profil.refus(
+                              URL(fileURLWithPath: valeur).lastPathComponent,
+                              e.anomalies))
+                    return 2
+                } catch {
+                    print("✗ Profil illisible : \(error)")
+                    return 2
+                }
+            }
         }
         var annulerApres: Double? = nil
         if let a = args.firstIndex(of: "--annuler-apres"), a + 1 < args.count {
@@ -57,12 +80,18 @@ enum CommandeExport {
         }
 
         // --- Logo ---------------------------------------------------------
-        // Sans --logo, aucun logo n'est posé, quel que soit le profil : c'est
-        // l'utilisateur qui fournit son image, jamais l'application.
+        // Aucun logo n'est posé que l'utilisateur n'ait fourni : ni les
+        // préréglages ni l'application n'en apportent un.
+        //
+        // Un profil FICHIER, lui, en nomme un — c'est son rôle. L'ignorer
+        // reviendrait à rendre un habillage amputé sans le dire, alors que le
+        // profil a été donné pour être appliqué. `--logo` reste plus fort que
+        // le profil : la ligne de commande a le dernier mot sur ce qu'elle
+        // désigne explicitement.
         if let l = args.firstIndex(of: "--logo"), l + 1 < args.count {
             profil.logoFichier = URL(fileURLWithPath: args[l + 1])
             profil.logoActif = true
-        } else {
+        } else if profil.logoFichier == nil {
             profil.logoActif = false
         }
         if let p = args.firstIndex(of: "--logo-position"), p + 1 < args.count {
