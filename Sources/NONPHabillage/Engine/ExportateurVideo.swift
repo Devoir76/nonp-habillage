@@ -328,12 +328,27 @@ final class ExportateurVideo: @unchecked Sendable {
             sortie: sortie,
             duree: Date().timeIntervalSince(debut),
             dureeVideo: dureeTotale.seconds,
-            octets: octets ?? 0,
+            octets: octets,
             logoIncruste: calqueLogo != nil,
             audioRecopie: entreeAudio != nil)
     }
 
     // MARK: - Pompe
+
+    /// Le couple lecture/écriture confié à la file de la pompe.
+    ///
+    /// `AVAssetReaderOutput` et `AVAssetWriterInput` sont antérieurs à
+    /// `Sendable` et ne l'adoptent pas ; les capturer dans la closure de
+    /// `requestMediaDataWhenReady` faisait donc deux avertissements de
+    /// concurrence. Les taire par une capture muette aurait perdu l'argument :
+    /// il est ici. **Les deux objets ne sont touchés que dans cette closure**,
+    /// qu'AVFoundation appelle en série sur la file `file` et sur elle seule.
+    /// Aucun autre fil ne les voit — c'est ce que `@unchecked` affirme, et
+    /// c'est vérifiable en lisant `pomper` de bout en bout.
+    private struct Convoyeur: @unchecked Sendable {
+        let sortie: AVAssetReaderOutput
+        let entree: AVAssetWriterInput
+    }
 
     /// Transfère les échantillons d'une sortie de lecture vers une entrée
     /// d'écriture, jusqu'à épuisement ou annulation.
@@ -345,8 +360,10 @@ final class ExportateurVideo: @unchecked Sendable {
         debut: Date,
         progression: ((Avancement) -> Void)?
     ) async throws {
+        let convoyeur = Convoyeur(sortie: sortie, entree: entree)
         try await withCheckedThrowingContinuation { (suite: CheckedContinuation<Void, Error>) in
-            entree.requestMediaDataWhenReady(on: file) { [self] in
+            convoyeur.entree.requestMediaDataWhenReady(on: file) { [self] in
+                let (sortie, entree) = (convoyeur.sortie, convoyeur.entree)
                 while entree.isReadyForMoreMediaData {
                     if estAnnule {
                         entree.markAsFinished()

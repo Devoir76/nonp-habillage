@@ -61,12 +61,16 @@ enum RefusVideo: Error, Equatable {
 
 enum DiagnosticVideo {
 
-    /// Classe l'échec d'ouverture de `video`, en interrogeant d'abord le
-    /// fichier lui-même, puis l'erreur rendue par AVFoundation.
-    static func refus(video: URL, erreur: Error) -> RefusVideo {
+    /// Ce que le DISQUE reproche au fichier — `nil` s'il n'a rien à lui
+    /// reprocher.
+    ///
+    /// Ces quatre constats **priment sur tout le reste**, y compris sur le nom
+    /// du fichier : un dossier reste un dossier, même déposé sans extension, et
+    /// l'annoncer « sans extension » serait exact et inutile. Ils sont donc
+    /// consultés en premier par les deux chemins de refus — celui du périmètre
+    /// (`FormatsVideo`) comme celui de l'échec de chargement.
+    static func etatDuFichier(_ video: URL) -> RefusVideo? {
         let fm = FileManager.default
-
-        // 1. L'état du fichier — la seule source qui ne se trompe pas.
         var estDossier: ObjCBool = false
         guard fm.fileExists(atPath: video.path, isDirectory: &estDossier) else {
             return .introuvable(video)
@@ -77,6 +81,14 @@ enum DiagnosticVideo {
            taille == 0 {
             return .vide(video)
         }
+        return nil
+    }
+
+    /// Classe l'échec d'ouverture de `video`, en interrogeant d'abord le
+    /// fichier lui-même, puis l'erreur rendue par AVFoundation.
+    static func refus(video: URL, erreur: Error) -> RefusVideo {
+        // 1. L'état du fichier — la seule source qui ne se trompe pas.
+        if let constat = etatDuFichier(video) { return constat }
 
         // 2. Ce que le disque ne dit pas : le code d'AVFoundation.
         let ns = erreur as NSError

@@ -96,7 +96,7 @@ enum ControlesInterface {
     /// modes, sur les deux orientations, et jusqu'aux pixels. La preuve de
     /// non-régression, elle, vit dans `ControlesRegressionV2`.
     private static func margeDuTexte(_ r: Rapport) {
-        let (w, h) = (1920, 1080)
+        let w = 1920
 
         // La colonne se mesure là où elle est CONTRAINTE. En 16:9 la longueur
         // de ligne cible est atteinte de très loin — 49 caractères pour 32

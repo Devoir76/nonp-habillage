@@ -47,12 +47,18 @@ enum FormatsVideo {
         return typesAcceptes.contains { type.conforms(to: $0) || type == $0 }
     }
 
-    /// Le refus à opposer à un fichier que `accepte` écarte — sans jamais
-    /// toucher au fichier, qui n'a pas encore été ouvert.
+    /// Le refus à opposer à un fichier que `accepte` écarte.
     ///
-    /// Deux formulations, parce que deux gestes : convertir un MKV, renommer
-    /// un fichier qui n'a pas d'extension du tout.
+    /// Deux formulations, parce que deux gestes : convertir un MKV, renommer un
+    /// fichier qui n'a pas d'extension du tout.
+    ///
+    /// Mais ce que le disque constate passe d'abord. Un dossier n'a pas
+    /// d'extension : sans cette précaution, un dossier déposé par mégarde
+    /// s'entendait répondre « renommez-le en .mp4 » — exact, et inutile. Le
+    /// fichier n'est pas ouvert pour autant : on ne lit que son état.
     static func refus(_ url: URL) -> RefusVideo {
-        url.pathExtension.isEmpty ? .sansExtension(url) : .formatNonPrisEnCharge(url)
+        if let constat = DiagnosticVideo.etatDuFichier(url) { return constat }
+        return url.pathExtension.isEmpty ? .sansExtension(url)
+                                         : .formatNonPrisEnCharge(url)
     }
 }

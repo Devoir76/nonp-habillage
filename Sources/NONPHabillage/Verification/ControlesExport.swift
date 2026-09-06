@@ -224,6 +224,14 @@ enum ControlesExport {
                    && mSansPoint?.contains("Convertissez") == false)
         try? FileManager.default.removeItem(at: sansPoint)
 
+        // Le périmètre ne doit pas voler la vedette au disque : un dossier n'a
+        // pas d'extension, et « renommez-le en .mp4 » serait exact et inutile.
+        r.egal("un dossier reste annoncé comme un dossier",
+               FormatsVideo.refus(dossier), .pasUnFichier(dossier))
+        r.egal("un .mkv qui n'existe pas est annoncé introuvable",
+               FormatsVideo.refus(dossier.appendingPathComponent("fantome.mkv")),
+               .introuvable(dossier.appendingPathComponent("fantome.mkv")))
+
         r.verifier("aucun de ces refus ne laisse de fichier de sortie",
                    !FileManager.default.fileExists(atPath: sortie.path))
 

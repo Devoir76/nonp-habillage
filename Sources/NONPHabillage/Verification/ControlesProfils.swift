@@ -734,7 +734,7 @@ enum ControlesProfils {
         // c'est la forme partageable —, donc le chemin diffère par
         // construction : ce sont les RÉGLAGES qui doivent survivre.
         let fichier = bac.appendingPathComponent("mon-habillage.json")
-        try? ProfilJSON.ecrire(hier, vers: fichier)
+        _ = try? ProfilJSON.ecrire(hier, vers: fichier)
         guard let importe = try? ProfilJSON.lire(fichier) else {
             r.verifier("un profil exporté hier s'importe aujourd'hui", false); return
         }
