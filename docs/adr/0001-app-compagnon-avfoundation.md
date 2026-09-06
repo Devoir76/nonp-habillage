@@ -1022,3 +1022,52 @@ réclame désormais 161 points**, contre la largeur minimale du volet qui en fai
 
 Rien n'est perdu pour VoiceOver, qui ne survole pas : le nom reste l'étiquette
 d'accessibilité du menu.
+
+## Tranché le 06/09 — la campagne de parité, et ce qu'elle a trouvé
+
+Première comparaison d'images entre le prototype et l'app native, sur vidéos
+réelles et sur trois formats. Protocole, chiffres et suites dans
+[`docs/campagne-parite.md`](../campagne-parite.md).
+
+### Le texte n'était pas gras
+
+Le prototype grave en **gras** : le champ `Bold` de son style ASS vaut `-1`, en
+dur, pour les deux styles qu'il écrit. L'app gravait en romain. Aucun champ du
+profil ne porte cette graisse et le registre des divergences ne la mentionnait
+pas — c'était donc un bug, pas un choix, et le plus visible de tous.
+
+**Aucun champ ne sera ajouté au schéma pour ça.** Ajouter un champ serait une
+décision d'Éric (invariant nº6), là où il n'y a rien à décider : le prototype
+n'offre pas ce réglage, il grave en gras, point. Le portage est fidèle par
+défaut, et c'est tout ce que le correctif fait.
+
+### Ce que la graisse déplace
+
+Un texte plus large tient en moins de caractères. La taille qui atteint la
+longueur de ligne visée est donc plus petite, et **toutes les tailles annoncées
+à la décision nº6 avaient été calculées sur une romaine** :
+
+| Format | Annoncé le 28/08 | Corrigé le 06/09 | Gain |
+| --- | --- | --- | --- |
+| 9:16 — 1080 × 1920 | 61 → 68 px | 57 → 63 px | +10 % |
+| 1:1 — 1080 × 1080 | 63 → 68 px | 59 → 63 px | +6 % |
+| 4:5 — 1080 × 1350 | 63 → 68 px | 58 → 63 px | +8 % |
+
+Le gain n'a pas bougé d'un point, et le raisonnement de la décision nº6 tient
+entier : c'est la mesure qui était faite sur la mauvaise graisse. Les autres
+chiffres de cette décision — capacités de ligne, hauteurs de bande, débords —
+sont dans le même cas. **Ils ne sont pas réécrits ici** : ils disent ce qui a
+été mesuré le 28/08, et cette page est un registre de décisions, pas un tableau
+de bord. Le chiffre qui fait foi est celui que le harnais vérifie.
+
+### L'invariant nº5 n'est pas levé
+
+La moitié mesurable est close : sur 44 fichiers de sous-titres réels, les 1 567
+répliques gravées sont identiques à celles du prototype, texte et minutages
+compris. La moitié qui se juge ne l'est pas — elle appartient à Éric, et elle
+lui manque encore deux choses : des **sources vierges** (une seule des trois
+comparées l'est) et un **16:9 vierge**, le format le plus courant et celui où
+la parité est attendue stricte.
+
+Une campagne qui trouve un bug le jour où on la lance n'a pas fini de servir.
+Le prototype reste l'outil de production.

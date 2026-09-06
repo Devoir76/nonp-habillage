@@ -324,6 +324,16 @@ revanche, ne dérive plus.
 
 ---
 
+## Rappel — le gras n'est pas une divergence, c'en était l'absence (lot 7)
+
+Le prototype grave le texte en gras (`Bold=-1` dans son style ASS, en dur).
+L'app le gravait en romain, et rien ici ne le disait : **une divergence absente
+de ce registre est un bug**, c'est la règle posée en tête de fichier, et elle a
+servi. Corrigé le 06/09 — l'app grave en gras elle aussi, et il n'y a donc plus
+rien à inscrire. Voir `docs/campagne-parite.md`.
+
+---
+
 ## Ce qui n'est **pas** une divergence
 
 - **La resegmentation change les minutages.** Elle le faisait déjà dans le
