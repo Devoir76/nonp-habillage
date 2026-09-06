@@ -15,9 +15,25 @@
 import Foundation
 import CoreGraphics
 
+/// L'espace de couleur, nommé une fois et imposé partout.
+///
+/// **Sans lui, les couleurs de la marque ne sortaient pas justes.** Le
+/// raccourci `CGColor(red:green:blue:alpha:)` crée sa couleur en sRGB ; un
+/// contexte `DeviceRGB` la convertit vers le profil de l'écran au moment de
+/// peindre. Le bleu NONP `#0067F6` ressortait en `#0080F8` dans le PNG — un
+/// écart de 25 sur le vert, parfaitement visible à côté de l'icône de NONP
+/// Transcription et du bandeau que l'application grave. Le fond, lui, passait
+/// de `#0B0B0E` à `#0B0C11`.
+///
+/// Contexte et couleurs dans le MÊME espace : ce qui est demandé est ce qui est
+/// écrit, à l'octet près. Un contrôle le vérifie sur l'icône livrée.
+let espaceCouleur = CGColorSpace(name: CGColorSpace.sRGB)!
+
 func couleur(_ hex: UInt32, _ alpha: Double = 1) -> CGColor {
-    CGColor(red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255, alpha: alpha)
+    CGColor(colorSpace: espaceCouleur,
+            components: [Double((hex >> 16) & 0xFF) / 255,
+                         Double((hex >> 8) & 0xFF) / 255,
+                         Double(hex & 0xFF) / 255, alpha])!
 }
 
 let bleuNONP: UInt32 = 0x0067F6
@@ -53,7 +69,7 @@ func plaque(pour cote: Double) -> CGRect {
 func rendreIcone(cote: Double, _ peindre: (CGContext, CGRect) -> Void) -> CGImage {
     let n = Int(cote.rounded())
     let ctx = CGContext(data: nil, width: n, height: n, bitsPerComponent: 8,
-                        bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                        bytesPerRow: 0, space: espaceCouleur,
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
     ctx.interpolationQuality = .high
     let p = plaque(pour: cote)
@@ -128,19 +144,35 @@ func inversion(fond: UInt32) -> (CGContext, CGRect) -> Void {
     }
 }
 
-/// Les trois fonds soumis au jugement.
+/// Les trois fonds qui ont été soumis au jugement le 06/09.
+///
+/// Gardés après la décision : ils sont la trace de ce sur quoi elle a porté, et
+/// la planche de comparaison les relit. Le classement allait à rebours de
+/// l'intuition — le panneau translucide du Dock étant plus CLAIR que les trois,
+/// s'en éloigner rouvre l'écart au lieu de le refermer.
 let variantesDuFond: [(nom: String, fond: UInt32, libelle: String)] = [
-    ("fond-19191E", 0x19191E, "#19191E — celui d'aujourd'hui"),
-    ("fond-0B0B0E", 0x0B0B0E, "#0B0B0E — nettement plus sombre"),
+    ("fond-19191E", 0x19191E, "#19191E — le premier essai"),
+    ("fond-0B0B0E", 0x0B0B0E, "#0B0B0E — retenu le 06/09"),
     ("fond-000000", 0x000000, "#000000 — noir pur"),
 ]
+
+/// **Le fond de l'icône, tranché le 06/09.**
+///
+/// `#0B0B0E` : assez noir pour que l'écart avec le panneau du Dock se rouvre —
+/// 1,18 à 1,57 contre 1,05 à 1,40 pour le premier essai —, assez peu pour
+/// rester une couleur plutôt qu'une absence. Le noir pur faisait un peu mieux
+/// au contraste et se lisait comme un trou.
+///
+/// Une seule constante le porte : le jeu d'icônes livré et la planche de
+/// comparaison la lisent tous les deux.
+let fondRetenu: UInt32 = 0x0B0B0E
 
 /// Les propositions, par leur nom de fichier.
 ///
 /// **La nº5 est celle retenue le 06/09** : l'inversion nue. Même bleu, même
 /// marque que NONP Transcription, fond sombre — à petite taille l'œil lit les
 /// valeurs avant les teintes, et cette différence-là survit là où une
-/// différence de teinte s'efface.
+/// différence de teinte s'efface. Son fond est `fondRetenu`.
 let propositions: [(nom: String, dessin: (CGContext, CGRect) -> Void)] = [
     ("1-ambre", { c, p in
         marqueCentree(c, p, fond: ambre, barres: 0xFFFFFF, triangles: noirNONP) }),
@@ -151,9 +183,9 @@ let propositions: [(nom: String, dessin: (CGContext, CGRect) -> Void)] = [
         marqueCentree(c, p, fond: bleuNONP, barres: 0xFFFFFF, triangles: noirNONP,
                       bandeau: ambreClair) }),
     ("4-plan-habille", planHabille),
-    ("5-inversion", inversion(fond: noirNONP)),
+    ("5-inversion", inversion(fond: fondRetenu)),
     ("6-inversion-bandeau", { c, p in
-        marqueCentree(c, p, fond: noirNONP, barres: 0xFFFFFF, triangles: bleuNONP,
+        marqueCentree(c, p, fond: fondRetenu, barres: 0xFFFFFF, triangles: bleuNONP,
                       bandeau: bleuNONP) }),
 ]
 

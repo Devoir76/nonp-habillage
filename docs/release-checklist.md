@@ -17,13 +17,12 @@ c'est la moitié de cette checklist en moins.
 Ce point n'est pas une case parmi d'autres. Tant qu'il tient, **il n'y a pas de
 release publique.**
 
-- [ ] **L'icône tient sur un Dock sombre.** `Resources/AppIcon.icns` existe
-      depuis le 06/09 — l'inversion nue, fond sombre et marque bleue — et la
-      build ne signale plus rien. Reste à la voir dans un vrai Dock, en clair
-      **et** en sombre : mesuré, le fond de l'icône n'a qu'un contraste de 1,05
-      à 1,40 sur un Dock sombre, où sa silhouette se dissout. Voir
-      [`../Images-reference/icones-proposees/LISEZMOI.md`](../Images-reference/icones-proposees/LISEZMOI.md),
-      qui donne les deux corrections possibles.
+- [ ] **L'icône a été vue dans un vrai Dock**, en clair **et** en sombre.
+      `Resources/AppIcon.icns` existe depuis le 06/09 — l'inversion nue, fond
+      `#0B0B0E`, marque bleue — et la build ne signale plus rien. Le fond a été
+      choisi sur mesure et sur planche, mais la planche est une simulation : un
+      Dock réel est translucide et prend la couleur du fond d'écran. C'est le
+      seul point que ni la mesure ni la simulation ne peuvent trancher.
 
 Les deux autres verrous sont tombés le 06/09 :
 
