@@ -56,6 +56,9 @@ enum ControlesInterface {
         r.section("Interface — retirer la vidéo")
         MainActor.assumeIsolated { retirerLaVideo(r) }
 
+        r.section("Interface — le nom proposé à l'enregistrement")
+        MainActor.assumeIsolated { nomProposé(r) }
+
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
 
@@ -911,6 +914,62 @@ enum ControlesInterface {
         autre.retirerSousTitres()
         r.verifier("retirer les sous-titres n'emporte rien d'autre",
                    autre.sousTitres == nil && autre.cues.isEmpty && autre.video == nil)
+    }
+
+    // MARK: - Le nom proposé à l'enregistrement
+
+    /// Le nom du fichier produit vient du **fichier de sous-titres** quand il y
+    /// en a un — c'est lui qui porte un nom choisi, quand la vidéo garde
+    /// souvent celui que lui a donné son téléchargement.
+    @MainActor
+    private static func nomProposé(_ r: Rapport) {
+        let dossierVideo = URL(fileURLWithPath: "/Users/x/Téléchargements")
+        let video = dossierVideo.appendingPathComponent(
+            "21 Atelier ORVA reunion publique extrait complet sans montage.mp4")
+        let srt = URL(fileURLWithPath: "/Users/x/Documents/Atelier ORVA Exemple.srt")
+
+        let avec = AppState.sortieProposee(video: video, sousTitres: srt)
+        r.egal("avec sous-titres : le nom vient du .srt",
+               avec.lastPathComponent, "Atelier ORVA Exemple_habillee.mp4")
+
+        // Le NOM vient des sous-titres, le DOSSIER reste celui de la vidéo :
+        // le .srt vit souvent ailleurs, et déplacer la sortie sans le dire
+        // ferait chercher le fichier produit.
+        r.egal("avec sous-titres : le dossier reste celui de la vidéo",
+               avec.deletingLastPathComponent().path, dossierVideo.path)
+
+        let sans = AppState.sortieProposee(video: video, sousTitres: nil)
+        r.egal("sans sous-titres : le nom vient de la vidéo",
+               sans.lastPathComponent,
+               "21 Atelier ORVA reunion publique extrait complet sans "
+               + "montage_habillee.mp4")
+
+        // Le piège du nom venu du .srt : « ORVA.srt » sur
+        // « ORVA_habillee.mp4 » proposerait la vidéo source elle-même.
+        let deja = dossierVideo.appendingPathComponent("ORVA_habillee.mp4")
+        let repli = AppState.sortieProposee(
+            video: deja, sousTitres: URL(fileURLWithPath: "/tmp/ORVA.srt"))
+        r.verifier("le nom proposé ne retombe jamais sur la vidéo source",
+                   !ExportateurVideo.memeFichier(repli, deja))
+        r.egal("il repart alors du nom de la vidéo",
+               repli.lastPathComponent, "ORVA_habillee_habillee.mp4")
+
+        // Quelle que soit l'entrée, la sortie reste un .mp4.
+        r.verifier("la sortie proposée est un .mp4",
+                   avec.pathExtension == "mp4" && sans.pathExtension == "mp4"
+                   && repli.pathExtension == "mp4")
+
+        // Le suffixe est NEUTRE. C'est la règle écrite pour les préréglages le
+        // 28/08 : rien, dans une application publique, n'applique l'identité
+        // d'une association aux fichiers d'un inconnu.
+        let suffixe = Textes.Export.suffixeSortie
+        r.verifier("le suffixe ne nomme aucune association "
+                   + "(« \(suffixe) »)",
+                   !suffixe.lowercased().contains("nonp"))
+        r.verifier("le suffixe n'est pas vide — sans quoi la sortie pourrait "
+                   + "porter le nom d'une entrée", !suffixe.isEmpty)
+        r.verifier("le suffixe s'écrit sans accent ni espace",
+                   suffixe.allSatisfy { $0.isASCII && !$0.isWhitespace })
     }
 
     // MARK: - Logo rond

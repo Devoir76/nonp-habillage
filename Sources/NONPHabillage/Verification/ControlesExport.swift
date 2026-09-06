@@ -40,6 +40,9 @@ enum ControlesExport {
         r.section("Export — entrées refusées")
         entreeInvalide(r)
 
+        r.section("Export — les fichiers d'origine ne sont jamais remplacés")
+        jamaisParDessusUneEntree(r, video: essai)
+
         r.section("Export — audio recopié sans réencodage")
         if let videoReelle {
             audioRecopie(r, video: videoReelle)
@@ -177,6 +180,80 @@ enum ControlesExport {
                    !FileManager.default.fileExists(atPath: sortie.path))
     }
 
+    // MARK: - Ne jamais écraser une entrée
+
+    /// L'export finit par effacer sa destination puis y déplacer son résultat.
+    /// Pointée sur la vidéo source, cette destination est l'original — et il
+    /// n'existe nulle part ailleurs. Le nom proposé par l'application ne tombe
+    /// jamais dessus, mais le champ du panneau d'enregistrement est libre et la
+    /// ligne de commande prend n'importe quel chemin : le refus doit donc venir
+    /// du moteur, que les deux traversent.
+    private static func jamaisParDessusUneEntree(_ r: Rapport, video: URL) {
+        guard let srt = fichierSousTitresDEssai() else {
+            r.verifier("fichier de sous-titres d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: srt) }
+
+        let avant = octets(de: video)
+        let empreinteSRT = try? String(contentsOf: srt, encoding: .utf8)
+
+        // Le même chemin, mot pour mot.
+        r.verifier("exporter par-dessus la vidéo source est refusé",
+                   refuse(video: video, sousTitres: srt, vers: video, r: r,
+                          intitule: "la vidéo source"))
+
+        // Le même fichier atteint autrement : un détour par « .. ». La
+        // comparaison de chaînes ne suffirait pas.
+        let detour = video.deletingLastPathComponent()
+            .appendingPathComponent("..")
+            .appendingPathComponent(video.deletingLastPathComponent().lastPathComponent)
+            .appendingPathComponent(video.lastPathComponent)
+        r.verifier("un chemin détourné vers la vidéo source est refusé aussi",
+                   refuse(video: video, sousTitres: srt, vers: detour, r: r,
+                          intitule: "la vidéo source par un détour"))
+
+        // Le fichier de sous-titres est une entrée lui aussi.
+        r.verifier("exporter par-dessus le fichier de sous-titres est refusé",
+                   refuse(video: video, sousTitres: srt, vers: srt, r: r,
+                          intitule: "les sous-titres"))
+
+        r.egal("la vidéo source est intacte", octets(de: video), avant)
+        r.egal("le fichier de sous-titres est intact",
+               try? String(contentsOf: srt, encoding: .utf8), empreinteSRT)
+
+        // Et le refus se lit : il nomme le fichier et dit quoi faire.
+        let message = Textes.Export.ecraseraitUneEntree(video.lastPathComponent)
+        r.verifier("le refus nomme le fichier menacé",
+                   message.contains(video.lastPathComponent))
+        r.verifier("le refus dit quoi faire",
+                   message.contains("autre nom") || message.contains("autre dossier"))
+    }
+
+    /// Tente l'export vers `destination` et rend vrai si le moteur l'a refusé
+    /// pour la bonne raison — sans rien écrire au passage.
+    private static func refuse(video: URL, sousTitres: URL, vers destination: URL,
+                               r: Rapport, intitule: String) -> Bool {
+        do {
+            _ = try bloquant {
+                try await ExportateurVideo().exporter(
+                    video: video, sousTitres: sousTitres, profil: .bandeauColore,
+                    vers: destination, progression: { _ in })
+            }
+            return false
+        } catch ErreurExport.ecraseraitUneEntree {
+            return true
+        } catch {
+            r.verifier("refus de \(intitule) : la raison attendue "
+                       + "(obtenu : \(error))", false)
+            return false
+        }
+    }
+
+    private static func octets(de url: URL) -> Int64 {
+        (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64)
+            .flatMap { $0 } ?? -1
+    }
+
     // MARK: - Audio
 
     private static func audioRecopie(_ r: Rapport, video: URL) {
@@ -226,7 +303,10 @@ enum ControlesExport {
 
     /// Fabrique une petite vidéo muette : un dégradé qui se déplace, pour que
     /// les images ne soient pas toutes identiques.
-    private static func fabriquerVideoDEssai() -> URL? {
+    /// Non privée : `ControlesInterface` s'en sert pour charger une vraie
+    /// vidéo dans l'`AppState` — le seul moyen d'éprouver « Habiller une autre
+    /// vidéo », qui doit précisément la décharger.
+    static func fabriquerVideoDEssai() -> URL? {
         let url = dossierTemporaire().appendingPathComponent("essai-source.mp4")
         try? FileManager.default.removeItem(at: url)
 
@@ -303,7 +383,7 @@ enum ControlesExport {
 
     // MARK: - Utilitaires
 
-    private static func dossierTemporaire() -> URL {
+    static func dossierTemporaire() -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("nonp-habillage-controles", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

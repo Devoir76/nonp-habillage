@@ -535,6 +535,35 @@ enum Textes {
 
     enum Export {
 
+        /// Le suffixe du fichier produit : `<base>_habillee.mp4`.
+        ///
+        /// **Neutre, et il doit le rester.** C'est la règle écrite pour les
+        /// préréglages le 28/08 — rien, dans une application destinée au
+        /// téléchargement public, n'applique l'identité d'une association aux
+        /// fichiers d'un inconnu. Un suffixe `_NONP` est donc exclu au même
+        /// titre qu'un préréglage `NONP` : le fichier sort de la machine de
+        /// l'utilisateur, il porte son nom à lui.
+        ///
+        /// ASCII pur, sans accent ni espace : ce nom traverse des dossiers
+        /// partagés, des lecteurs réseau et des lignes de commande.
+        ///
+        /// Une seule constante, parce qu'il ne s'écrit qu'ici : `sortieProposee`
+        /// le pose, et rien d'autre ne le connaît.
+        static let suffixeSortie = "_habillee"
+
+        /// La sortie ne peut jamais s'écrire sur un de ses fichiers d'entrée.
+        ///
+        /// Le nom proposé les évite déjà, mais le champ du panneau
+        /// d'enregistrement est libre : on peut y retaper le nom de la vidéo
+        /// source. macOS demanderait alors « remplacer ? », et un oui
+        /// détruirait l'original. Le garde-fou est donc dans le MOTEUR, pas
+        /// dans le panneau — la ligne de commande passe par le même chemin.
+        static func ecraseraitUneEntree(_ nom: String) -> String {
+            "L'export écrirait par-dessus « \(nom) », qu'il est en train de "
+            + "lire. Choisissez un autre nom ou un autre dossier : "
+            + "les fichiers d'origine ne sont jamais remplacés."
+        }
+
         /// Formats d'entrée : MP4, MOV, M4V (ADR §3). Un fichier refusé doit
         /// produire un message explicite assorti d'une marche à suivre — jamais
         /// un échec silencieux ni un plantage.
@@ -572,6 +601,8 @@ enum Textes {
                 return lectureImpossible(raison)
             case .ecritureImpossible(let raison):
                 return ecritureImpossible(raison)
+            case .ecraseraitUneEntree(let url):
+                return ecraseraitUneEntree(url.lastPathComponent)
             case .annule:
                 return annule
             }

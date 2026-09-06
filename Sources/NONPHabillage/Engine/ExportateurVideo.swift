@@ -44,6 +44,8 @@ enum ErreurExport: Error {
     case pisteVideoAbsente(URL)
     case lectureImpossible(String)
     case ecritureImpossible(String)
+    /// La destination désigne un fichier d'entrée — la vidéo ou les sous-titres.
+    case ecraseraitUneEntree(URL)
     case annule
 }
 
@@ -91,6 +93,26 @@ final class ExportateurVideo: @unchecked Sendable {
         return annulationDemandee
     }
 
+    // MARK: - Deux chemins, un seul fichier ?
+
+    /// Les deux URL désignent-elles le même fichier ?
+    ///
+    /// La comparaison de chaînes ne suffit pas : `~/Films/a.mp4` et
+    /// `/Users/x/Films/../Films/a.mp4` sont le même fichier, et un dossier
+    /// peut être un lien symbolique. On normalise donc d'abord, puis — quand
+    /// les deux fichiers existent — on compare les identifiants que le système
+    /// leur donne, ce qui attrape aussi les liens durs et les points de montage
+    /// atteints par deux chemins différents.
+    static func memeFichier(_ a: URL, _ b: URL) -> Bool {
+        if a.resolvingSymlinksInPath().standardizedFileURL
+            == b.resolvingSymlinksInPath().standardizedFileURL { return true }
+        let cle: Set<URLResourceKey> = [.fileResourceIdentifierKey]
+        guard let ia = try? a.resourceValues(forKeys: cle).fileResourceIdentifier,
+              let ib = try? b.resourceValues(forKeys: cle).fileResourceIdentifier
+        else { return false }   // la destination n'existe pas encore : cas normal
+        return ia.isEqual(ib)
+    }
+
     // MARK: - Export
 
     /// Grave les sous-titres sur la vidéo et écrit le résultat.
@@ -103,6 +125,19 @@ final class ExportateurVideo: @unchecked Sendable {
         vers sortie: URL,
         progression: @escaping (Avancement) -> Void
     ) async throws -> Bilan {
+
+        // AVANT TOUT LE RESTE : la destination ne doit désigner aucune entrée.
+        //
+        // L'export finit par `removeItem(at: sortie)` puis un déplacement — sur
+        // la vidéo source, c'est sa destruction pure et simple, et l'original
+        // n'existe nulle part ailleurs. Le nom proposé par l'application ne
+        // tombe jamais dessus, mais le champ du panneau d'enregistrement est
+        // libre, et la ligne de commande prend n'importe quel chemin. Le refus
+        // est donc ici, au seul endroit que les deux traversent.
+        for entree in [video, sousTitres].compactMap({ $0 })
+        where Self.memeFichier(sortie, entree) {
+            throw ErreurExport.ecraseraitUneEntree(entree)
+        }
 
         let debut = Date()
         let asset = AVURLAsset(url: video)

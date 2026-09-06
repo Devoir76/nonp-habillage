@@ -523,11 +523,44 @@ final class AppState: ObservableObject {
         tempsRestant = nil
     }
 
-    /// Nom de sortie proposé : `<vidéo>_habillee.mp4`, à côté de la source.
+    /// Nom de sortie proposé : `<base>_habillee.mp4`, à côté de la vidéo.
+    ///
+    /// **La base vient du fichier de sous-titres quand il y en a un**, et de la
+    /// vidéo sinon. Une vidéo garde souvent le nom automatique que lui a donné
+    /// son téléchargement — « 21 Atelier ORVA reunion publique extrait
+    /// complet sans montage.mp4 » — alors que le `.srt` porte un nom choisi,
+    /// celui de la personne filmée. Quand les deux diffèrent, c'est presque
+    /// toujours le second qui est voulu.
+    ///
+    /// Une supposition inexacte ne coûte rien : le nom reste modifiable dans le
+    /// panneau d'enregistrement, qui s'ouvre dessus.
+    ///
+    /// Le DOSSIER, lui, reste celui de la vidéo. Le retour d'usage porte sur le
+    /// nom seul, et le fichier de sous-titres vit souvent ailleurs que la vidéo
+    /// — écrire dans son dossier déplacerait la sortie sans que rien ne le dise.
     var sortieProposee: URL? {
         guard let video else { return nil }
-        let base = video.deletingPathExtension().lastPathComponent
-        return video.deletingLastPathComponent()
-            .appendingPathComponent("\(base)_habillee.mp4")
+        return Self.sortieProposee(video: video, sousTitres: sousTitres)
+    }
+
+    /// Le calcul du nom, sorti de l'état pour être éprouvé sur des noms réels
+    /// sans charger de vidéo. Voir `sortieProposee`.
+    static func sortieProposee(video: URL, sousTitres: URL?) -> URL {
+        let dossier = video.deletingLastPathComponent()
+        let depuisLaVideo = video.deletingPathExtension().lastPathComponent
+        let base = sousTitres?.deletingPathExtension().lastPathComponent
+            ?? depuisLaVideo
+        let propose = dossier.appendingPathComponent(
+            base + Textes.Export.suffixeSortie + ".mp4")
+
+        // Le seul cas où la base venue des sous-titres retomberait sur la
+        // vidéo elle-même : « ORVA_habillee.mp4 » habillée avec
+        // « ORVA.srt ». On repart alors du nom de la vidéo, qui ne peut pas
+        // se rejoindre lui-même — le suffixe n'est jamais vide.
+        guard !ExportateurVideo.memeFichier(propose, video) else {
+            return dossier.appendingPathComponent(
+                depuisLaVideo + Textes.Export.suffixeSortie + ".mp4")
+        }
+        return propose
     }
 }
