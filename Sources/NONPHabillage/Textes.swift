@@ -246,10 +246,19 @@ enum Textes {
         static let fondDeLApercuConseil =
             "Regardez le plus sombre et le plus clair : c'est ainsi qu'on vérifie "
             + "que le texte reste lisible sur toute la vidéo."
-        /// L'infobulle du menu : la réserve, puis le conseil. Les deux phrases
-        /// restent mot pour mot — elles ont seulement quitté la ligne.
+        /// L'infobulle du menu : le nom, la réserve, puis le conseil. Les
+        /// trois textes restent mot pour mot — ils ont seulement quitté la
+        /// ligne.
+        ///
+        /// Le nom les y a rejoints le 06/09, par le même raisonnement : dans
+        /// un volet dont la valeur est l'IMAGE, un réglage dont l'état se lit
+        /// seul n'a pas besoin d'être annoncé en permanence. « 3/6 — moyen »
+        /// dit le rang et le qualificatif ; « Fond de l'aperçu » ne servait
+        /// qu'à la première rencontre, et c'est exactement ce que porte une
+        /// infobulle. Le nom reste, entier, à portée du pointeur — et il reste
+        /// annoncé par VoiceOver, qui ne survole rien.
         static var fondDeLApercuInfobulle: String {
-            fondApercuSeulement + " " + fondDeLApercuConseil
+            fondDeLApercu + " — " + fondApercuSeulement + " " + fondDeLApercuConseil
         }
 
         /// Libellé d'une entrée du menu : son rang, puis ce qu'elle vaut.

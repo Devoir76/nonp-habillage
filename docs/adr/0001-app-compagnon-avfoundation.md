@@ -996,3 +996,29 @@ que l'utilisateur voit déjà — le sélecteur de fichiers grise les autres
 extensions — et refuser un conteneur après cinq minutes de gravure serait
 inutilement cruel. Un fichier sans extension du tout reçoit un autre conseil :
 le renommer, pas le convertir. Il est peut-être un MP4 valide.
+
+## Tranché le 06/09 — le fond de l'aperçu s'efface encore
+
+Le réglage a déjà maigri une fois : ses deux phrases d'escorte — la réserve
+« n'affecte que l'aperçu » et le conseil de contraste — ont quitté la ligne
+pour l'infobulle du menu. Il restait le nom, « Fond de l'aperçu », affiché en
+permanence à gauche d'un menu de 210 points.
+
+**Le nom part à son tour, par le même raisonnement.** Dans un volet dont la
+valeur est l'image, un réglage dont l'ÉTAT se lit seul n'a pas besoin d'être
+annoncé en permanence : « 3/6 — moyen » dit le rang, donc qu'il y a six choix,
+et le qualificatif, donc lequel on regarde. Le nom ne servait qu'à la première
+rencontre — c'est exactement ce que porte une infobulle. Il y rejoint les deux
+phrases, entier, mot pour mot.
+
+Ce qui l'autorisait tient en une condition, et elle est tenue par un contrôle :
+**chaque libellé du menu se lit sans son nom**. C'est la même condition qui
+avait autorisé le premier allègement. Si elle tombait — un libellé redevenu
+« 3/6 » nu —, le nom devrait revenir sur la ligne.
+
+Le menu passe en petite taille et à sa largeur naturelle. **La ligne entière
+réclame désormais 161 points**, contre la largeur minimale du volet qui en fait
+528 : elle ne contraint plus rien.
+
+Rien n'est perdu pour VoiceOver, qui ne survole pas : le nom reste l'étiquette
+d'accessibilité du menu.

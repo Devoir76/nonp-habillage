@@ -157,8 +157,18 @@ struct BarreChoixApercu: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .frame(maxWidth: 210)
+                // Le nom quitte la ligne à son tour, et rejoint l'infobulle où
+                // les deux phrases l'attendaient déjà. Ce qui reste visible est
+                // l'ÉTAT du réglage — « 3/6 — moyen » —, qui se lit seul : le
+                // rang dit que c'est un choix parmi six, le qualificatif dit
+                // lequel. Le nom, lui, ne servait qu'à la première rencontre.
+                .labelsHidden()
+                .controlSize(.small)
+                .fixedSize()
                 .help(Textes.Interface.fondDeLApercuInfobulle)
+                // Rien n'est perdu pour VoiceOver : ce que l'œil n'a plus à
+                // lire, il doit toujours pouvoir l'entendre.
+                .accessibilityLabel(Textes.Interface.fondDeLApercu)
             }
 
             Spacer(minLength: 0)

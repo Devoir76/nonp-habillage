@@ -556,18 +556,29 @@ enum ControlesInterface {
                    && Textes.Interface.fondDeLApercuConseil
                        .contains(Textes.Interface.fondLePlusClair))
 
-        // Les deux phrases ont quitté la ligne pour l'infobulle du menu. Elles
-        // n'ont pas été RÉSUMÉES : les perdre en chemin serait la seule façon
-        // de rater cet allègement, puisque plus rien à l'écran ne les rappelle.
+        // Les deux phrases ont quitté la ligne pour l'infobulle du menu, et le
+        // NOM les y a rejointes le 06/09. Aucun des trois textes n'a été
+        // RÉSUMÉ : les perdre en chemin serait la seule façon de rater cet
+        // allègement, puisque plus rien à l'écran ne les rappelle.
         let infobulle = Textes.Interface.fondDeLApercuInfobulle
-        r.verifier("l'infobulle du menu porte la réserve, mot pour mot",
+        r.verifier("l'infobulle du menu porte son nom, mot pour mot",
+                   infobulle.contains(Textes.Interface.fondDeLApercu))
+        r.verifier("elle porte la réserve, mot pour mot",
                    infobulle.contains(Textes.Interface.fondApercuSeulement))
         r.verifier("elle porte aussi le conseil d'usage, mot pour mot",
                    infobulle.contains(Textes.Interface.fondDeLApercuConseil))
-        r.verifier("et rien d'autre — l'infobulle est la somme des deux "
+        r.verifier("et rien d'autre — l'infobulle est la somme des trois "
                    + "(\(infobulle.count) caractères)",
-                   infobulle.count == Textes.Interface.fondApercuSeulement.count
-                   + Textes.Interface.fondDeLApercuConseil.count + 1)
+                   infobulle.count == Textes.Interface.fondDeLApercu.count
+                   + Textes.Interface.fondApercuSeulement.count
+                   + Textes.Interface.fondDeLApercuConseil.count + 4)
+
+        // Ce que la ligne montre encore doit se lire SEUL : c'est la condition
+        // qui autorisait à retirer le nom. Chaque libellé porte son rang sur
+        // six et le qualificatif de l'image — on sait ce qu'on choisit sans
+        // survoler quoi que ce soit.
+        r.verifier("l'état visible du réglage se lit sans son nom",
+                   libelles.allSatisfy { $0.contains("/6 — ") })
 
         // Ce qui autorisait à les retirer de la ligne : les libellés du menu
         // disent déjà le sens du réglage. On ne survole pas pour savoir ce
