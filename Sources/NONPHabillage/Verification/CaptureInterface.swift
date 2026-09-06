@@ -50,7 +50,7 @@ enum CaptureInterface {
         print(String(repeating: "─", count: 66))
 
         var ecrites: [String] = []
-        let etat = AppState()
+        let etat = AppState(memoire: false)
 
         func capturer(_ nom: String, hauteur: CGFloat) {
             let vue = FenetrePrincipaleView.pourCapture(etat: etat)

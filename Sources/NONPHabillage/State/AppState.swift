@@ -35,11 +35,24 @@ final class AppState: ObservableObject {
     /// À défaut, le profil neutre, comme l'ADR §2 le prévoit pour un premier
     /// lancement. Un fichier de mémoire abîmé retombe sur le même cas : mieux
     /// vaut ouvrir sur des réglages sobres que refuser de s'ouvrir.
-    init() {
-        if let memorise = MemoireProfil.relire() {
-            profil = memorise
-        }
+    ///
+    /// **`memoire: false` coupe le lien avec le disque, dans les deux sens** :
+    /// l'état s'ouvre sur le profil neutre et n'écrit rien. C'est ce qu'il faut
+    /// aux contrôles, et ce n'est pas un détail de confort — un `AppState()` de
+    /// contrôle héritait des réglages MÉMORISÉS de la machine qui l'exécute.
+    /// Un contrôle qui met en scène « sans logo » obtenait donc un logo dès lors
+    /// que la personne aux commandes en avait posé un dans l'application, et il
+    /// mesurait alors deux fois le même état sans le dire. C'est arrivé (voir
+    /// `barreAction`), et le contrôle est resté rouge trois commits durant
+    /// pendant qu'on cherchait du côté de l'interface.
+    init(memoire: Bool = true) {
+        self.memoire = memoire
+        guard memoire, let memorise = MemoireProfil.relire() else { return }
+        profil = memorise
     }
+
+    /// Faux dans les contrôles : ni lecture ni écriture du profil mémorisé.
+    private let memoire: Bool
 
     @Published private(set) var video: URL?
     @Published private(set) var tailleVideo: CGSize?
@@ -333,6 +346,9 @@ final class AppState: ObservableObject {
     private var memorisation: Task<Void, Never>?
 
     private func memoriserProfil() {
+        // Un état de contrôle n'écrit RIEN : le harnais tourne sur la machine
+        // d'Éric, et le profil mémorisé y est le sien.
+        guard memoire else { return }
         memorisation?.cancel()
         let aEnregistrer = profil
         memorisation = Task { [weak self] in

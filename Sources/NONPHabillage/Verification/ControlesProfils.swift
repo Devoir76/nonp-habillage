@@ -600,7 +600,7 @@ enum ControlesProfils {
         let logo = bac.appendingPathComponent("logo.png")
         FileManager.default.createFile(atPath: logo.path, contents: Data([0x89, 0x50]))
 
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         var regle = ProfilHabillage.bandeauColore
         regle.nom = "Le mien"
         regle.couleurTexte = CouleurProfil(hex: "#FFD400")
@@ -748,7 +748,7 @@ enum ControlesProfils {
         // Le volet a perdu sa section « Profil » le 28/08 ; les trois gestes
         // sont au menu Fichier. Rien de tout cela ne touche aux données : ce
         // qui a été enregistré se relit, exactement.
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.profil = hier
         r.egal("un profil relu s'applique tel quel à l'application",
                etat.profil, hier)
@@ -872,7 +872,7 @@ enum ControlesProfils {
         FileManager.default.createFile(atPath: logo.path, contents: Data([0x89, 0x50]))
 
         // ── PIÈGE Nº1 : le chemin absolu qui casse ──────────────────────────
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         var profil = ProfilHabillage.neutre
         profil.logoActif = true
         profil.logoFichier = logo

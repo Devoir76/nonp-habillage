@@ -68,6 +68,9 @@ enum ControlesInterface {
         r.section("Interface — la marge du texte, unique commande de la colonne")
         margeDuTexte(r)
 
+        r.section("Interface — les contrôles ne lisent ni n'écrivent la machine")
+        MainActor.assumeIsolated { miseEnSceneSansMemoire(r) }
+
         r.section("Interface — « Habiller » dans la barre d'action du bas")
         MainActor.assumeIsolated { barreAction(r) }
 
@@ -178,6 +181,58 @@ enum ControlesInterface {
             profil: p, largeurVideo: w, hauteurVideo: h))?.largeurColonneTexte ?? 0
     }
 
+    // MARK: - La mise en scène ne vient pas de la machine
+
+    /// **Un contrôle d'interface met en scène l'état qu'il mesure — jamais
+    /// celui de la personne aux commandes.**
+    ///
+    /// La règle a été apprise à ses dépens. `AppState()` ouvre sur le profil
+    /// MÉMORISÉ, logo compris : c'est ce qu'il faut à l'application, et
+    /// exactement ce qu'il ne faut pas à un contrôle. La colonne mise en scène
+    /// « sans logo » en portait donc un dès que la machine en avait un, et le
+    /// contrôle de la barre d'action comparait deux fois le même état. Il est
+    /// resté rouge trois commits, en accusant l'interface.
+    ///
+    /// Ce qui se vérifie ici vaut pour tout le harnais, et dans les deux sens :
+    /// un état de contrôle ne LIT pas le profil mémorisé, et n'y ÉCRIT rien.
+    /// Le second point n'est pas théorique — le profil se mémorise une demi-
+    /// seconde après le dernier changement, et un contrôle qui fait tourner la
+    /// boucle d'exécution laisse cette écriture partir.
+    @MainActor
+    private static func miseEnSceneSansMemoire(_ r: Rapport) {
+        // 1. Il part des réglages par défaut, quelle que soit la machine.
+        let controle = AppState(memoire: false)
+        r.egal("un état de contrôle ouvre sur les réglages par défaut",
+               controle.profil, ProfilHabillage.neutre)
+
+        // 2. Et il s'écarte bien de ce que l'application aurait relu — sans quoi
+        //    le point 1 pourrait n'être vrai que par coïncidence.
+        if let memorise = MemoireProfil.relire(), memorise != ProfilHabillage.neutre {
+            r.verifier("la machine a un profil mémorisé, et l'état de contrôle "
+                       + "ne l'a pas repris", controle.profil != memorise)
+        } else {
+            r.nonExecute("l'état de contrôle ignore le profil mémorisé",
+                         motif: "cette machine n'a pas de profil mémorisé qui "
+                         + "s'écarte des réglages par défaut")
+        }
+
+        // 3. Et il n'écrit rien. On règle, on laisse passer la temporisation en
+        //    faisant tourner la boucle, puis on relit le fichier de la machine.
+        //    S'il avait bougé, le contrôle aurait déjà abîmé le profil d'Éric :
+        //    il le remet donc en place avant de le signaler.
+        let avant = try? Data(contentsOf: MemoireProfil.fichier)
+        let regleur = AppState(memoire: false)
+        regleur.profil.couleurTexte = CouleurProfil(hex: "#FF3B30")
+        regleur.lignesMax = 4
+        _ = pomperJusqua({ false }, secondes: 1.2)
+        let apres = try? Data(contentsOf: MemoireProfil.fichier)
+        if avant != apres, let avant {
+            try? avant.write(to: MemoireProfil.fichier)
+        }
+        r.verifier("et il n'écrit rien dans le profil mémorisé de la machine",
+                   avant == apres)
+    }
+
     // MARK: - Barre d'action
 
     /// « Habiller » est descendu de la barre des dépôts au pied de la fenêtre.
@@ -198,13 +253,45 @@ enum ControlesInterface {
     /// 3. Elle ne prend pas sa place sur l'aperçu : les minima de l'aperçu
     ///    valent toujours une fois sa hauteur retranchée (voir
     ///    `dispositionDeuxColonnes`, qui la retranche vraiment).
+    ///
+    /// **La mise en scène est vérifiée AVANT d'être mesurée.** Tout le point 1
+    /// repose sur deux colonnes de hauteurs différentes : si les deux états
+    /// mis en scène se ressemblent, la comparaison ne prouve plus rien, et
+    /// c'est arrivé — l'état de contrôle héritait du profil MÉMORISÉ de la
+    /// machine, logo compris, donc la colonne « sans logo » en avait un. Les
+    /// deux états sont désormais construits sans mémoire (`AppState(memoire:
+    /// false)`), et le contrôle commence par dire ce qu'il a réellement mis en
+    /// scène. Voir aussi `miseEnSceneSansMemoire`, qui tient la règle pour tout
+    /// le harnais.
     @MainActor
     private static func barreAction(_ r: Rapport) {
         _ = NSApplication.shared
 
-        let barreFermee = hauteurBarreAction(voletOuvert: false, avecLogo: false)
-        let barreOuverte = hauteurBarreAction(voletOuvert: true, avecLogo: false)
-        let barreReglagesLongs = hauteurBarreAction(voletOuvert: true, avecLogo: true)
+        // ── La mise en scène, d'abord ────────────────────────────────────
+        //
+        // Un vrai fichier de logo, pas un chemin inventé : avec un fichier
+        // absent l'application est en état « logo introuvable », que rien
+        // n'oblige à afficher les mêmes commandes. La colonne longue doit être
+        // une colonne que l'on peut vraiment obtenir.
+        guard let logo = fabriquerLogoDEssai() else {
+            r.verifier("fabrication du logo d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: logo) }
+
+        let court = AppState(memoire: false)
+        let long = AppState(memoire: false)
+        long.chargerLogo(logo)
+
+        r.verifier("la mise en scène tient : la colonne courte est sans logo, "
+                   + "la longue en a un",
+                   !court.profil.logoActif && court.profil.logoFichier == nil
+                   && long.profil.logoActif && long.profil.logoFichier == logo)
+        r.verifier("et le logo mis en scène existe vraiment — la colonne longue "
+                   + "est un état atteignable", !long.logoIntrouvable)
+
+        let barreFermee = hauteurBarreAction(court, voletOuvert: false)
+        let barreOuverte = hauteurBarreAction(court, voletOuvert: true)
+        let barreReglagesLongs = hauteurBarreAction(long, voletOuvert: true)
 
         r.verifier("la barre d'action a une hauteur de barre, pas de panneau "
                    + "(\(Int(barreFermee)) points)",
@@ -217,8 +304,8 @@ enum ControlesInterface {
         // 1. Hors de la zone défilante.
         r.egal("sa hauteur ne change pas quand le volet s'ouvre",
                Int(barreOuverte), Int(barreFermee))
-        let panneauCourt = hauteurPanneauReglages(avecLogo: false)
-        let panneauLong = hauteurPanneauReglages(avecLogo: true)
+        let panneauCourt = hauteurPanneauReglages(court)
+        let panneauLong = hauteurPanneauReglages(long)
         r.verifier("la colonne des réglages, elle, s'allonge vraiment "
                    + "(\(Int(panneauCourt)) → \(Int(panneauLong)) points)",
                    panneauLong > panneauCourt + 50)
@@ -241,7 +328,7 @@ enum ControlesInterface {
 
         // 3. Le bouton reste commandé par le même état qu'avant : le déplacer
         //    ne devait rien changer à QUAND il est actionnable.
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         r.verifier("sans vidéo, « Habiller » est impossible", !etat.peutHabiller)
         etat.profil.logoActif = true
         etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
@@ -254,15 +341,15 @@ enum ControlesInterface {
     }
 
     /// Hauteur naturelle de la barre d'action, mesurée sur la VRAIE vue.
+    ///
+    /// L'état lui est DONNÉ, jamais fabriqué ici : c'est l'appelant qui met en
+    /// scène, et qui a vérifié sa mise en scène. Un mesureur qui construit
+    /// lui-même son état cache ce qu'il mesure — c'est ainsi que la colonne
+    /// « sans logo » a pu en porter un pendant trois commits.
     @MainActor
-    private static func hauteurBarreAction(voletOuvert: Bool,
-                                           avecLogo: Bool) -> CGFloat {
-        let etat = AppState()
+    private static func hauteurBarreAction(_ etat: AppState,
+                                           voletOuvert: Bool) -> CGFloat {
         etat.voletOuvert = voletOuvert
-        if avecLogo {
-            etat.profil.logoActif = true
-            etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
-        }
         let hote = NSHostingView(
             rootView: BarreAction().environmentObject(etat)
                 .frame(width: Fenetre.largeurIdealeOuverte))
@@ -270,14 +357,10 @@ enum ControlesInterface {
         return hote.fittingSize.height
     }
 
-    /// Hauteur naturelle du contenu de la colonne défilante.
+    /// Hauteur naturelle du contenu de la colonne défilante. Même règle : l'état
+    /// vient de l'appelant.
     @MainActor
-    private static func hauteurPanneauReglages(avecLogo: Bool) -> CGFloat {
-        let etat = AppState()
-        if avecLogo {
-            etat.profil.logoActif = true
-            etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
-        }
+    private static func hauteurPanneauReglages(_ etat: AppState) -> CGFloat {
         let hote = NSHostingView(
             rootView: PanneauPersonnaliserView().environmentObject(etat)
                 .frame(width: Fenetre.largeurReglages - 32))
@@ -301,7 +384,7 @@ enum ControlesInterface {
     @MainActor
     private static func hauteurConstante(_ r: Rapport) {
         // La case dit la vérité sur les deux profils livrés, sans les toucher.
-        let neutre = AppState()
+        let neutre = AppState(memoire: false)
         neutre.profil = .neutre
         r.verifier("profil neutre : la case est cochée", neutre.hauteurConstante)
         r.egal("profil neutre : le champ garde sa valeur",
@@ -309,12 +392,12 @@ enum ControlesInterface {
         r.egal("le préréglage NONP garde la sienne",
                ProfilHabillage.bandeauColore.bandeauHauteurFixeLignes, 0)
 
-        let nonp = AppState()
+        let nonp = AppState(memoire: false)
         nonp.profil = .bandeauColore
         r.verifier("préréglage NONP : la case est décochée", !nonp.hauteurConstante)
 
         // Cocher reprend « Lignes maximum ». Décocher rend la hauteur au texte.
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.profil = .neutre
         etat.lignesMax = 3
         r.egal("cochée, la case suit « Lignes maximum » quand il change",
@@ -334,7 +417,7 @@ enum ControlesInterface {
         var libre = ProfilHabillage.neutre
         libre.lignesMax = 2
         libre.bandeauHauteurFixeLignes = 3
-        let charge = AppState()
+        let charge = AppState(memoire: false)
         charge.profil = libre
         r.egal("un profil qui dissocie les deux valeurs est chargé tel quel",
                charge.profil.bandeauHauteurFixeLignes, 3)
@@ -515,7 +598,7 @@ enum ControlesInterface {
               let clair = fondDeControle(largeur: 320, hauteur: 180) else {
             r.verifier("fonds de contrôle", false); return
         }
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.voletOuvert = true
         etat.poserFondsDeControle((0..<6).map { i in
             (instant: Double(i), image: i < 3 ? sombre : clair,
@@ -554,7 +637,7 @@ enum ControlesInterface {
         // Avec un fichier chargé — l'état COURANT : le menu, les chevrons et le
         // compteur. C'est là que la barre faisait une ligne et demie, « la plus
         // longue du fichier » s'écrivant sous le compteur.
-        let avecST = AppState()
+        let avecST = AppState(memoire: false)
         avecST.voletOuvert = true
         avecST.poserFondsDeControle((0..<6).map { i in
             (instant: Double(i), image: i < 3 ? sombre : clair,
@@ -617,7 +700,7 @@ enum ControlesInterface {
         // La barre d'action du bas mange de la hauteur : la retrancher, plutôt
         // que de laisser les minima de l'aperçu se vérifier sur une place qui
         // n'existe plus.
-        let barreAction = hauteurBarreAction(voletOuvert: true, avecLogo: false)
+        let barreAction = hauteurBarreAction(AppState(memoire: false), voletOuvert: true)
 
         for (nomTaille, fenetre) in tailles {
             // La place réellement laissée à l'aperçu : la fenêtre, moins la
@@ -666,7 +749,7 @@ enum ControlesInterface {
         // Les réglages : la colonne est défilante, donc tous atteignables quelle
         // que soit la hauteur. Ce qui doit être vérifié, c'est qu'ils tiennent
         // en LARGEUR — une colonne trop étroite rognerait un curseur.
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.profil.logoActif = true
         etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
         let hote = NSHostingView(
@@ -706,7 +789,7 @@ enum ControlesInterface {
     /// « la hauteur de la barre en usage » — elle ne l'est pas.
     @MainActor
     private static func hauteurBarreEntrees() -> CGFloat {
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.voletOuvert = true
         let hote = NSHostingView(
             rootView: BarreEntrees().environmentObject(etat)
@@ -834,7 +917,7 @@ enum ControlesInterface {
 
         // Comme pour les deux colonnes : la barre d'action du bas n'est pas de
         // la place disponible pour l'image.
-        let barreAction = hauteurBarreAction(voletOuvert: false, avecLogo: false)
+        let barreAction = hauteurBarreAction(AppState(memoire: false), voletOuvert: false)
 
         for (nom, fenetre) in tailles {
             let zone = CGSize(
@@ -870,7 +953,7 @@ enum ControlesInterface {
     /// ne pouvait changer de vidéo qu'en relançant l'application.
     @MainActor
     private static func retirerLaVideo(_ r: Rapport) {
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.voletOuvert = true
 
         // Des sous-titres réellement chargés : c'est ce qui doit SURVIVRE.
@@ -912,7 +995,7 @@ enum ControlesInterface {
 
         // La réciproque tenait déjà, mais rien ne la vérifiait : retirer les
         // sous-titres ne doit pas retirer la vidéo.
-        let autre = AppState()
+        let autre = AppState(memoire: false)
         autre.chargerSousTitres(srt)
         autre.retirerSousTitres()
         r.verifier("retirer les sous-titres n'emporte rien d'autre",
@@ -996,7 +1079,7 @@ enum ControlesInterface {
             """.write(to: srt, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: srt) }
 
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.chargerVideo(video)
         guard pomperJusqua({ etat.video != nil && !etat.apercuEnPreparation }) else {
             r.verifier("la vidéo d'essai se charge dans l'application", false); return
@@ -1210,7 +1293,7 @@ enum ControlesInterface {
         }
 
         // Et le volet entier, à cette même largeur : rien ne dépasse.
-        let etat = AppState()
+        let etat = AppState(memoire: false)
         etat.profil.logoActif = true
         etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
         let hote = NSHostingView(
@@ -1317,7 +1400,7 @@ enum ControlesInterface {
             ("accueil avec erreur", { (e: AppState) in
                 e.profil.police = "Police Absente"; e.rafraichirApercu() }),
         ] {
-            let etat = AppState()
+            let etat = AppState(memoire: false)
             prepare(etat)
             let vue = ContenuFenetre().environmentObject(etat)
                 .frame(width: largeurFenetre)
@@ -1331,13 +1414,13 @@ enum ControlesInterface {
 
         // Volet fermé : aucun réglage visible. On le vérifie par la hauteur —
         // le volet fait plusieurs centaines de points, il ne peut pas se cacher.
-        let ferme = AppState()
+        let ferme = AppState(memoire: false)
         let hoteFerme = NSHostingView(
             rootView: ContenuFenetre().environmentObject(ferme).frame(width: largeurFenetre))
         hoteFerme.layoutSubtreeIfNeeded()
         let hauteurFermee = hoteFerme.fittingSize.height
 
-        let ouvert = AppState()
+        let ouvert = AppState(memoire: false)
         ouvert.voletOuvert = true
         let hoteOuvert = NSHostingView(
             rootView: ContenuFenetre().environmentObject(ouvert).frame(width: largeurFenetre))
@@ -1347,7 +1430,7 @@ enum ControlesInterface {
         r.verifier("le volet fermé n'occupe pas la place du volet ouvert "
                    + "(\(Int(hauteurFermee)) contre \(Int(hauteurOuverte)) points)",
                    hauteurOuverte > hauteurFermee)
-        r.verifier("le volet est fermé au premier lancement", !AppState().voletOuvert)
+        r.verifier("le volet est fermé au premier lancement", !AppState(memoire: false).voletOuvert)
 
         // ── La fenêtre s'ouvre à la taille NATURELLE de son contenu ──────────
         //
