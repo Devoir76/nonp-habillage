@@ -22,6 +22,9 @@ des deux tient, **il n'y a pas de release publique.**
       [`campagne-parite.md`](campagne-parite.md), et c'est **Éric qui tranche**.
       Publier avant serait publier un outil dont on ne sait pas s'il remplace
       celui qu'on utilise.
+- [ ] **L'icône existe.** `Resources/AppIcon.icns` est absent : la build le
+      signale et pose une icône générique. Une application publiée sans icône
+      se remarque immédiatement, dans le Dock comme dans le Finder.
 - [ ] **Le nom définitif est arrêté.** « NONP Habillage » est un nom de travail
       (CLAUDE.md, en-tête). Il apparaît dans le bundle, dans l'identifiant, dans
       l'archive et sur la page de téléchargement : le changer après coup casse
