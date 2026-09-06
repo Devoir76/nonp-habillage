@@ -29,6 +29,16 @@ struct GenerateurPropositions {
             CGImageDestinationAddImage(d, image, nil)
             CGImageDestinationFinalize(d)
         }
-        print("\(propositions.count) propositions écrites dans \(dossier)")
+        // Les trois fonds à l'étude : mêmes formes, seule la plaque change.
+        for (nom, fond, _) in variantesDuFond {
+            let image = rendreIcone(cote: 1024, inversion(fond: fond))
+            let url = URL(fileURLWithPath: "\(dossier)/\(nom).png") as CFURL
+            let d = CGImageDestinationCreateWithURL(
+                url, UTType.png.identifier as CFString, 1, nil)!
+            CGImageDestinationAddImage(d, image, nil)
+            CGImageDestinationFinalize(d)
+        }
+        print("\(propositions.count) propositions et \(variantesDuFond.count) "
+              + "fonds écrits dans \(dossier)")
     }
 }

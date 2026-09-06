@@ -117,6 +117,24 @@ func planHabille(_ ctx: CGContext, _ p: CGRect) {
                     width: bande.width * 0.76, height: h))
 }
 
+/// L'inversion nue, dont seul le FOND varie.
+///
+/// Le fond est le seul paramètre en question depuis le 06/09 : sur un Dock
+/// sombre, `#19191E` n'a qu'un contraste de 1,05 à 1,40 et la plaque perd son
+/// bord. Trois valeurs sont mises côte à côte plutôt qu'une seule décrétée.
+func inversion(fond: UInt32) -> (CGContext, CGRect) -> Void {
+    { ctx, p in
+        marqueCentree(ctx, p, fond: fond, barres: 0xFFFFFF, triangles: bleuNONP)
+    }
+}
+
+/// Les trois fonds soumis au jugement.
+let variantesDuFond: [(nom: String, fond: UInt32, libelle: String)] = [
+    ("fond-19191E", 0x19191E, "#19191E — celui d'aujourd'hui"),
+    ("fond-0B0B0E", 0x0B0B0E, "#0B0B0E — nettement plus sombre"),
+    ("fond-000000", 0x000000, "#000000 — noir pur"),
+]
+
 /// Les propositions, par leur nom de fichier.
 ///
 /// **La nº5 est celle retenue le 06/09** : l'inversion nue. Même bleu, même
@@ -133,8 +151,7 @@ let propositions: [(nom: String, dessin: (CGContext, CGRect) -> Void)] = [
         marqueCentree(c, p, fond: bleuNONP, barres: 0xFFFFFF, triangles: noirNONP,
                       bandeau: ambreClair) }),
     ("4-plan-habille", planHabille),
-    ("5-inversion", { c, p in
-        marqueCentree(c, p, fond: noirNONP, barres: 0xFFFFFF, triangles: bleuNONP) }),
+    ("5-inversion", inversion(fond: noirNONP)),
     ("6-inversion-bandeau", { c, p in
         marqueCentree(c, p, fond: noirNONP, barres: 0xFFFFFF, triangles: bleuNONP,
                       bandeau: bleuNONP) }),
