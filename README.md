@@ -3,12 +3,11 @@
 Application macOS qui grave un **logo** et des **sous-titres** sur une vidéo.
 On dépose la vidéo, on dépose le fichier `.srt` ou `.vtt`, on règle, on grave.
 
-Nom de travail : le nom définitif sera arrêté avant la première publication.
-
-> **État du projet.** Rien n'est publié. L'application fonctionne de bout en
-> bout, mais l'outil de production reste le prototype Python dont elle est le
-> portage, tant que son rendu n'a pas été jugé équivalent sur vidéos réelles.
-> Où en est cette comparaison : [`docs/campagne-parite.md`](docs/campagne-parite.md).
+> **État du projet.** Rien n'est encore publié, mais l'application est **l'outil
+> de production depuis le 06/09** : son rendu a été comparé à celui du prototype
+> Python dont elle est le portage, sur vidéos réelles et sur trois formats, et
+> jugé équivalent en 16:9 et meilleur en 9:16. Le détail de cette comparaison :
+> [`docs/campagne-parite.md`](docs/campagne-parite.md).
 
 ## Ce qu'elle fait
 

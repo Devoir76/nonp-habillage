@@ -1,10 +1,11 @@
 # Divergences assumées avec le prototype Python
 
-Le prototype `nonp_habille.py` reste l'outil de production (invariant nº5) et
-fait foi tant que l'app native n'a pas prouvé un rendu équivalent. Le portage
-est donc **fidèle par défaut** : quand rien n'est écrit ici, le code Swift
-reproduit le comportement Python au caractère près, et les contrôles de parité
-le vérifient à chaque exécution.
+Le prototype `nonp_habille.py` a fait foi jusqu'au 06/09 ; depuis, l'app native
+est l'outil de production et lui n'est plus qu'un filet (voir ADR-0001, « Levé
+le 06/09 »). **Ce fichier ne perd rien à cette levée.** Le portage reste
+**fidèle par défaut** : quand rien n'est écrit ici, le code Swift reproduit le
+comportement Python au caractère près, et les contrôles de parité le vérifient
+à chaque exécution — non plus pour arbitrer, mais pour signaler une régression.
 
 Ce fichier est le registre du reste : chaque endroit où le comportement diffère
 **volontairement**. Une divergence qui n'y figure pas est un bug, pas un choix.

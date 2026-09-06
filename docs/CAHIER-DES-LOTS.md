@@ -208,9 +208,14 @@ infobulle par réglage — obligatoire au compilateur, éprouvée par le harnais
 **Acceptation** — Éric juge le rendu indiscernable à l'usage en 16:9 **et** en
 9:16 ; la checklist de release est déroulable de bout en bout.
 
-**Reste à faire** — le jugement d'Éric sur la campagne, et les sources vierges
-qui lui manquent (aucun 16:9 vierge sur la machine de travail). Tant qu'il n'a
-pas eu lieu, l'invariant nº5 tient et le prototype reste l'outil de production.
+**Acceptation prononcée le 06/09** — Éric a jugé le rendu sur cinq vidéos
+réelles, les deux formats qui comptent couverts chacun par une source vierge :
+équivalent en 16:9 au seul écart D-4 près, **meilleur en 9:16**. **L'invariant
+nº5 est levé** : l'app native est l'outil de production, le prototype reste un
+filet qu'on ne modifie pas. Voir ADR-0001, « Levé le 06/09 ».
+
+**Reste avant publication** — l'icône, seul verrou encore debout de la
+checklist de release. Le nom est arrêté.
 
 ---
 

@@ -1,11 +1,15 @@
 # Campagne de parité — prototype Python contre app native
 
-L'invariant nº5 dit que le prototype fait foi **tant que l'app native n'a pas
-prouvé un rendu équivalent sur vidéos réelles**. Ce fichier est la preuve en
-cours de constitution : ce qui a été comparé, comment, ce qui en est ressorti,
-et ce qui manque encore pour lever l'invariant.
+L'invariant nº5 disait que le prototype fait foi **tant que l'app native n'a
+pas prouvé un rendu équivalent sur vidéos réelles**. Ce fichier est cette
+preuve : ce qui a été comparé, comment, et ce qui en est ressorti.
 
-Tenu depuis le lot 7. Rejouable par `./Scripts/campagne_parite.sh`.
+> **L'invariant nº5 est levé depuis le 06/09.** L'app native est l'outil de
+> production ; le prototype reste installé comme filet, et jamais modifié.
+> Verdict et motif en fin de fichier.
+
+Tenu depuis le lot 7. Rejouable par `./Scripts/campagne_parite.sh` — la
+comparaison n'arbitre plus, mais elle reste l'outil du doute.
 
 ---
 
@@ -114,14 +118,29 @@ trois sources non vierges gardent une zone de sous-titres nette : c'est le logo
 qui ne s'y compare pas, puisque les deux moteurs posent le leur par-dessus un
 autre.
 
-## Ce qui manque pour lever l'invariant nº5
+## Le verdict — 06/09
 
-**Le jugement d'Éric.** Rien ne le remplace, et il n'a pas encore eu lieu. Les
-cinq vidéos sont comparées, les deux formats qui comptent sont couverts par une
-source vierge chacun, et les deux défauts trouvés sont corrigés.
+**L'invariant nº5 est levé. L'app native devient l'outil de production.**
+Décision d'Éric, sur ces cinq vidéos. Le motif, tel qu'il l'a posé :
 
-Tant que ce jugement n'a pas eu lieu, **l'invariant nº5 tient** : le prototype
-reste l'outil de production.
+- la **parité mesurable est close** — 1 567 répliques identiques, texte et
+  minutages, sur 44 fichiers ;
+- **en 9:16, le rendu natif est jugé meilleur** que celui du prototype : le
+  texte démesuré et les bandeaux en escalier ont disparu ;
+- **en 16:9, le seul écart restant est la divergence D-4**, un correctif du
+  fond qui sortait du cadre ;
+- la campagne a **trouvé deux défauts qu'aucun test de synthèse ne pouvait
+  produire** : la graisse du texte, et le montage vide en tête de piste.
+
+Ce dernier point justifie l'invariant rétrospectivement : il réclamait des
+vidéos réelles, et il a fallu des vidéos réelles pour faire sortir ce que le
+harnais ne sait pas fabriquer.
+
+**Ce qui reste après la levée** : le prototype demeure installé comme filet et
+n'est jamais modifié depuis ce dépôt ; la comparaison de parité reste au
+harnais, non plus comme arbitrage mais comme contrôle de non-régression ; et le
+registre des divergences continue d'être tenu — une divergence qui n'y figure
+pas est un bug, règle qui a servi deux fois le 06/09.
 
 ## Rejouer la campagne
 

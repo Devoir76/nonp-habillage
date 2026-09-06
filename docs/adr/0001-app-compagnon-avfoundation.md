@@ -452,6 +452,12 @@ Ils ne sont pas négociables et doivent être vérifiés par des tests :
 5. **Le prototype Python reste l'outil de production** tant que l'app native n'a
    pas prouvé un rendu équivalent sur des vidéos réelles.
 
+   > ⚠︎ **Levé le 06/09.** La preuve a été faite, et Éric a tranché : l'app
+   > native devient l'outil de production, le prototype reste installé comme
+   > filet. Motif et portée ci-dessous, « Levé le 06/09 — l'invariant nº5 ».
+   > L'interdiction de modifier le prototype depuis ce dépôt, elle, ne bouge
+   > pas.
+
 ## Architecture proposée
 
 ```
@@ -1082,13 +1088,62 @@ portait, et le harnais ne sait pas en fabriquer une qui le porte :
 vidéos réelles portent ce que les bancs d'essai ne savent pas fabriquer — c'est
 exactement ce que l'invariant nº5 dit depuis le début.
 
-### L'invariant nº5 n'est pas levé
+### La campagne a rendu son verdict le soir même
 
-La moitié mesurable est close : sur 44 fichiers de sous-titres réels, les 1 567
-répliques gravées sont identiques à celles du prototype, texte et minutages
-compris. La moitié qui se juge appartient à Éric, et elle n'a pas encore eu
-lieu. Cinq vidéos sont comparées, et les deux formats qui comptent ont chacun
-une source vierge.
+La moitié mesurable était close : sur 44 fichiers de sous-titres réels, les
+1 567 répliques gravées sont identiques à celles du prototype, texte et
+minutages compris. La moitié qui se juge appartenait à Éric. Cinq vidéos
+comparées, les deux formats qui comptent couverts chacun par une source vierge.
+Il a tranché — voir « Levé le 06/09 — l'invariant nº5 ».
 
-Une campagne qui trouve deux bugs le jour où on la lance n'a pas fini de
-servir. Le prototype reste l'outil de production.
+## Levé le 06/09 — l'invariant nº5
+
+**Le prototype Python n'est plus la référence. L'app native est l'outil de
+production.** Décision d'Éric, au vu de la campagne de parité.
+
+### Le motif, tel qu'il a été posé
+
+- **La parité mesurable est close.** 1 567 répliques gravées identiques —
+  texte et minutages — sur 44 fichiers de sous-titres réels.
+- **En 9:16, le rendu natif est jugé MEILLEUR** que celui du prototype. Le
+  texte démesuré et les bandeaux en escalier ont disparu. C'était l'objet même
+  de la décision nº5, prise le 23/08 sur un défaut constaté : la voir tenir sur
+  vidéos réelles ferme la question.
+- **En 16:9, le seul écart restant est la divergence D-4** — les espaces
+  latéraux élargissent le fond au lieu d'écarter le texte. Un correctif du
+  fond, qui sortait du cadre de la parité et y est resté.
+- **La campagne a trouvé deux défauts qu'aucun test de synthèse ne pouvait
+  produire** : la graisse du texte et le montage vide en tête de piste.
+
+Ce dernier point n'est pas un argument de plus : c'est la justification
+rétrospective de l'invariant lui-même. Il demandait des **vidéos réelles**, et
+il a fallu des vidéos réelles — deux fichiers rapportés d'un réseau social —
+pour faire sortir un défaut que le harnais ne savait pas fabriquer.
+
+### Ce que la levée change, et ce qu'elle ne change pas
+
+**Change** : l'app native grave les vidéos publiées. Le prototype ne tranche
+plus rien.
+
+**Ne change pas** :
+
+- **Le prototype reste installé, comme filet.** Une régression trouvée trop
+  tard doit pouvoir se contourner le jour même, pas la semaine suivante.
+- **On ne le modifie jamais depuis ce dépôt.** L'interdiction survit à la
+  levée, et pour une raison plus forte qu'avant : un filet qu'on retouche n'est
+  plus un filet. C'est désormais tout ce que l'invariant nº5 dit.
+- **La comparaison de parité reste au harnais.** Elle ne sert plus d'arbitrage
+  — plus rien n'est arbitré — mais de **contrôle de non-régression** : le jour
+  où une coupure de ligne changera sans qu'on l'ait voulu, c'est elle qui le
+  dira.
+- **Le registre des divergences reste tenu.** Une divergence qui n'y figure pas
+  est un bug ; la règle a servi deux fois le 06/09, elle n'a pas cessé de
+  valoir.
+
+### Ce qui reste avant une publication
+
+Le nom l'était déjà : « NONP Habillage » et `com.nonp.habillage`, décidés le
+24/08 (décision nº1) — seuls `CLAUDE.md` et la checklist parlaient encore d'un
+nom de travail, et ils ont été remis d'accord. Reste **l'icône**, absente
+depuis le premier jour : c'est le dernier verrou de la checklist de release, et
+elle n'a jamais dépendu que d'elle-même.

@@ -3,8 +3,14 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // ControlesParite.swift — comparaison directe avec la sortie du prototype.
 //
-// Le prototype Python reste l'outil de production (invariant nº5). Tant qu'il
-// fait foi, un portage ne se juge pas à l'œil : il se compare. `test_iso_rendu.py`
+// Le prototype Python a fait foi jusqu'au 06/09 ; depuis, l'app native est
+// l'outil de production et l'invariant nº5 est levé (ADR-0001, « Levé le
+// 06/09 »). **Cette rubrique ne disparaît pas pour autant, elle change de
+// rôle** : elle n'arbitre plus rien — il n'y a plus rien à arbitrer — mais elle
+// reste le contrôle de NON-RÉGRESSION du découpage. Le jour où une coupure de
+// ligne changera sans qu'on l'ait voulu, c'est elle qui le dira.
+//
+// Un portage ne se juge pas à l'œil : il se compare. `test_iso_rendu.py`
 // avait posé le précédent côté profils, avec 30 contrôles octet à octet ; c'est
 // la même exigence ici, appliquée aux cues.
 //

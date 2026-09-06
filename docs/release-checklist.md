@@ -12,28 +12,34 @@ c'est la moitié de cette checklist en moins.
 
 ---
 
-## Avant tout — les deux verrous du projet
+## Avant tout — le verrou qui reste
 
-Ces deux points ne sont pas des cases à cocher parmi d'autres. Tant que l'un
-des deux tient, **il n'y a pas de release publique.**
+Ce point n'est pas une case parmi d'autres. Tant qu'il tient, **il n'y a pas de
+release publique.**
 
-- [ ] **L'invariant nº5 est levé.** Le prototype fait foi tant que l'app n'a pas
-      prouvé un rendu équivalent sur vidéos réelles. La preuve se constitue dans
-      [`campagne-parite.md`](campagne-parite.md), et c'est **Éric qui tranche**.
-      Publier avant serait publier un outil dont on ne sait pas s'il remplace
-      celui qu'on utilise.
 - [ ] **L'icône existe.** `Resources/AppIcon.icns` est absent : la build le
       signale et pose une icône générique. Une application publiée sans icône
       se remarque immédiatement, dans le Dock comme dans le Finder.
-- [ ] **Le nom définitif est arrêté.** « NONP Habillage » est un nom de travail
-      (CLAUDE.md, en-tête). Il apparaît dans le bundle, dans l'identifiant, dans
-      l'archive et sur la page de téléchargement : le changer après coup casse
-      les liens et les installations existantes.
+
+Les deux autres sont tombés le 06/09 :
+
+- [x] **L'invariant nº5 est levé.** La campagne de parité a fait la preuve, et
+      Éric a tranché : l'app native est l'outil de production, le prototype
+      reste un filet. Motif dans [`campagne-parite.md`](campagne-parite.md) et
+      à l'ADR, « Levé le 06/09 ».
+- [x] **Le nom définitif est arrêté** : « NONP Habillage », identifiant
+      `com.nonp.habillage`, décidés le 24/08 (ADR-0001, décision nº1). Ils
+      apparaissent dans le bundle, dans l'archive et sur la page de
+      téléchargement — les changer après coup casserait les liens et les
+      installations existantes, et c'est bien pourquoi il fallait les fixer
+      avant.
 
 ## Séquence de release (ordre impératif)
 
 1. **Validation d'usage** de la version candidate, sur vidéos réelles, en 16:9
-   **et** en 9:16.
+   **et** en 9:16. Le prototype n'arbitre plus, mais il reste installé : sur un
+   doute de rendu, `./Scripts/campagne_parite.sh` remet les deux côte à côte en
+   une commande.
 2. **Harnais complet au vert**, corpus et prototype compris :
    `./Scripts/verifier.sh --corpus <dossier de .srt>` — aucun échec, et
    **aucune rubrique non exécutée** ; une rubrique sautée n'est pas une
