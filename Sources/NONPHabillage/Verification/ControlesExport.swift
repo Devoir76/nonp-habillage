@@ -40,6 +40,9 @@ enum ControlesExport {
         r.section("Export — entrées refusées")
         entreeInvalide(r)
 
+        r.section("Export — la cause annoncée est la vraie")
+        causeNommee(r, video: essai)
+
         r.section("Export — les fichiers d'origine ne sont jamais remplacés")
         jamaisParDessusUneEntree(r, video: essai)
 
@@ -174,10 +177,127 @@ enum ControlesExport {
             message = CommandeExport.message(pour: error)
         }
         r.verifier("un fichier qui n'est pas une vidéo est refusé", message != nil)
-        r.verifier("le message nomme les formats acceptés",
-                   message?.contains("MP4") == true || message?.contains("piste vidéo") == true)
+        r.verifier("le message dit que le contenu est illisible",
+                   message?.contains("illisible") == true)
         r.verifier("aucun fichier de sortie n'est créé",
                    !FileManager.default.fileExists(atPath: sortie.path))
+    }
+
+    // MARK: - La cause annoncée est la vraie
+
+    /// Le défaut du 06/09 : « format non pris en charge — convertissez la
+    /// vidéo » sortait pour TOUTE erreur de chargement. Un fichier introuvable,
+    /// un dossier, des droits refusés : l'utilisateur partait convertir un
+    /// fichier qui n'avait aucun problème de format, et le vrai problème
+    /// restait entier. Chaque cause doit désormais se nommer elle-même.
+    private static func causeNommee(_ r: Rapport, video: URL) {
+        let dossier = dossierTemporaire()
+        let sortie = dossier.appendingPathComponent("jamais-cause.mp4")
+
+        // --- De bout en bout : ce que le DISQUE dit du fichier -------------
+
+        let absent = dossier.appendingPathComponent("jamais-existe.mp4")
+        try? FileManager.default.removeItem(at: absent)
+        let mIntrouvable = messageDuRefus(video: absent, vers: sortie)
+        r.verifier("un fichier introuvable est annoncé introuvable",
+                   mIntrouvable?.contains("introuvable") == true)
+        r.verifier("un fichier introuvable ne parle pas de format",
+                   mIntrouvable?.contains("Convertissez") == false)
+
+        let mDossier = messageDuRefus(video: dossier, vers: sortie)
+        r.verifier("un dossier est annoncé comme un dossier",
+                   mDossier?.contains("dossier, pas une vidéo") == true)
+
+        let interdit = dossier.appendingPathComponent("interdit.mp4")
+        try? FileManager.default.removeItem(at: interdit)
+        try? FileManager.default.copyItem(at: video, to: interdit)
+        try? FileManager.default.setAttributes([.posixPermissions: 0],
+                                               ofItemAtPath: interdit.path)
+        // Sous un compte administrateur qui contourne les droits POSIX, le
+        // fichier resterait lisible : le contrôle ne vaut que si macOS refuse
+        // vraiment l'accès. Mieux vaut l'annoncer non exécuté que le faire
+        // passer pour éprouvé.
+        if FileManager.default.isReadableFile(atPath: interdit.path) {
+            r.nonExecute("droits refusés",
+                         motif: "ce compte lit le fichier malgré des droits à 000")
+        } else {
+            let mDroits = messageDuRefus(video: interdit, vers: sortie)
+            r.verifier("un accès refusé est annoncé comme un problème de droits",
+                       mDroits?.contains("droits") == true)
+            r.verifier("un accès refusé écarte explicitement le format",
+                       mDroits?.contains("format n'est pas en cause") == true)
+        }
+        try? FileManager.default.setAttributes([.posixPermissions: 0o644],
+                                               ofItemAtPath: interdit.path)
+        try? FileManager.default.removeItem(at: interdit)
+
+        let vide = dossier.appendingPathComponent("vide.mp4")
+        try? Data().write(to: vide)
+        let mVide = messageDuRefus(video: vide, vers: sortie)
+        r.verifier("un fichier de 0 octet est annoncé vide",
+                   mVide?.contains("vide") == true)
+        try? FileManager.default.removeItem(at: vide)
+
+        r.verifier("aucun de ces refus ne laisse de fichier de sortie",
+                   !FileManager.default.fileExists(atPath: sortie.path))
+
+        // --- La table de classement, cas par cas --------------------------
+        //
+        // Les deux codes qui comptent ne se distinguent QUE par leur numéro :
+        // un MKV et un MP4 tronqué échouent tous deux à `loadTracks`, l'un en
+        // −11828, l'autre en −11829, et ils appellent deux gestes opposés
+        // (convertir / retrouver une copie intacte). Fabriquer un MKV exigerait
+        // un outil tiers — invariant nº3 : c'est l'erreur qu'on fabrique, sur
+        // un fichier par ailleurs valide, pour que seul le classement soit
+        // éprouvé.
+        func refus(_ domaine: String, _ code: Int) -> RefusVideo {
+            DiagnosticVideo.refus(
+                video: video,
+                erreur: NSError(domain: domaine, code: code,
+                                userInfo: [NSLocalizedDescriptionKey: "raison de macOS"]))
+        }
+        r.egal("un format non reconnu (−11828) reste un problème de format",
+               refus(AVFoundationErrorDomain, -11828), .formatNonPrisEnCharge(video))
+        r.egal("un contenu illisible (−11829) n'est pas un problème de format",
+               refus(AVFoundationErrorDomain, -11829), .endommagee(video))
+        r.egal("un refus d'accès (Cocoa 257) est un problème de droits",
+               refus(NSCocoaErrorDomain, NSFileReadNoPermissionError),
+               .droitsRefuses(video))
+        r.egal("une erreur inconnue cite la raison réelle de macOS",
+               refus("UnDomaineInconnu", 42),
+               .chargementImpossible(video, "raison de macOS"))
+
+        // Le conseil de conversion est réservé au seul cas où il aide.
+        let tous: [RefusVideo] = [
+            .introuvable(video), .pasUnFichier(video), .droitsRefuses(video),
+            .vide(video), .endommagee(video), .chargementImpossible(video, "x"),
+        ]
+        r.verifier("seul un vrai problème de format conseille une conversion",
+                   tous.allSatisfy { !Textes.Export.message(pour: $0).contains("Convertissez") }
+                   && Textes.Export.message(pour: .formatNonPrisEnCharge(video))
+                        .contains("Convertissez"))
+
+        // Chaque message nomme le fichier en cause : sans cela, l'utilisateur
+        // qui en a déposé plusieurs ne sait pas lequel est refusé.
+        r.verifier("chaque refus nomme le fichier",
+                   (tous + [.formatNonPrisEnCharge(video)]).allSatisfy {
+                       Textes.Export.message(pour: $0).contains(video.lastPathComponent)
+                   })
+    }
+
+    /// Tente l'export et rend le message affiché en cas de refus — nil si
+    /// l'export a, contre toute attente, abouti.
+    private static func messageDuRefus(video: URL, vers sortie: URL) -> String? {
+        do {
+            _ = try bloquant {
+                try await ExportateurVideo().exporter(
+                    video: video, sousTitres: nil, profil: .bandeauColore,
+                    vers: sortie, progression: { _ in })
+            }
+            return nil
+        } catch {
+            return CommandeExport.message(pour: error)
+        }
     }
 
     // MARK: - Ne jamais écraser une entrée

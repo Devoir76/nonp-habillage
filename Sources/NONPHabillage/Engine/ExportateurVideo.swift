@@ -40,7 +40,10 @@ import AVFoundation
 import CoreMedia
 
 enum ErreurExport: Error {
-    case videoIllisible(URL)
+    /// La vidéo d'entrée n'a pas pu être ouverte. La CAUSE exacte voyage avec
+    /// l'erreur : sans elle, le message affiché ne pouvait que deviner, et il
+    /// devinait mal (voir `DiagnosticVideo`).
+    case videoRefusee(RefusVideo)
     case pisteVideoAbsente(URL)
     case lectureImpossible(String)
     case ecritureImpossible(String)
@@ -147,6 +150,10 @@ final class ExportateurVideo: @unchecked Sendable {
         // capture, l'erreur d'AVFoundation remonterait telle quelle : en
         // anglais, technique, et sans marche à suivre. L'ADR §3 exige le
         // contraire (« message explicite assorti d'une marche à suivre »).
+        //
+        // Mais un message explicite qui nomme la MAUVAISE cause ne vaut pas
+        // mieux : le diagnostic établit laquelle avant que le texte ne se
+        // choisisse. Un fichier absent n'est pas un problème de format.
         let pistesVideo: [AVAssetTrack]
         let pistesAudio: [AVAssetTrack]
         let dureeTotale: CMTime
@@ -155,7 +162,8 @@ final class ExportateurVideo: @unchecked Sendable {
             pistesAudio = try await asset.loadTracks(withMediaType: .audio)
             dureeTotale = try await asset.load(.duration)
         } catch {
-            throw ErreurExport.videoIllisible(video)
+            throw ErreurExport.videoRefusee(
+                DiagnosticVideo.refus(video: video, erreur: error))
         }
         guard let pisteVideo = pistesVideo.first else {
             throw ErreurExport.pisteVideoAbsente(video)

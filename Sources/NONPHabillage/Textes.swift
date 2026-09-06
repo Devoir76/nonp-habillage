@@ -567,10 +567,76 @@ enum Textes {
         /// Formats d'entrée : MP4, MOV, M4V (ADR §3). Un fichier refusé doit
         /// produire un message explicite assorti d'une marche à suivre — jamais
         /// un échec silencieux ni un plantage.
+        ///
+        /// **Réservé au vrai problème de format.** Ce texte a longtemps servi
+        /// de fourre-tout : un fichier introuvable, un dossier, des droits
+        /// refusés recevaient tous ce conseil de conversion, qui ne réglait
+        /// rien. Chaque cause a désormais son message — voir `RefusVideo`.
         static func formatNonPrisEnCharge(_ nom: String) -> String {
             "Le fichier « \(nom) » n'est pas pris en charge par le moteur vidéo de "
             + "macOS. Les formats acceptés sont MP4, MOV et M4V. Convertissez la "
             + "vidéo dans l'un de ces formats, puis réessayez."
+        }
+
+        static func videoIntrouvable(_ nom: String) -> String {
+            "Le fichier « \(nom) » est introuvable. Il a sans doute été déplacé, "
+            + "renommé ou supprimé depuis. Retrouvez-le, puis déposez-le à nouveau."
+        }
+
+        static func pasUnFichier(_ nom: String) -> String {
+            "« \(nom) » est un dossier, pas une vidéo. Ouvrez-le et choisissez le "
+            + "fichier à habiller."
+        }
+
+        static func droitsRefuses(_ nom: String) -> String {
+            "macOS refuse l'accès au fichier « \(nom) ». Le format n'est pas en "
+            + "cause : ce sont les droits. Vérifiez-les dans le Finder (Lire les "
+            + "informations), ou copiez la vidéo dans un dossier qui vous appartient."
+        }
+
+        static func videoVide(_ nom: String) -> String {
+            "Le fichier « \(nom) » est vide : il ne contient aucune donnée. La "
+            + "copie ou le téléchargement qui l'a produit ne s'est probablement pas "
+            + "terminé."
+        }
+
+        /// Ce que macOS signale ici, c'est un contenu qu'il n'arrive pas à
+        /// analyser : un fichier tronqué, un fichier corrompu, ou un fichier
+        /// qui n'est pas du tout ce que son extension annonce. Le message ne
+        /// tranche pas entre les trois — il n'en sait rien — mais il écarte
+        /// explicitement la conversion, qui ne réglerait aucun des trois.
+        static func videoEndommagee(_ nom: String) -> String {
+            "Le contenu du fichier « \(nom) » est illisible : il est incomplet, "
+            + "endommagé, ou ce n'est pas la vidéo que son nom annonce. Le convertir "
+            + "n'y changerait rien. Récupérez une copie intacte du fichier."
+        }
+
+        /// Le dernier recours. Il cite la raison rendue par macOS **telle
+        /// quelle** : une raison technique vaut mieux qu'une cause inventée.
+        static func chargementImpossible(_ nom: String, _ raison: String) -> String {
+            "Le fichier « \(nom) » n'a pas pu être ouvert. macOS indique : "
+            + "\(raison). Si la vidéo est rangée dans un service de synchronisation "
+            + "ou sur un disque distant, vérifiez qu'elle est bien téléchargée sur "
+            + "cet ordinateur."
+        }
+
+        static func message(pour refus: RefusVideo) -> String {
+            switch refus {
+            case .introuvable(let url):
+                return videoIntrouvable(url.lastPathComponent)
+            case .pasUnFichier(let url):
+                return pasUnFichier(url.lastPathComponent)
+            case .droitsRefuses(let url):
+                return droitsRefuses(url.lastPathComponent)
+            case .vide(let url):
+                return videoVide(url.lastPathComponent)
+            case .formatNonPrisEnCharge(let url):
+                return formatNonPrisEnCharge(url.lastPathComponent)
+            case .endommagee(let url):
+                return videoEndommagee(url.lastPathComponent)
+            case .chargementImpossible(let url, let raison):
+                return chargementImpossible(url.lastPathComponent, raison)
+            }
         }
 
         static func pisteVideoAbsente(_ nom: String) -> String {
@@ -593,8 +659,8 @@ enum Textes {
 
         static func message(pour erreur: ErreurExport) -> String {
             switch erreur {
-            case .videoIllisible(let url):
-                return formatNonPrisEnCharge(url.lastPathComponent)
+            case .videoRefusee(let refus):
+                return message(pour: refus)
             case .pisteVideoAbsente(let url):
                 return pisteVideoAbsente(url.lastPathComponent)
             case .lectureImpossible(let raison):

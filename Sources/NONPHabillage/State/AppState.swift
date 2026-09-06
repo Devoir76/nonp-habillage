@@ -206,9 +206,19 @@ final class AppState: ObservableObject {
                 dureeVideo = duree
                 erreur = nil
                 await preparerFonds(jeton: jeton)
+            } catch ErreurVideo.pisteVideoAbsente {
+                guard chargementCourant == jeton else { return }
+                erreur = Textes.Export.pisteVideoAbsente(url.lastPathComponent)
             } catch {
                 guard chargementCourant == jeton else { return }
-                erreur = Textes.Export.formatNonPrisEnCharge(url.lastPathComponent)
+                // Le dépôt d'une vidéo est la porte d'entrée de l'application :
+                // c'est ici que le message fourre-tout faisait le plus de dégâts.
+                // Un fichier déplacé depuis, un dossier déposé par mégarde, un
+                // fichier dont macOS refuse l'accès s'annonçaient tous « format
+                // non pris en charge », et l'utilisateur partait convertir une
+                // vidéo qui n'avait rien.
+                erreur = Textes.Export.message(
+                    pour: DiagnosticVideo.refus(video: url, erreur: error))
             }
         }
     }
