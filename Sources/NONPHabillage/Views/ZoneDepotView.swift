@@ -16,6 +16,11 @@ struct ZoneDepotView: View {
 
     let titre: String
     let sousTitre: String
+    /// L'infobulle de la zone. Obligatoire, comme pour les réglages du volet :
+    /// une zone de dépôt est le premier contrôle que l'on rencontre, et c'est
+    /// là que les deux promesses du produit se disent — le fichier d'origine
+    /// n'est jamais touché, et aucun mot des sous-titres ne bouge.
+    let aide: String
     let symbole: String
     let typesAcceptes: [UTType]
     /// Décrit le fichier déjà chargé, s'il y en a un.
@@ -69,6 +74,7 @@ struct ZoneDepotView: View {
         .onDrop(of: [.fileURL], isTargeted: $survole) { fournisseurs in
             recevoir(fournisseurs)
         }
+        .help(aide)
     }
 
     private func recevoir(_ fournisseurs: [NSItemProvider]) -> Bool {

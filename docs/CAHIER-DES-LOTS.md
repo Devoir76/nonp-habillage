@@ -199,8 +199,18 @@ laissait passer un AVI par la ligne de commande : une seule règle vaut désorma
 pour les deux portes. Voir ADR-0001, « Tranché le 06/09 — ce qu'un refus doit
 dire ».
 
+**Fait le 06/09** — dette technique résorbée (plus un seul avertissement à la
+compilation, sur un `.build` effacé), « Fond de l'aperçu » allégé de son nom,
+première campagne de parité sur vidéos réelles ([`campagne-parite.md`](campagne-parite.md)),
+[`release-checklist.md`](release-checklist.md), `README.md` public, et une
+infobulle par réglage — obligatoire au compilateur, éprouvée par le harnais.
+
 **Acceptation** — Éric juge le rendu indiscernable à l'usage en 16:9 **et** en
 9:16 ; la checklist de release est déroulable de bout en bout.
+
+**Reste à faire** — le jugement d'Éric sur la campagne, et les sources vierges
+qui lui manquent (aucun 16:9 vierge sur la machine de travail). Tant qu'il n'a
+pas eu lieu, l'invariant nº5 tient et le prototype reste l'outil de production.
 
 ---
 

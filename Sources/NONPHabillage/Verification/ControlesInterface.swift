@@ -77,6 +77,9 @@ enum ControlesInterface {
         r.section("Interface — hauteur constante : une case, la valeur de « Lignes maximum »")
         MainActor.assumeIsolated { hauteurConstante(r) }
 
+        r.section("Interface — chaque réglage a son aide, et elle apprend quelque chose")
+        aideDesReglages(r)
+
         r.section("Interface — fond de l'aperçu : le contrôle se dit lui-même")
         fondDeLApercu(r)
         MainActor.assumeIsolated { dispositionBarreDeChoix(r) }
@@ -485,6 +488,85 @@ enum ControlesInterface {
                    !Textes.Interface.hauteurFixeInactive.isEmpty
                    && Textes.Interface.hauteurFixeInactive
                        != Textes.Interface.hauteurFixeActive(2))
+    }
+
+    // MARK: - L'aide des réglages
+
+    /// Un libellé nomme un réglage ; il ne dit pas ce qu'on y gagne.
+    ///
+    /// Que chaque réglage AIT une aide, le compilateur s'en charge : les
+    /// constructeurs de contrôles en réclament une, et un réglage ajouté sans
+    /// la sienne ne compile pas. Ce qu'il ne peut pas exiger, c'est qu'elle
+    /// serve à quelque chose — et c'est là-dessus que porte cette rubrique.
+    private static func aideDesReglages(_ r: Rapport) {
+        let aides = Textes.Aide.toutes
+        r.egal("chaque réglage du volet et chaque zone de dépôt a son aide",
+               aides.count, 18)
+
+        r.verifier("aucune n'est vide",
+                   aides.allSatisfy { !$0.texte.trimmingCharacters(
+                       in: .whitespacesAndNewlines).isEmpty })
+
+        // Deux réglages qui reçoivent la même phrase sont deux réglages dont
+        // l'un des deux n'a pas été écrit.
+        let uniques = Set(aides.map(\.texte))
+        r.egal("aucune n'est le copier-coller d'une autre", uniques.count, aides.count)
+
+        // Le survol doit APPRENDRE quelque chose, et cela se joue aux premiers
+        // mots : une aide qui S'OUVRE sur son propre libellé commence par ce
+        // qu'on savait déjà. Employer le mot plus loin est légitime — « la
+        // taille exacte », « les premières polices » —, l'ouvrir dessus ne
+        // l'est pas.
+        //
+        // L'article de tête ne compte pas : « La couleur du fond… » sous un
+        // libellé « Couleur du fond » est exactement le cas visé.
+        func ouvertureNue(_ texte: String) -> String {
+            var t = texte.lowercased()
+            for article in ["les ", "le ", "la ", "l'", "un ", "une "]
+            where t.hasPrefix(article) {
+                t.removeFirst(article.count); break
+            }
+            return t
+        }
+        let libelles: [String] = [
+            Textes.Interface.taille, Textes.Interface.police,
+            Textes.Interface.couleurTexte, Textes.Interface.couleurContour,
+            Textes.Interface.lignesMax, Textes.Interface.bandeauActif,
+            Textes.Interface.modeBandeau, Textes.Interface.couleurBandeau,
+            Textes.Interface.hauteurFixe, Textes.Interface.margeBasse,
+        ]
+        let repetitions = zip(aides.prefix(libelles.count), libelles)
+            .filter { ouvertureNue($0.0.texte).hasPrefix($0.1.lowercased()) }
+            .map(\.1)
+        r.egal("aucune ne s'ouvre en répétant son libellé", repetitions, [])
+
+        // Assez longue pour dire quelque chose, assez courte pour être lue au
+        // survol — une infobulle qu'on ne finit pas ne sert personne.
+        let tropCourtes = aides.filter { $0.texte.count < 60 }.map(\.nom)
+        let tropLongues = aides.filter { $0.texte.count > 240 }.map(\.nom)
+        r.egal("aucune n'est trop courte pour apprendre quoi que ce soit",
+               tropCourtes, [])
+        r.egal("aucune n'est trop longue pour être lue au survol", tropLongues, [])
+
+        r.verifier("chacune est une phrase, ponctuation comprise",
+                   aides.allSatisfy { $0.texte.hasSuffix(".") })
+
+        // Les deux promesses du produit se disent là où l'on dépose un
+        // fichier, pas dans un manuel que personne n'ouvrira.
+        r.verifier("le dépôt de la vidéo promet que l'original n'est pas touché",
+                   Textes.Aide.depotVideo.contains("jamais modifiée"))
+        r.verifier("le dépôt des sous-titres porte l'invariant nº1 — aucun mot "
+                   + "n'est modifié",
+                   Textes.Aide.depotSousTitres.contains("Aucun mot"))
+
+        // Le piège du format vertical, nommé là où il se tend.
+        r.verifier("l'aide de la taille du logo dit que le pourcentage porte "
+                   + "sur la hauteur",
+                   Textes.Aide.tailleLogo.contains("HAUTEUR"))
+        r.verifier("l'aide de la taille du texte prévient qu'un format change "
+                   + "le résultat",
+                   Textes.Aide.taille.contains("16:9")
+                   && Textes.Aide.taille.contains("9:16"))
     }
 
     // MARK: - Fond de l'aperçu
@@ -1326,6 +1408,7 @@ enum ControlesInterface {
     private static func lignesDeLaColonne() -> [(String, AnyView)] {
         typealias Volet = PanneauPersonnaliserView
         let T = Textes.Interface.self
+        let A = Textes.Aide.self
 
         var lignes: [(String, AnyView)] = []
         // Plus de titre « Profil » : la section a quitté le volet le 28/08 pour
@@ -1337,40 +1420,40 @@ enum ControlesInterface {
             (T.ajoutezDesSousTitres, AnyView(Text(T.ajoutezDesSousTitres)
                 .font(.caption).fixedSize(horizontal: false, vertical: true))),
             (T.taille, AnyView(Volet.choixSegmente(
-                T.taille, selection: .constant(TailleNommee.allCases[0])) {
+                T.taille, aide: A.taille, selection: .constant(TailleNommee.allCases[0])) {
                     ForEach(TailleNommee.allCases) { t in
                         Text(T.nomTaille(t)).tag(t)
                     }
                 })),
             (T.police, AnyView(Volet.choixPolice(
-                selection: .constant(ProfilHabillage.neutre.police)))),
+                aide: A.police, selection: .constant(ProfilHabillage.neutre.police)))),
             (T.couleurTexte, AnyView(Volet.selecteurCouleur(
-                T.couleurTexte, valeur: .constant(ProfilHabillage.neutre.couleurTexte)))),
+                T.couleurTexte, aide: A.couleurTexte, valeur: .constant(ProfilHabillage.neutre.couleurTexte)))),
             (T.couleurContour, AnyView(Volet.selecteurCouleur(
-                T.couleurContour, valeur: .constant(ProfilHabillage.neutre.contourCouleur)))),
+                T.couleurContour, aide: A.couleurContour, valeur: .constant(ProfilHabillage.neutre.contourCouleur)))),
             (T.lignesMax, AnyView(Volet.pasAPas(
-                T.lignesMax, valeur: .constant(2), de: 1, a: 4))),
+                T.lignesMax, aide: A.lignesMax, valeur: .constant(2), de: 1, a: 4))),
             (T.bandeauActif, AnyView(Volet.interrupteur(
-                T.bandeauActif, actif: .constant(true)))),
+                T.bandeauActif, aide: A.bandeauActif, actif: .constant(true)))),
             (T.modeBandeau, AnyView(Volet.choixSegmente(
-                T.modeBandeau, selection: .constant(ModeBandeau.pleineLargeur)) {
+                T.modeBandeau, aide: A.modeBandeau, selection: .constant(ModeBandeau.pleineLargeur)) {
                     Text(T.modePleineLargeur).tag(ModeBandeau.pleineLargeur)
                     Text(T.modeAjuste).tag(ModeBandeau.ajuste)
                 })),
             (T.couleurBandeau, AnyView(Volet.selecteurCouleur(
-                T.couleurBandeau, valeur: .constant(ProfilHabillage.neutre.bandeauCouleur)))),
+                T.couleurBandeau, aide: A.couleurBandeau, valeur: .constant(ProfilHabillage.neutre.bandeauCouleur)))),
             (T.hauteurFixe, AnyView(Volet.interrupteur(
-                T.hauteurFixe, actif: .constant(true)))),
+                T.hauteurFixe, aide: A.hauteurFixe, actif: .constant(true)))),
             (T.margeBasse, AnyView(Volet.curseurPourcent(
-                T.margeBasse, valeur: .constant(0.10), de: 0, a: 0.30))),
+                T.margeBasse, aide: A.margeBasse, valeur: .constant(0.10), de: 0, a: 0.30))),
             (T.positionLogo, AnyView(Volet.coinsDuLogo(
-                position: .constant(.coin(.basDroit))))),
+                aide: A.positionLogo, position: .constant(.coin(.basDroit))))),
             (T.logoRond, AnyView(Volet.interrupteur(
-                T.logoRond, actif: .constant(true)))),
+                T.logoRond, aide: A.logoRond, actif: .constant(true)))),
             (T.tailleLogo, AnyView(Volet.curseurPourcent(
-                T.tailleLogo, valeur: .constant(0.10), de: 0.01, a: 0.50))),
+                T.tailleLogo, aide: A.tailleLogo, valeur: .constant(0.10), de: 0.01, a: 0.50))),
             (T.opaciteLogo, AnyView(Volet.curseurPourcent(
-                T.opaciteLogo, valeur: .constant(1), de: 0, a: 1))),
+                T.opaciteLogo, aide: A.opaciteLogo, valeur: .constant(1), de: 0, a: 1))),
         ]
         return lignes
     }

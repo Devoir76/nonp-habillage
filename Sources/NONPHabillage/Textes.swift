@@ -109,6 +109,116 @@ enum Textes {
 
     // MARK: - Interface (lot 5)
 
+    /// Les infobulles des réglages.
+    ///
+    /// ── Pourquoi une famille à part ──────────────────────────────────────
+    ///
+    /// Un libellé nomme un réglage ; il ne dit pas ce qu'on y gagne, ni quand
+    /// il compte. « Marge basse » se comprend, mais rien n'annonce qu'une
+    /// vidéo destinée à un réseau social a besoin de la relever pour passer
+    /// au-dessus des commandes de lecture. C'est ce genre de phrase qui vit
+    /// ici, et nulle part ailleurs.
+    ///
+    /// **Chaque réglage du volet en a une, et ce n'est pas une convention :
+    /// c'est le compilateur qui l'exige.** Les constructeurs de contrôles —
+    /// `choixSegmente`, `interrupteur`, `curseurPourcent`… — prennent une aide
+    /// obligatoire. Un réglage ajouté sans la sienne ne compile pas. Une règle
+    /// que le compilateur tient ne se relâche pas au bout de six mois.
+    ///
+    /// Elles ne répètent jamais le libellé : le survol doit apprendre quelque
+    /// chose, sinon il fait perdre du temps à celui qui a pris la peine de
+    /// s'arrêter. Un contrôle le vérifie.
+    enum Aide {
+
+        // ── Sous-titres ──────────────────────────────────────────────────
+
+        static let taille =
+            "Quatre apparences plutôt qu'un pourcentage : le moteur en déduit "
+            + "la taille exacte selon le format de la vidéo. Une même valeur ne "
+            + "donne pas la même chose en 16:9 et en 9:16."
+        static let police =
+            "Les premières polices de la liste sont livrées avec macOS : un "
+            + "profil qui les emploie rend la même chose sur une autre machine. "
+            + "Les suivantes n'existent peut-être que sur la vôtre."
+        static let couleurTexte =
+            "La couleur des lettres. Regardez le plan le plus clair et le plus "
+            + "sombre de la vidéo avant de choisir : c'est là que la lisibilité "
+            + "se perd."
+        static let couleurContour =
+            "Le liseré qui détache les lettres de l'image. C'est lui qui sauve "
+            + "un sous-titre posé sur un fond clair, quand il n'y a pas de "
+            + "bandeau derrière."
+        static let lignesMax =
+            "Au-delà, une réplique trop longue est redécoupée en plusieurs, dont "
+            + "les minutages se répartissent au prorata. Rien n'est retiré du "
+            + "texte : il est seulement montré en plusieurs fois."
+
+        // ── Bandeau ──────────────────────────────────────────────────────
+
+        static let bandeauActif =
+            "Le fond posé derrière le texte. Il masque aussi un sous-titre déjà "
+            + "incrusté dans la vidéo, ce qu'un simple contour ne fait pas."
+        static let modeBandeau =
+            "Pleine largeur : une bande constante, qui ne saute pas d'une "
+            + "réplique à l'autre. Ajusté : une pastille à la longueur de chaque "
+            + "ligne, plus discrète mais mouvante."
+        static let couleurBandeau =
+            "Le sélecteur porte aussi l'opacité : un fond à demi transparent "
+            + "laisse deviner l'image derrière sans que le texte y perde."
+        static let hauteurFixe =
+            "La bande garde la même hauteur, qu'une réplique tienne sur une "
+            + "ligne ou sur deux. Sans cela, elle grandit et rétrécit au fil du "
+            + "texte."
+        static let margeBasse =
+            "La distance entre le bas de l'image et le bas du texte. À relever "
+            + "pour une vidéo destinée à un réseau social, où le bas de l'écran "
+            + "est occupé par les commandes de lecture."
+
+        // ── Logo ─────────────────────────────────────────────────────────
+
+        static let choisirLogo =
+            "Une image PNG, JPEG, HEIC ou TIFF. Un PNG à fond transparent se "
+            + "pose sans rectangle autour."
+        static let retirerLogo =
+            "Retire le logo de l'habillage. Le fichier n'est pas touché, et les "
+            + "autres réglages restent en place."
+        static let positionLogo =
+            "Les quatre coins en un clic. Pour un autre emplacement, faites "
+            + "glisser le logo directement dans l'aperçu."
+        static let logoRond =
+            "Découpe l'image en cercle au moment de la graver. Inutile si le "
+            + "fichier est déjà détouré ; réversible à tout moment."
+        static let tailleLogo =
+            "En pourcentage de la HAUTEUR de la vidéo, jamais de sa largeur : "
+            + "le logo garde la même présence en 16:9 et en 9:16."
+        static let opaciteLogo =
+            "Un logo à demi transparent se fait oublier sur l'image sans "
+            + "disparaître. À 100 %, il est posé tel quel."
+
+        // ── Zones de dépôt ───────────────────────────────────────────────
+
+        static let depotVideo =
+            "La vidéo à habiller. Elle n'est jamais modifiée : l'habillage part "
+            + "dans un nouveau fichier, que vous nommez à l'enregistrement."
+        static let depotSousTitres =
+            "Le fichier de sous-titres à graver. Aucun mot n'en sera modifié — "
+            + "ni orthographe, ni ponctuation, ni tournure."
+
+        /// Toutes les aides, pour que le harnais les éprouve ensemble.
+        static let toutes: [(nom: String, texte: String)] = [
+            ("taille", taille), ("police", police),
+            ("couleur du texte", couleurTexte), ("couleur du contour", couleurContour),
+            ("lignes maximum", lignesMax), ("bandeau", bandeauActif),
+            ("mode du bandeau", modeBandeau), ("couleur du bandeau", couleurBandeau),
+            ("hauteur constante", hauteurFixe), ("marge basse", margeBasse),
+            ("choisir un logo", choisirLogo), ("retirer le logo", retirerLogo),
+            ("position du logo", positionLogo), ("logo rond", logoRond),
+            ("taille du logo", tailleLogo), ("opacité du logo", opaciteLogo),
+            ("dépôt de la vidéo", depotVideo),
+            ("dépôt des sous-titres", depotSousTitres),
+        ]
+    }
+
     enum Interface {
 
         // Écran d'accueil

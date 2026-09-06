@@ -306,6 +306,7 @@ struct BarreEntrees: View {
             ZoneDepotView(
                 titre: Textes.Interface.deposezVotreVideo,
                 sousTitre: Textes.Interface.formatsAcceptes,
+                aide: Textes.Aide.depotVideo,
                 symbole: "film",
                 typesAcceptes: UTType.videosAcceptees,
                 fichierCharge: descriptionVideo,
@@ -315,6 +316,7 @@ struct BarreEntrees: View {
             ZoneDepotView(
                 titre: Textes.Interface.sousTitresFacultatifs,
                 sousTitre: "SRT ou VTT",
+                aide: Textes.Aide.depotSousTitres,
                 symbole: "captions.bubble",
                 typesAcceptes: UTType.sousTitresAcceptes,
                 fichierCharge: descriptionSousTitres,
