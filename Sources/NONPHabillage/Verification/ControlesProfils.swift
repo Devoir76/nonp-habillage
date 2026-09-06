@@ -177,6 +177,38 @@ enum ControlesProfils {
         r.verifier("elle nomme le format de référence de la conversion",
                    m.contains("16:9 1080p"))
 
+        // Le message tient sur plusieurs lignes — il explique ce qu'il a fait,
+        // c'est ce qu'on lui demande. La ligne de commande le met en page pour
+        // qu'il ne déborde pas dans la marge ; cette mise en page ne doit RIEN
+        // en retirer. Un résumé de conversion serait une conversion à moitié
+        // dite.
+        // Ce que la mise en page a le droit d'ajouter : un repère de tête et de
+        // l'indentation. Rien d'autre, et surtout rien en moins — on retire les
+        // deux, et il doit rester le message mot pour mot.
+        let enLignes = Textes.Profil.migrationEnLignes(m)
+        let repere = "⚠︎ "
+        r.egal("la mise en page du terminal n'en retire pas un mot",
+               enLignes.split(separator: "\n")
+                   .map { ligne -> String in
+                       var nue = ligne.trimmingCharacters(in: .whitespaces)
+                       // `removeFirst(3)` mangeait une lettre : « ⚠︎ » est un
+                       // seul caractère Swift, sélecteur de variante compris.
+                       if nue.hasPrefix(repere) { nue.removeFirst(repere.count) }
+                       return nue
+                   }
+                   .joined(separator: "\n"),
+               m)
+        r.verifier("les lignes suivantes s'alignent sous la première",
+                   enLignes.split(separator: "\n").dropFirst()
+                       .allSatisfy { $0.hasPrefix("     ") })
+
+        // Et un profil déjà en v2 ne s'annonce pas converti : une annonce sans
+        // conversion userait l'attention qu'on garde pour les vraies.
+        let v2 = try? ProfilJSON.decoderDetaille(
+            ProfilJSON.encoder(.bandeauColore, cheminLogo: nil), base: nil)
+        r.verifier("un profil déjà en version 2 ne s'annonce pas converti",
+                   v2 != nil && v2?.migration == nil)
+
         // Mode « pleine-largeur » : conversion exacte, sans convention.
         let pleine = """
         {"schema_version": 1, "nom": "P",

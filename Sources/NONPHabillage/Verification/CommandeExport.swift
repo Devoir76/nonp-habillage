@@ -54,6 +54,7 @@ enum CommandeExport {
         // préréglage de l'app en serait une transcription — donc une source de
         // divergence, et précisément celle qu'on cherche à mesurer.
         var profil = ProfilHabillage.bandeauColore
+        var messageMigration: String? = nil
         if let p = args.firstIndex(of: "--profil"), p + 1 < args.count {
             let valeur = args[p + 1]
             switch valeur.lowercased() {
@@ -61,7 +62,16 @@ enum CommandeExport {
             case "nonp":   profil = .bandeauColore
             default:
                 do {
-                    profil = try ProfilJSON.lire(URL(fileURLWithPath: valeur))
+                    // `lireDetaille`, et non `lire` : la seconde rend le profil
+                    // converti sans dire qu'elle l'a converti. En interface, le
+                    // message est affiché ; ici il se perdait, et un profil v1
+                    // passait en v2 en silence — l'invariant nº6 l'interdit,
+                    // une conversion silencieuse étant une modification
+                    // silencieuse.
+                    let lecture = try ProfilJSON.lireDetaille(
+                        URL(fileURLWithPath: valeur))
+                    profil = lecture.profil
+                    if let migration = lecture.migration { messageMigration = migration }
                 } catch let e as ErreurProfil {
                     print("✗ Profil refusé : "
                           + Textes.Profil.refus(
@@ -134,6 +144,9 @@ enum CommandeExport {
         print("  logo        : \(descriptionLogo)")
         print("  usage       : \(usage(sousTitres: sousTitres, profil: profil))")
         print("  profil      : \(profil.nom)")
+        if let messageMigration {
+            print(Textes.Profil.migrationEnLignes(messageMigration))
+        }
         print("  sortie      : \(sortie.path)")
         print("")
 

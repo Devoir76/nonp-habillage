@@ -488,6 +488,22 @@ enum Textes {
         // suit se dit à l'utilisateur, à chaque profil converti.
 
         static let migrationTitre = "Profil converti de la version 1 à la version 2."
+
+        /// La conversion, telle qu'une sortie de terminal la montre.
+        ///
+        /// Le message de migration tient sur plusieurs lignes — il explique ce
+        /// qu'il a fait, c'est ce qu'on lui demande. Recollé tel quel derrière
+        /// une étiquette, il débordait dans la marge et sa suite paraissait
+        /// venir d'ailleurs. Chaque ligne est donc alignée sous la première.
+        ///
+        /// Aucun mot n'est retiré au passage : c'est une mise en page, pas un
+        /// résumé. Un résumé de conversion serait une conversion à moitié dite.
+        static func migrationEnLignes(_ message: String) -> String {
+            message.split(separator: "\n", omittingEmptySubsequences: false)
+                .enumerated()
+                .map { $0.offset == 0 ? "  ⚠︎ \($0.element)" : "     \($0.element)" }
+                .joined(separator: "\n")
+        }
         static func migrationPleineLargeur(_ pourcent: Double) -> String {
             migrationTitre + "\n"
             + "« marge_interieure_pct_largeur » (\(ProfilJSON.lisible(pourcent)) %) "

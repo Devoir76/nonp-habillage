@@ -1147,3 +1147,27 @@ Le nom l'était déjà : « NONP Habillage » et `com.nonp.habillage`, décidés
 nom de travail, et ils ont été remis d'accord. Reste **l'icône**, absente
 depuis le premier jour : c'est le dernier verrou de la checklist de release, et
 elle n'a jamais dépendu que d'elle-même.
+
+## Tranché le 06/09 — l'invariant nº6 remis à jour
+
+L'invariant nº6 disait encore « le schéma reste en version 1 » alors que la
+décision nº6 l'avait passé en v2 au lot 6 et que l'app écrit de la v2 depuis.
+Un garde-fou qui contredit le code n'en est plus un : la prochaine session lit
+une règle fausse. Réécrit par Éric, et il dit désormais trois choses de plus.
+
+**Version courante : 2.** Le fait, écrit là où on le cherche.
+
+**Les profils v1 sont lus et convertis, et la conversion dit toujours ce
+qu'elle a fait** — « une conversion silencieuse est une modification
+silencieuse ». C'est l'invariant nº1 étendu du texte des sous-titres aux
+réglages : ce qui entre ne se transforme pas sans qu'on le dise. Le message
+existait et l'interface l'affichait ; **la ligne de commande le perdait**,
+depuis l'ajout de `--profil <fichier.json>` la veille — elle appelait `lire`,
+qui rend le profil converti sans dire qu'il l'a été, au lieu de `lireDetaille`.
+Un profil v1 y passait en v2 en silence. Corrigé le jour même.
+
+**La fenêtre de remaniement se ferme à la première diffusion.** Tant que rien
+n'a été distribué, une version peut encore bouger ; après, tout changement
+impose une version nouvelle et un chemin de migration. C'est ce qui rend la
+publication irréversible du point de vue du contrat, et c'est une raison de
+plus de ne pas la précipiter.
