@@ -41,6 +41,8 @@ Cette moitié-là est close, et elle se rejoue à chaque exécution de
 
 ## Ce que la comparaison d'images a trouvé
 
+Deux défauts, et le second n'aurait pas pu sortir d'un banc d'essai.
+
 **Le texte n'était pas gras.** Le prototype grave en gras — le champ `Bold` de
 son style ASS vaut `-1`, en dur, pour les deux styles qu'il écrit — et l'app
 gravait en romain. Aucun champ du profil ne porte cette graisse, et le registre
@@ -61,6 +63,27 @@ sur une romaine.**
 Le gain mesuré n'a pas bougé d'un point : c'est la mesure qui était faite sur
 la mauvaise graisse, pas le raisonnement qui était faux.
 
+**Un montage vide en tête était compté comme de l'image.** Certains MP4 ouvrent
+leurs pistes sur du rien : 80 ms et 66 ms sur les deux sources vierges du
+06/09. L'écart se payait deux fois — le fichier produit sortait deux images
+plus long que sa source là où le prototype rendait le même compte, et les
+minutages des sous-titres, qui comptent depuis la première image, faisaient
+paraître chaque réplique d'autant plus tôt qu'elle.
+
+Le vide ne se lit nulle part simplement : `timeRange` d'une telle piste
+commence à zéro et le compte dans sa durée. Il faut aller aux **segments**, où
+il apparaît pour ce qu'il est. Trois pièces au correctif, et il fallait les
+trois : borner la lecture à la première image, ouvrir la session d'écriture à
+la même seconde, et chercher les sous-titres à l'instant diminué du vide. Seuls
+les segments **de tête** sont retirés : un vide au milieu d'une piste est un
+trou voulu, et le refermer raccourcirait la vidéo de quelqu'un.
+
+**C'est l'argument de la campagne en une ligne.** Aucune vidéo d'essai ne
+portait ce défaut, et le harnais ne sait pas en fabriquer une qui le porte :
+`AVAssetExportSession` aplatit un montage vide en images noires, même en
+passthrough. Il aura fallu deux fichiers rapportés d'un réseau social. Les
+vidéos réelles portent ce que les bancs d'essai ne savent pas fabriquer.
+
 ## La moitié qui se juge
 
 Le rendu ne sera pas identique au pixel près — Core Text n'est pas libass, et
@@ -76,20 +99,29 @@ La question n'est d'ailleurs pas la même selon le format :
   l'app réduit la taille pour tenir la ligne entière (divergence D-1, voulue).
   La question devient « est-ce mieux », pas « est-ce pareil ».
 
+## Ce qui a été comparé le 06/09
+
+| Vidéo | Format | Source vierge |
+| --- | --- | --- |
+| Combat | 16:9 — 1920 × 1080 | oui |
+| Âne et chèvres | 9:16 — 360 × 638 | oui |
+| Plateau de télévision | 16:9 — 1920 × 1080 | logo incrusté |
+| Face caméra | 9:16 — 540 × 960 | oui |
+| Format carré | 1:1 — 720 × 720 | logo et cartouche incrustés |
+
+Le 16:9 vierge, qui manquait à la première passe, est arrivé le soir même. Les
+trois sources non vierges gardent une zone de sous-titres nette : c'est le logo
+qui ne s'y compare pas, puisque les deux moteurs posent le leur par-dessus un
+autre.
+
 ## Ce qui manque pour lever l'invariant nº5
 
-1. **Le jugement d'Éric**, sur les trois formats déjà comparés. Rien ne le
-   remplace, et il n'a pas encore eu lieu.
-2. **Des sources vierges.** Sur les trois vidéos comparées le 06/09, une seule
-   l'est — la verticale. Les deux autres sont des vidéos déjà habillées dont le
-   suffixe a disparu : elles portent un logo incrusté sous celui que les deux
-   moteurs posent. La zone des sous-titres reste nette sur les trois, mais **le
-   logo ne se compare vraiment qu'en 9:16**.
-3. **Un 16:9 vierge**, qui n'existe pas sur la machine de travail. C'est le
-   format le plus courant, et celui où la parité est attendue stricte.
+**Le jugement d'Éric.** Rien ne le remplace, et il n'a pas encore eu lieu. Les
+cinq vidéos sont comparées, les deux formats qui comptent sont couverts par une
+source vierge chacun, et les deux défauts trouvés sont corrigés.
 
-Tant que ces trois points ne sont pas réglés, **l'invariant nº5 tient** : le
-prototype reste l'outil de production.
+Tant que ce jugement n'a pas eu lieu, **l'invariant nº5 tient** : le prototype
+reste l'outil de production.
 
 ## Rejouer la campagne
 

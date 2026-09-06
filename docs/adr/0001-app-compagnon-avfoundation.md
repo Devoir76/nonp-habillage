@@ -1060,14 +1060,35 @@ sont dans le même cas. **Ils ne sont pas réécrits ici** : ils disent ce qui a
 été mesuré le 28/08, et cette page est un registre de décisions, pas un tableau
 de bord. Le chiffre qui fait foi est celui que le harnais vérifie.
 
+### Un montage vide en tête était compté comme de l'image
+
+Second défaut, et celui-là ne se voyait pas. Certains MP4 ouvrent leurs pistes
+sur du rien — 80 ms, 66 ms — avant la première image. L'app comptait ce vide
+comme de l'image : le fichier produit sortait deux images plus long que sa
+source, et les minutages des sous-titres, qui comptent depuis la première
+image, faisaient paraître chaque réplique d'autant plus tôt qu'elle.
+
+Il fallait aller aux **segments** de la piste pour le voir : `timeRange`
+commence à zéro et compte le vide dans sa durée. Le correctif borne la lecture
+à la première image, ouvre la session d'écriture à la même seconde, et cherche
+les sous-titres à l'instant diminué du vide. Seuls les segments **de tête**
+sont retirés — un vide au milieu est un trou voulu, et le refermer
+raccourcirait la vidéo de quelqu'un.
+
+**Ce défaut est l'argument de la campagne.** Aucune vidéo d'essai ne le
+portait, et le harnais ne sait pas en fabriquer une qui le porte :
+`AVAssetExportSession` aplatit un montage vide en images noires, même en
+`Passthrough`. Il aura fallu deux fichiers rapportés d'un réseau social. Les
+vidéos réelles portent ce que les bancs d'essai ne savent pas fabriquer — c'est
+exactement ce que l'invariant nº5 dit depuis le début.
+
 ### L'invariant nº5 n'est pas levé
 
 La moitié mesurable est close : sur 44 fichiers de sous-titres réels, les 1 567
 répliques gravées sont identiques à celles du prototype, texte et minutages
-compris. La moitié qui se juge ne l'est pas — elle appartient à Éric, et elle
-lui manque encore deux choses : des **sources vierges** (une seule des trois
-comparées l'est) et un **16:9 vierge**, le format le plus courant et celui où
-la parité est attendue stricte.
+compris. La moitié qui se juge appartient à Éric, et elle n'a pas encore eu
+lieu. Cinq vidéos sont comparées, et les deux formats qui comptent ont chacun
+une source vierge.
 
-Une campagne qui trouve un bug le jour où on la lance n'a pas fini de servir.
-Le prototype reste l'outil de production.
+Une campagne qui trouve deux bugs le jour où on la lance n'a pas fini de
+servir. Le prototype reste l'outil de production.
