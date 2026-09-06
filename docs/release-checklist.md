@@ -17,11 +17,15 @@ c'est la moitié de cette checklist en moins.
 Ce point n'est pas une case parmi d'autres. Tant qu'il tient, **il n'y a pas de
 release publique.**
 
-- [ ] **L'icône existe.** `Resources/AppIcon.icns` est absent : la build le
-      signale et pose une icône générique. Une application publiée sans icône
-      se remarque immédiatement, dans le Dock comme dans le Finder.
+- [ ] **L'icône tient sur un Dock sombre.** `Resources/AppIcon.icns` existe
+      depuis le 06/09 — l'inversion nue, fond sombre et marque bleue — et la
+      build ne signale plus rien. Reste à la voir dans un vrai Dock, en clair
+      **et** en sombre : mesuré, le fond de l'icône n'a qu'un contraste de 1,05
+      à 1,40 sur un Dock sombre, où sa silhouette se dissout. Voir
+      [`../Images-reference/icones-proposees/LISEZMOI.md`](../Images-reference/icones-proposees/LISEZMOI.md),
+      qui donne les deux corrections possibles.
 
-Les deux autres sont tombés le 06/09 :
+Les deux autres verrous sont tombés le 06/09 :
 
 - [x] **L'invariant nº5 est levé.** La campagne de parité a fait la preuve, et
       Éric a tranché : l'app native est l'outil de production, le prototype
