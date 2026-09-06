@@ -517,10 +517,28 @@ final class AppState: ObservableObject {
 
     func annulerExport() { exportateur?.annuler() }
 
+    /// « Habiller une autre vidéo » — l'application revient à l'accueil vide.
+    ///
+    /// Elle gardait la vidéo précédente chargée, et il fallait cliquer
+    /// « Retirer » pour déposer la suivante : le bouton disait le contraire de
+    /// ce qu'il faisait, et ajoutait deux gestes à chaque enchaînement alors que
+    /// les vidéos se traitent à la chaîne.
+    ///
+    /// **Les sous-titres partent avec la vidéo.** Ils lui sont propres : une
+    /// autre vidéo appelle un autre texte, et les garder chargés ferait
+    /// justement le rendu qu'on ne veut pas — le texte de la précédente sur
+    /// l'image de la suivante.
+    ///
+    /// **Les réglages et le logo restent.** Ce sont l'habillage, pas le
+    /// document : ils ne changent pas d'une vidéo à l'autre, et les redemander
+    /// à chaque fichier viderait de son sens la mémorisation du profil.
     func recommencer() {
         etape = .accueil
         avancement = 0
         tempsRestant = nil
+        retirerVideo()          // referme aussi le volet et efface l'erreur
+        retirerSousTitres()
+        message = nil
     }
 
     /// Nom de sortie proposé : `<base>_habillee.mp4`, à côté de la vidéo.

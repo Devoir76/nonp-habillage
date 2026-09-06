@@ -59,6 +59,9 @@ enum ControlesInterface {
         r.section("Interface — le nom proposé à l'enregistrement")
         MainActor.assumeIsolated { nomProposé(r) }
 
+        r.section("Interface — « Habiller une autre vidéo » repart de zéro")
+        MainActor.assumeIsolated { habillerUneAutreVideo(r) }
+
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
 
@@ -970,6 +973,99 @@ enum ControlesInterface {
                    + "porter le nom d'une entrée", !suffixe.isEmpty)
         r.verifier("le suffixe s'écrit sans accent ni espace",
                    suffixe.allSatisfy { $0.isASCII && !$0.isWhitespace })
+    }
+
+    // MARK: - Habiller une autre vidéo
+
+    /// Le bouton de fin de course doit rendre l'application prête pour le
+    /// fichier suivant : la vidéo et ses sous-titres partent, l'habillage reste.
+    @MainActor
+    private static func habillerUneAutreVideo(_ r: Rapport) {
+        guard let video = ControlesExport.fabriquerVideoDEssai() else {
+            r.verifier("fabrication de la vidéo d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: video) }
+
+        let srt = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nonp-enchainement-essai.srt")
+        try? """
+            1
+            00:00:00,500 --> 00:00:01,500
+            Il m'a dit qu'il n'avait rien vu ce jour-là.
+
+            """.write(to: srt, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: srt) }
+
+        let etat = AppState()
+        etat.chargerVideo(video)
+        guard pomperJusqua({ etat.video != nil && !etat.apercuEnPreparation }) else {
+            r.verifier("la vidéo d'essai se charge dans l'application", false); return
+        }
+        etat.chargerSousTitres(srt)
+
+        // L'habillage que l'enchaînement doit préserver — des réglages qui ne
+        // sont pas ceux par défaut, et un logo.
+        guard let logo = fabriquerLogoDEssai() else {
+            r.verifier("fabrication du logo d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: logo) }
+        etat.chargerLogo(logo)
+        etat.lignesMax = 3
+        etat.profil.couleurTexte = CouleurProfil(hex: "#FF3B30")
+        let habillage = etat.profil
+
+        r.verifier("au départ : vidéo, sous-titres, réglages et logo sont là",
+                   etat.video != nil && etat.sousTitres != nil
+                   && etat.profil.logoActif && etat.profil.logoFichier != nil)
+
+        etat.recommencer()
+
+        // Ce qui doit PARTIR : le document.
+        r.verifier("« Habiller une autre vidéo » : plus de vidéo chargée",
+                   etat.video == nil)
+        r.verifier("« Habiller une autre vidéo » : plus de définition ni de durée",
+                   etat.tailleVideo == nil && etat.dureeVideo == 0)
+        r.verifier("« Habiller une autre vidéo » : plus d'image de fond",
+                   etat.fondsDisponibles.isEmpty)
+        // Une autre vidéo appelle d'autres sous-titres : les garder graverait
+        // le texte de la précédente sur l'image de la suivante.
+        r.verifier("« Habiller une autre vidéo » : plus de sous-titres",
+                   etat.sousTitres == nil && etat.cues.isEmpty
+                   && etat.repliques.isEmpty)
+        r.verifier("« Habiller une autre vidéo » : l'écran d'accueil revient, "
+                   + "vide", etat.etape == .accueil && etat.apercu == nil
+                   && etat.imageAccueil == nil)
+        r.verifier("« Habiller une autre vidéo » : « Habiller » redevient "
+                   + "impossible tant qu'on n'a rien déposé", !etat.peutHabiller)
+        r.verifier("« Habiller une autre vidéo » : plus aucun geste de retrait "
+                   + "n'est nécessaire avant de déposer la suivante",
+                   etat.video == nil && etat.sousTitres == nil)
+
+        // Ce qui doit RESTER : l'habillage. Il ne change pas d'une vidéo à
+        // l'autre, et le redemander viderait de son sens le profil mémorisé.
+        r.egal("« Habiller une autre vidéo » garde tous les réglages",
+               etat.profil, habillage)
+        r.verifier("« Habiller une autre vidéo » garde le logo",
+                   etat.profil.logoActif && etat.profil.logoFichier == logo)
+        r.egal("« Habiller une autre vidéo » garde « Lignes maximum »",
+               etat.lignesMax, 3)
+    }
+
+    /// Fait tourner la boucle d'exécution jusqu'à ce que la condition tienne.
+    ///
+    /// `chargerVideo` travaille en tâche de fond ; le harnais, lui, est
+    /// synchrone. Sans cette pompe, aucune vidéo ne serait jamais chargée dans
+    /// un `AppState` de contrôle, et l'enchaînement d'une vidéo à la suivante —
+    /// le seul retour d'usage qui porte là-dessus — ne serait pas éprouvé.
+    @MainActor
+    private static func pomperJusqua(_ condition: () -> Bool,
+                                     secondes: Double = 20) -> Bool {
+        let limite = Date().addingTimeInterval(secondes)
+        while !condition(), Date() < limite {
+            RunLoop.current.run(mode: .default,
+                                before: Date().addingTimeInterval(0.02))
+        }
+        return condition()
     }
 
     // MARK: - Logo rond
