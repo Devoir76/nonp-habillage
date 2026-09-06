@@ -188,6 +188,31 @@ final class ExportateurVideo: @unchecked Sendable {
                             height: abs(orientee.height).rounded())
         let imagesParSeconde = try await pisteVideo.load(.nominalFrameRate)
 
+        // ── Le blanc de tête ────────────────────────────────────────────────
+        //
+        // Certains MP4 — les deux rapportés d'un réseau social le 06/09 —
+        // ouvrent leurs pistes sur un MONTAGE VIDE : 80 ms et 66 ms de rien,
+        // avant la première image. AVFoundation ne l'annonce nulle part
+        // simplement : `timeRange` d'une telle piste commence à zéro et compte
+        // ce vide dans sa durée. Il faut le lire dans les SEGMENTS, où il
+        // apparaît pour ce qu'il est — un segment `isEmpty`.
+        //
+        // Sans lui, l'écart se payait deux fois :
+        //
+        //   • le fichier produit était PLUS LONG que sa source, de deux images
+        //     exactement, là où le prototype rendait le même compte ;
+        //   • les minutages des sous-titres comptent depuis la première image,
+        //     et chaque réplique paraissait d'autant plus tôt qu'elle.
+        //
+        // Le retirer ramène tout à zéro, comme ffmpeg le fait de toute entrée.
+        // On prend le PLUS PETIT des deux pistes : retirer d'une ce que l'autre
+        // n'a pas désynchroniserait le son, qu'on recopie précisément sans y
+        // toucher.
+        var origineSource = try await Self.blancDeTete(pisteVideo)
+        if let pisteAudio {
+            origineSource = min(origineSource, try await Self.blancDeTete(pisteAudio))
+        }
+
         // Sous-titres : lecture, mise en page, resegmentation à la césure du
         // rendu. Sans fichier, la composition ne pose aucun calque — c'est
         // l'usage « logo seul » de l'ADR, qui reste un export valide.
@@ -208,12 +233,25 @@ final class ExportateurVideo: @unchecked Sendable {
 
         let composition = CompositeurVideo.composition(
             pour: asset, cues: cues, profil: profil,
-            miseEnPage: miseEnPage, calqueLogo: calqueLogo, taille: taille)
+            miseEnPage: miseEnPage, calqueLogo: calqueLogo, taille: taille,
+            origineSource: origineSource)
 
         // --- Lecture ------------------------------------------------------
         let lecteur: AVAssetReader
         do { lecteur = try AVAssetReader(asset: asset) }
         catch { throw ErreurExport.lectureImpossible(error.localizedDescription) }
+
+        // La lecture commence à la PREMIÈRE IMAGE, pas à l'origine du montage.
+        //
+        // Sans cette borne, la composition fabrique des images avant elle — la
+        // durée de l'asset court depuis zéro, la piste non — et le fichier
+        // produit en sortait plus long que sa source. Caler la seule session du
+        // rédacteur ne suffit pas : ces images-là sont fabriquées en amont,
+        // c'est donc en amont qu'il faut ne pas les demander.
+        if origineSource > .zero {
+            lecteur.timeRange = CMTimeRange(
+                start: origineSource, duration: dureeTotale - origineSource)
+        }
 
         let sortieVideo = AVAssetReaderVideoCompositionOutput(
             videoTracks: [pisteVideo],
@@ -272,7 +310,7 @@ final class ExportateurVideo: @unchecked Sendable {
             throw ErreurExport.ecritureImpossible(
                 redacteur.error?.localizedDescription ?? "écriture refusée")
         }
-        redacteur.startSession(atSourceTime: .zero)
+        redacteur.startSession(atSourceTime: origineSource)
 
         let nettoyer = {
             lecteur.cancelReading()
@@ -327,10 +365,32 @@ final class ExportateurVideo: @unchecked Sendable {
         return Bilan(
             sortie: sortie,
             duree: Date().timeIntervalSince(debut),
-            dureeVideo: dureeTotale.seconds,
+            // La durée RÉELLEMENT écrite, blanc de tête retiré : le bilan
+            // décrit le fichier produit, pas celui qu'on a lu.
+            dureeVideo: (dureeTotale - origineSource).seconds,
             octets: octets,
             logoIncruste: calqueLogo != nil,
             audioRecopie: entreeAudio != nil)
+    }
+
+    /// La durée de vide qui précède la première image d'une piste.
+    ///
+    /// Les segments de tête marqués `isEmpty`, et eux seuls : un montage vide
+    /// au MILIEU d'une piste est un trou voulu, qu'il n'est pas question de
+    /// refermer — on ne raccourcirait pas la vidéo de quelqu'un.
+    ///
+    /// Non privée : c'est la seule pièce du correctif qui s'éprouve sans
+    /// fichier. Fabriquer un MP4 porteur d'un montage vide s'est révélé
+    /// impossible avec les seuls outils d'Apple — `AVAssetExportSession`
+    /// l'aplatit, même en `Passthrough` —, mais une `AVMutableComposition` en
+    /// porte un, un vrai, et c'est sur elle que le harnais mesure.
+    static func blancDeTete(_ piste: AVAssetTrack) async throws -> CMTime {
+        var vide = CMTime.zero
+        for segment in try await piste.load(.segments) {
+            guard segment.isEmpty else { break }
+            vide = vide + segment.timeMapping.target.duration
+        }
+        return vide
     }
 
     // MARK: - Pompe

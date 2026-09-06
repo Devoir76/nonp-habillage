@@ -47,6 +47,9 @@ enum ControlesExport {
         r.section("Export — un seul périmètre pour les deux portes")
         perimetreUnique(r, video: essai)
 
+        r.section("Export — un blanc de tête ne rallonge pas la vidéo")
+        blancDeTete(r, videoReelle: videoReelle)
+
         r.section("Export — les fichiers d'origine ne sont jamais remplacés")
         jamaisParDessusUneEntree(r, video: essai)
 
@@ -185,6 +188,133 @@ enum ControlesExport {
                    message?.contains("illisible") == true)
         r.verifier("aucun fichier de sortie n'est créé",
                    !FileManager.default.fileExists(atPath: sortie.path))
+    }
+
+    // MARK: - Le blanc de tête
+
+    /// Certains MP4 ouvrent leurs pistes sur un MONTAGE VIDE — 80 ms et 66 ms
+    /// de rien avant la première image, sur les deux vidéos rapportées d'un
+    /// réseau social le 06/09. Le fichier produit en sortait plus long que sa
+    /// source, de deux images exactement, et les minutages des sous-titres,
+    /// qui comptent depuis la première image, paraissaient d'autant plus tôt
+    /// qu'elle. Trouvé par la campagne de parité.
+    ///
+    /// **Ce qui se contrôle ici est la MESURE du vide**, pas l'export de bout
+    /// en bout — et il faut dire pourquoi. Fabriquer un MP4 porteur d'un
+    /// montage vide n'a pas été possible avec les seuls outils d'Apple :
+    /// `AVAssetExportSession` l'aplatit en images noires, y compris en
+    /// `Passthrough`. Une `AVMutableComposition`, elle, en porte un vrai. Le
+    /// bout en bout attend donc une vidéo réelle qui en ait un, et s'annonce
+    /// non exécuté à défaut — jamais réussi par défaut.
+    private static func blancDeTete(_ r: Rapport, videoReelle: URL?) {
+        let blanc = CMTime(seconds: 0.5, preferredTimescale: 600)
+
+        // Une piste ordinaire n'ouvre sur rien.
+        guard let ordinaire = pisteDeComposition(blancDeTete: .zero) else {
+            r.verifier("fabrication d'une piste sans blanc", false); return
+        }
+        r.egal("une piste qui commence à sa première image ne déclare aucun vide",
+               (try? bloquant { try await ExportateurVideo.blancDeTete(ordinaire) })?.seconds,
+               0)
+
+        // Une piste ouverte sur un vide le déclare, à la milliseconde.
+        guard let avecVide = pisteDeComposition(blancDeTete: blanc) else {
+            r.verifier("fabrication d'une piste à blanc de tête", false); return
+        }
+        let mesure = (try? bloquant {
+            try await ExportateurVideo.blancDeTete(avecVide) })?.seconds ?? -1
+        r.verifier("un vide de 0,5 s en tête est mesuré à 0,5 s "
+                   + "(\(String(format: "%.3f", mesure)))",
+                   abs(mesure - 0.5) < 0.005)
+
+        // Un trou AU MILIEU n'est pas un blanc de tête : c'est un choix de
+        // montage, et le refermer raccourcirait la vidéo de quelqu'un.
+        guard let trouAuMilieu = pisteDeComposition(blancDeTete: .zero, trouApres: blanc) else {
+            r.verifier("fabrication d'une piste à trou central", false); return
+        }
+        r.egal("un vide au milieu de la piste n'est pas retiré",
+               (try? bloquant { try await ExportateurVideo.blancDeTete(trouAuMilieu) })?.seconds,
+               0)
+
+        // Bout en bout : le compte d'images de la sortie doit être celui de la
+        // source. Il faut pour cela une vidéo réelle qui porte un blanc.
+        guard let videoReelle else {
+            r.nonExecute("le compte d'images sur une source à blanc de tête",
+                         motif: "aucune vidéo réelle fournie — passer --video <fichier>")
+            return
+        }
+        let vide = (try? bloquant {
+            guard let piste = try await AVURLAsset(url: videoReelle)
+                .loadTracks(withMediaType: .video).first else { return 0.0 }
+            return try await ExportateurVideo.blancDeTete(piste).seconds
+        }) ?? 0
+        guard vide > 0 else {
+            r.nonExecute("le compte d'images sur une source à blanc de tête",
+                         motif: "« \(videoReelle.lastPathComponent) » n'en porte pas — "
+                              + "passer une vidéo qui ouvre sur un montage vide")
+            return
+        }
+
+        // La DURÉE, et non le compte d'images : `AVAssetReaderTrackOutput` rend
+        // les échantillons du média, montage vide compris, et son compte ne
+        // s'accorde ni avec celui d'un lecteur ni avec celui de la source. La
+        // durée, elle, est celle du montage — la seule chose que les deux
+        // moteurs et un lecteur voient pareil.
+        let sortie = dossierTemporaire().appendingPathComponent("blanc.mp4")
+        let dureeSource = (try? bloquant {
+            try await AVURLAsset(url: videoReelle).load(.duration) })?.seconds ?? 0
+        let attendue = dureeSource - vide
+        do {
+            let bilan = try bloquant {
+                try await ExportateurVideo().exporter(
+                    video: videoReelle, sousTitres: nil, profil: .bandeauColore,
+                    vers: sortie, progression: { _ in })
+            }
+            let obtenue = (try? bloquant {
+                try await AVURLAsset(url: sortie).load(.duration) })?.seconds ?? 0
+            r.verifier("un blanc de tête de \(String(format: "%.3f", vide)) s ne "
+                       + "rallonge pas la vidéo produite "
+                       + "(\(String(format: "%.3f", obtenue)) s pour "
+                       + "\(String(format: "%.3f", attendue)) s attendues)",
+                       abs(obtenue - attendue) < 0.05)
+            r.verifier("et le bilan annonce la durée du fichier produit, pas "
+                       + "celle qu'il a lue "
+                       + "(\(String(format: "%.3f", bilan.dureeVideo)) s)",
+                       abs(bilan.dureeVideo - attendue) < 0.05)
+        } catch {
+            r.verifier("export d'une source à blanc de tête — "
+                       + "\(CommandeExport.message(pour: error))", false)
+        }
+        try? FileManager.default.removeItem(at: sortie)
+    }
+
+    /// Une piste de montage, éventuellement ouverte sur un vide, ou trouée
+    /// après `trouApres`. Le vide y est RÉEL — c'est ce qu'un fichier exporté
+    /// ne sait pas porter.
+    private static func pisteDeComposition(
+        blancDeTete blanc: CMTime, trouApres: CMTime? = nil) -> AVAssetTrack? {
+        guard let essai = fabriquerVideoDEssai() else { return nil }
+        defer { try? FileManager.default.removeItem(at: essai) }
+        let source = AVURLAsset(url: essai)
+        let montage = AVMutableComposition()
+        guard let cible = montage.addMutableTrack(
+            withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+              let piste = (try? bloquant {
+                  try await source.loadTracks(withMediaType: .video) })?.first,
+              let duree = try? bloquant({ try await source.load(.duration) })
+        else { return nil }
+        do {
+            if blanc > .zero {
+                montage.insertEmptyTimeRange(CMTimeRange(start: .zero, duration: blanc))
+            }
+            try cible.insertTimeRange(CMTimeRange(start: .zero, duration: duree),
+                                      of: piste, at: blanc)
+            if let trouApres {
+                montage.insertEmptyTimeRange(
+                    CMTimeRange(start: trouApres, duration: trouApres))
+            }
+        } catch { return nil }
+        return cible
     }
 
     // MARK: - Un seul périmètre pour les deux portes

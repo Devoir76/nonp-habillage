@@ -31,13 +31,16 @@ enum CompositeurVideo {
     /// - Parameters:
     ///   - cues: les répliques déjà resegmentées, avec leurs minutages de rendu.
     ///   - taille: dimensions de rendu, orientation appliquée.
+    ///   - origineSource: l'instant, dans la piste, de sa PREMIÈRE image.
+    ///     Presque toujours zéro ; pas toujours. Voir ci-dessous.
     static func composition(
         pour asset: AVAsset,
         cues: [CueGravee],
         profil: ProfilHabillage,
         miseEnPage: MiseEnPageRendu,
         calqueLogo: CGImage?,
-        taille: CGSize
+        taille: CGSize,
+        origineSource: CMTime = .zero
     ) -> AVMutableVideoComposition {
 
         let largeur = Int(taille.width)
@@ -69,7 +72,18 @@ enum CompositeurVideo {
                 if let ciLogo {
                     image = ciLogo.transformed(by: decalage).composited(over: image)
                 }
-                if let calque = cache.calque(aSecondes: requete.compositionTime.seconds) {
+                // Les minutages des sous-titres comptent depuis la PREMIÈRE
+                // IMAGE, pas depuis l'origine de la piste — c'est ce que voit
+                // celui qui a écrit le fichier, et c'est ce que fait le
+                // prototype, dont ffmpeg ramène toute entrée à zéro.
+                //
+                // Certains MP4 posent leur première image à 66 ou 80 ms : sans
+                // ce retrait, chaque réplique paraissait d'autant plus tôt que
+                // l'image. Trouvé le 06/09, sur deux vidéos venues d'un réseau
+                // social — un décalage invisible sur un banc d'essai, et
+                // présent sur les fichiers réels.
+                let instant = requete.compositionTime.seconds - origineSource.seconds
+                if let calque = cache.calque(aSecondes: instant) {
                     image = CIImage(cgImage: calque)
                         .transformed(by: decalage).composited(over: image)
                 }
