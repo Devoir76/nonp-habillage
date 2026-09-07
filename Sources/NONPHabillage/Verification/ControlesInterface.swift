@@ -62,6 +62,9 @@ enum ControlesInterface {
         r.section("Interface — « Habiller une autre vidéo » repart de zéro")
         MainActor.assumeIsolated { habillerUneAutreVideo(r) }
 
+        r.section("Interface — « Revenir aux réglages » garde tout, et rend un second export")
+        MainActor.assumeIsolated { revenirAuxReglages(r) }
+
         r.section("Interface — logo recadré en cercle")
         logoRond(r)
 
@@ -1225,6 +1228,185 @@ enum ControlesInterface {
                    etat.profil.logoActif && etat.profil.logoFichier == logo)
         r.egal("« Habiller une autre vidéo » garde « Lignes maximum »",
                etat.lignesMax, 3)
+    }
+
+    // MARK: - Revenir aux réglages
+
+    /// L'autre issue de l'écran de fin — celle qui ne perd rien.
+    ///
+    /// Contrôle jumeau de `habillerUneAutreVideo`, et volontairement écrit
+    /// contre lui : les deux boutons sont voisins, leurs effets sont opposés,
+    /// et c'est cette OPPOSITION qui doit être vérifiée. L'un vide le document,
+    /// l'autre ne touche à rien. Une régression qui rapprocherait les deux
+    /// comportements ferait tomber l'un des deux contrôles.
+    ///
+    /// Il fait un VRAI export, puis un SECOND depuis l'état revenu. Simuler
+    /// l'étape « terminé » n'aurait rien prouvé : ce qui est en cause, c'est
+    /// qu'un export laisse l'application capable d'en refaire un, sur le même
+    /// fichier, sans redéposer quoi que ce soit.
+    @MainActor
+    private static func revenirAuxReglages(_ r: Rapport) {
+        guard let video = ControlesExport.fabriquerVideoDEssai() else {
+            r.verifier("fabrication de la vidéo d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: video) }
+
+        let srt = ControlesExport.dossierTemporaire()
+            .appendingPathComponent("nonp-retour-essai.srt")
+        try? """
+            1
+            00:00:00,200 --> 00:00:01,500
+            Il m'a dit qu'il n'avait rien vu ce jour-là.
+
+            """.write(to: srt, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: srt) }
+
+        let etat = AppState(memoire: false)
+        etat.chargerVideo(video)
+        guard pomperJusqua({ etat.video != nil && !etat.apercuEnPreparation }) else {
+            r.verifier("la vidéo d'essai se charge dans l'application", false); return
+        }
+        etat.chargerSousTitres(srt)
+
+        guard let logo = fabriquerLogoDEssai() else {
+            r.verifier("fabrication du logo d'essai", false); return
+        }
+        defer { try? FileManager.default.removeItem(at: logo) }
+        etat.chargerLogo(logo)
+        etat.lignesMax = 3
+        etat.profil.couleurTexte = CouleurProfil(hex: "#FF3B30")
+        // Le volet OUVERT : c'est l'écran qu'on quitte, et c'est celui qu'on
+        // doit retrouver. Le refermer en chemin renverrait sur un accueil nu
+        // quelqu'un qui réglait.
+        etat.voletOuvert = true
+        let habillage = etat.profil
+        let fondChoisi = etat.indexFond
+
+        // Le nom d'avant le premier export : celui que l'application calcule.
+        let nomCalcule = etat.sortieProposee?.lastPathComponent
+
+        // ── Premier export ────────────────────────────────────────────────
+        //
+        // Vers un nom CHOISI, différent de celui que l'application propose :
+        // c'est le cas qui distingue « reproposer le fichier écrit » de
+        // « recalculer le nom », et c'est celui d'un utilisateur qui renomme
+        // dans le panneau d'enregistrement.
+        let choisi = ControlesExport.dossierTemporaire()
+            .appendingPathComponent("retour-choisi.mp4")
+        try? FileManager.default.removeItem(at: choisi)
+        defer { try? FileManager.default.removeItem(at: choisi) }
+
+        etat.habiller(vers: choisi)
+        guard pomperJusqua({ etat.etape == .termine(choisi) }, secondes: 120) else {
+            r.verifier("le premier export aboutit — étape « terminé » "
+                       + "(obtenu : \(etat.etape))", false); return
+        }
+        r.verifier("le premier export écrit le fichier",
+                   FileManager.default.fileExists(atPath: choisi.path))
+        let ecritureDuPremier = ecritureDe(choisi)
+
+        // ── Le retour ─────────────────────────────────────────────────────
+        etat.reprendreCetteVideo()
+
+        r.verifier("« Revenir aux réglages » ramène à l'écran précédent",
+                   etat.etape == .accueil)
+        r.verifier("« Revenir aux réglages » garde la vidéo, avec sa définition "
+                   + "et sa durée",
+                   etat.video == video && etat.tailleVideo != nil
+                   && etat.dureeVideo > 0)
+        r.verifier("« Revenir aux réglages » garde les sous-titres et leurs "
+                   + "répliques",
+                   etat.sousTitres == srt && !etat.cues.isEmpty
+                   && !etat.repliques.isEmpty)
+        r.egal("« Revenir aux réglages » garde tous les réglages",
+               etat.profil, habillage)
+        r.verifier("« Revenir aux réglages » garde le logo",
+                   etat.profil.logoActif && etat.profil.logoFichier == logo)
+        r.verifier("« Revenir aux réglages » garde le volet ouvert et son fond "
+                   + "d'aperçu",
+                   etat.voletOuvert && etat.indexFond == fondChoisi)
+        r.verifier("« Revenir aux réglages » garde les images de fond et l'aperçu",
+                   !etat.fondsDisponibles.isEmpty && etat.apercu != nil)
+        r.verifier("« Revenir aux réglages » ne laisse aucune progression "
+                   + "derrière lui",
+                   etat.avancement == 0 && etat.tempsRestant == nil)
+
+        // Le point de tout l'exercice : le bouton « Habiller » est réarmé.
+        // `peutHabiller` exige `.accueil` — sans le retour, il reste faux.
+        r.verifier("« Habiller » redevient possible sans rien redéposer",
+                   etat.peutHabiller)
+
+        // ── Le nom proposé pour le second passage ─────────────────────────
+        r.egal("le nom proposé est le fichier qu'on vient d'écrire",
+               etat.sortieProposee, choisi)
+        r.verifier("il ne repart donc pas du nom calculé "
+                   + "(« \(nomCalcule ?? "—") »)",
+                   etat.sortieProposee?.lastPathComponent != nomCalcule)
+        r.verifier("aucun suffixe ne s'empile sur la sortie précédente",
+                   !(etat.sortieProposee?.lastPathComponent
+                       .contains(Textes.Export.suffixeSortie
+                                 + Textes.Export.suffixeSortie) ?? false))
+
+        // ── Second export, réglage corrigé ────────────────────────────────
+        //
+        // C'est le geste décrit par le retour d'usage : on revient, on corrige,
+        // on refait. Le fichier produit doit REMPLACER le premier, pas s'écrire
+        // à côté de lui.
+        etat.lignesMax = 2
+        etat.habiller(vers: choisi)
+        guard pomperJusqua({ etat.etape == .termine(choisi) }, secondes: 120) else {
+            r.verifier("le second export aboutit — étape « terminé » "
+                       + "(obtenu : \(etat.etape), erreur : "
+                       + "\(etat.erreur ?? "aucune"))", false); return
+        }
+        r.verifier("un second export depuis cet état aboutit", true)
+        r.verifier("le second export a bien écrit un fichier non vide",
+                   FileManager.default.fileExists(atPath: choisi.path)
+                   && octetsDe(choisi) > 0)
+        // REMPLACÉ, pas doublé : le fichier est le même, et il est plus récent.
+        // C'est la seule mesure qui distingue une réécriture d'un fichier resté
+        // en place — deux encodages du même plan peuvent peser pareil.
+        r.verifier("il a REMPLACÉ le premier, et non laissé le sien en place",
+                   ecritureDe(choisi) ?? .distantPast
+                   > ecritureDuPremier ?? .distantFuture)
+        r.egal("il n'a rien écrit à côté : un seul .mp4 sous ce nom",
+               fichiersMP4(ControlesExport.dossierTemporaire(),
+                           prefixe: "retour-choisi"), 1)
+
+        // ── Et l'opposition avec sa voisine ───────────────────────────────
+        //
+        // Depuis ce MÊME état de fin, l'autre bouton doit tout vider — dont le
+        // nom mémorisé, qui appartient au document qui s'en va.
+        etat.recommencer()
+        r.verifier("« Habiller une autre vidéo », elle, vide bien le document",
+                   etat.video == nil && etat.sousTitres == nil)
+        r.verifier("et oublie le fichier écrit : plus rien à reproposer",
+                   etat.sortieProposee == nil)
+    }
+
+    /// Taille d'un fichier, 0 s'il n'existe pas.
+    private static func octetsDe(_ url: URL) -> Int {
+        let attributs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return (attributs?[.size] as? NSNumber)?.intValue ?? 0
+    }
+
+    /// Date de dernière écriture, `nil` si le fichier n'existe pas.
+    private static func ecritureDe(_ url: URL) -> Date? {
+        let attributs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        return attributs?[.modificationDate] as? Date
+    }
+
+    /// Combien de `.mp4` commençant par ce préfixe vivent dans ce dossier.
+    ///
+    /// C'est ce qui distingue « remplacer » de « écrire à côté » : un second
+    /// export qui aurait glissé sur « retour-choisi 2.mp4 » ou
+    /// « retour-choisi_habillee.mp4 » se verrait ici, et nulle part ailleurs.
+    private static func fichiersMP4(_ dossier: URL, prefixe: String) -> Int {
+        let contenu = (try? FileManager.default.contentsOfDirectory(
+            atPath: dossier.path)) ?? []
+        return contenu.filter {
+            $0.hasPrefix(prefixe) && $0.hasSuffix(".mp4")
+        }.count
     }
 
     /// Fait tourner la boucle d'exécution jusqu'à ce que la condition tienne.

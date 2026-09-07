@@ -152,6 +152,19 @@ final class AppState: ObservableObject {
     @Published private(set) var tempsRestant: TimeInterval?
     private var exportateur: ExportateurVideo?
 
+    /// Le fichier RÉELLEMENT écrit au dernier export, tant que la vidéo et les
+    /// sous-titres n'ont pas changé.
+    ///
+    /// Il existe pour `reprendreCetteVideo()` : on revient corriger un réglage
+    /// et on refait LE MÊME fichier. Reproposer le nom calculé ferait retaper
+    /// à chaque passe le nom qu'on venait de choisir — et écrirait à côté du
+    /// premier export, au lieu de le remplacer, dès qu'on l'avait déposé
+    /// ailleurs.
+    ///
+    /// Il s'efface avec le document : changer de vidéo ou de sous-titres, c'est
+    /// changer de sortie, et le nom doit alors se recalculer.
+    @Published private(set) var derniereSortie: URL?
+
     // MARK: - Usages
 
     /// Y a-t-il quelque chose à graver ? Logo et sous-titres sont indépendants.
@@ -213,6 +226,7 @@ final class AppState: ObservableObject {
                 video = url
                 tailleVideo = taille
                 dureeVideo = duree
+                derniereSortie = nil     // autre document, autre sortie
                 erreur = nil
                 await preparerFonds(jeton: jeton)
             } catch ErreurVideo.pisteVideoAbsente {
@@ -244,6 +258,7 @@ final class AppState: ObservableObject {
         video = nil
         tailleVideo = nil
         dureeVideo = 0
+        derniereSortie = nil
         fondsDisponibles = []
         indexFond = 0                   // recalcule l'aperçu, qui n'a plus de fond
         apercuEnPreparation = false
@@ -261,6 +276,7 @@ final class AppState: ObservableObject {
             // La plus longue d'abord : c'est le pire cas, et s'il passe, tout passe.
             repliques = Apercu.repliquesParPireCas(lues)
             indexReplique = 0
+            derniereSortie = nil     // le nom proposé vient du .srt : il change
             erreur = nil
             rafraichirApercu()
         } catch let e as ErreurSousTitres {
@@ -383,6 +399,7 @@ final class AppState: ObservableObject {
         cues = []
         repliques = []
         indexReplique = 0
+        derniereSortie = nil
         rafraichirApercu()
     }
 
@@ -537,6 +554,7 @@ final class AppState: ObservableObject {
                             self?.tempsRestant = a.restantEstime
                         }
                     })
+                derniereSortie = bilan.sortie
                 etape = .termine(bilan.sortie)
             } catch ErreurExport.annule {
                 etape = .accueil
@@ -551,6 +569,34 @@ final class AppState: ObservableObject {
     }
 
     func annulerExport() { exportateur?.annuler() }
+
+    /// **Revenir à l'écran de réglages sans rien perdre** — l'autre issue de
+    /// l'écran de fin, ajoutée sur retour d'usage après un export réel.
+    ///
+    /// L'écran de fin n'offrait que le Finder et « Habiller une autre vidéo ».
+    /// Un doute sur le rendu — une ligne trop basse, une couleur qui passe mal
+    /// sur ce plan-là — obligeait donc à TOUT redéposer : la vidéo, les
+    /// sous-titres, et à refaire le chemin jusqu'au réglage en cause. Le doute
+    /// arrive vraiment, et c'est lui qui motive cette porte.
+    ///
+    /// **Rien n'est retiré.** Ni la vidéo, ni les sous-titres, ni les réglages,
+    /// ni le logo, ni le fond d'aperçu choisi, ni l'état du volet : on retrouve
+    /// l'écran qu'on a quitté, exactement. C'est tout l'écart avec
+    /// `recommencer()`, sa voisine, qui vide le document — et les deux boutons
+    /// disent lequel des deux ils font.
+    ///
+    /// Seule l'ÉTAPE change, et avec elle les deux compteurs de progression qui
+    /// n'ont plus de sens hors encodage. `peutHabiller` exige `.accueil` : c'est
+    /// ce retour qui réarme le bouton « Habiller », et donc le second export.
+    ///
+    /// L'aperçu n'est pas recalculé : aucun réglage n'a bougé pendant l'export,
+    /// l'image affichée est encore la bonne. La recomposer ne changerait qu'une
+    /// chose — le temps de la recomposer.
+    func reprendreCetteVideo() {
+        etape = .accueil
+        avancement = 0
+        tempsRestant = nil
+    }
 
     /// « Habiller une autre vidéo » — l'application revient à l'accueil vide.
     ///
@@ -571,8 +617,8 @@ final class AppState: ObservableObject {
         etape = .accueil
         avancement = 0
         tempsRestant = nil
-        retirerVideo()          // referme aussi le volet et efface l'erreur
-        retirerSousTitres()
+        retirerVideo()          // referme aussi le volet, efface l'erreur
+        retirerSousTitres()     // les deux oublient aussi la dernière sortie
         message = nil
     }
 
@@ -591,8 +637,17 @@ final class AppState: ObservableObject {
     /// Le DOSSIER, lui, reste celui de la vidéo. Le retour d'usage porte sur le
     /// nom seul, et le fichier de sous-titres vit souvent ailleurs que la vidéo
     /// — écrire dans son dossier déplacerait la sortie sans que rien ne le dise.
+    ///
+    /// **Sauf après un export : c'est le fichier écrit qui est reproposé.** On
+    /// revient par « Revenir aux réglages » pour refaire LE MÊME fichier, avec
+    /// un réglage corrigé. Recalculer le nom ferait retaper à chaque passe
+    /// celui qu'on venait de choisir, et laisserait derrière soi une pile de
+    /// versions à trier au lieu de remplacer la précédente. Le panneau
+    /// d'enregistrement demandera confirmation du remplacement — c'est macOS
+    /// qui le fait, et c'est exactement ce qu'on veut voir.
     var sortieProposee: URL? {
         guard let video else { return nil }
+        if let derniereSortie { return derniereSortie }
         return Self.sortieProposee(video: video, sousTitres: sousTitres)
     }
 

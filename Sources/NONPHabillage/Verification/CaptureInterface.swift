@@ -37,6 +37,9 @@ enum CaptureInterface {
 
     /// `--capture <dossier> [--video <fichier>] [--corpus-srt <fichier>]
     ///  [--logo <image>]`
+    ///
+    /// Sans `--video`, seuls l'accueil vide et l'écran de fin sont pris : ce
+    /// sont les deux seuls écrans qui ne dépendent d'aucun fichier.
     @MainActor
     static func executer(arguments args: [String]) -> Int32 {
         guard let i = args.firstIndex(of: "--capture"), i + 1 < args.count else { return 2 }
@@ -141,6 +144,30 @@ enum CaptureInterface {
             }
         } else {
             print("  — captures 2 à 5 : non exécutées (passer --video <fichier>)")
+        }
+
+        // 6. L'ÉCRAN DE FIN, et ses trois issues.
+        //
+        // Rendu directement, sans passer par `FenetrePrincipaleView` :
+        // `AppState.etape` est en lecture seule pour les vues, et le seul chemin
+        // qui y mène est un vrai encodage. C'est pourtant l'écran qu'il faut
+        // VOIR, depuis qu'il porte deux sorties aux effets opposés : la
+        // symétrie des deux légendes et l'alignement des colonnes ne se
+        // vérifient qu'à l'œil (voir `TermineView`).
+        //
+        // Il ne dépend d'aucune vidéo — seul le nom du fichier s'y affiche —,
+        // et se prend donc même sans `--video`.
+        let ecranDeFin = TermineView(
+            sortie: URL(fileURLWithPath: "/Users/x/Films/Atelier ORVA Exemple_habillee.mp4"))
+            .frame(width: Fenetre.largeurFermee, height: Fenetre.hauteurFermee)
+            .environmentObject(etat)
+        let renduFin = ImageRenderer(content: ecranDeFin)
+        renduFin.scale = 2
+        if let image = renduFin.cgImage {
+            try? ImagesReference.ecrire(
+                image, vers: dossier.appendingPathComponent("6-ecran-de-fin.png"))
+            ecrites.append("6-ecran-de-fin")
+            print("  ✓ 6-ecran-de-fin.png  (\(image.width / 2)×\(image.height / 2) points)")
         }
 
         print("")

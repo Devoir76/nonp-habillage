@@ -430,7 +430,37 @@ enum Textes {
         static let exportTermine = "Vidéo habillée"
         static let exportAnnule = "Export annulé."
         static let revelerDansFinder = "Afficher dans le Finder"
+
+        // ── Les deux issues de l'écran de fin ──────────────────────────────
+        //
+        // Elles sont VOISINES et leurs effets sont OPPOSÉS : l'une garde tout
+        // en place, l'autre vide le document. Deux boutons pareils qui font le
+        // contraire l'un de l'autre se cliquent au hasard une fois sur deux —
+        // d'où, pour chacun, une ligne qui dit ce qu'il advient des fichiers
+        // chargés. C'est le même principe que « Il n'y a rien à graver » sous
+        // le bouton « Habiller » : l'explication vit contre son bouton.
+
+        /// **En attente du choix d'Éric.** Deux autres libellés tenaient la
+        /// corde, et le changement se fait ici, sur cette seule ligne :
+        ///
+        /// - « Reprendre cette vidéo » — c'est l'opposition la plus nette avec
+        ///   « Habiller une AUTRE vidéo » : *cette* contre *une autre*, deux
+        ///   mots qui se répondent et qu'on lit d'un coup d'œil.
+        /// - « Corriger un réglage » — nomme le motif plutôt que la
+        ///   destination, et dit donc pourquoi on cliquerait ; mais il promet
+        ///   les réglages, alors que le bouton rend l'écran tel qu'on l'a
+        ///   quitté, volet fermé s'il l'était.
+        ///
+        /// Celui qui est en place nomme la destination, se lit vite, et n'est
+        /// démenti par rien : le volet est bien la porte des réglages, ouverte
+        /// ou non.
+        static let reprendreCetteVideo = "Revenir aux réglages"
+        static let reprendreCetteVideoEffet =
+            "La vidéo, les sous-titres et les réglages restent chargés."
+
         static let recommencer = "Habiller une autre vidéo"
+        static let recommencerEffet =
+            "La vidéo et ses sous-titres sont retirés. Les réglages restent."
 
         // Divers
         static let rienAGraver =

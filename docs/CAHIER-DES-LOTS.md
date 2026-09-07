@@ -175,6 +175,17 @@ posé dans le moteur ; et « **Habiller une autre vidéo** » décharge la vidé
 ses sous-titres en gardant les réglages et le logo. Voir ADR-0001, « Tranché le
 06/09 ».
 
+**Une troisième issue à l'écran de fin** (07/09/2026). L'écran ne proposait que
+le Finder et « Habiller une autre vidéo », qui vide tout : un doute sur le rendu
+obligeait donc à redéposer la vidéo et les sous-titres pour aller vérifier.
+« **Revenir aux réglages** » ramène à l'écran quitté sans rien perdre — vidéo,
+sous-titres, réglages, logo, fond d'aperçu et état du volet —, et « Habiller »
+s'y trouve réarmé. Les deux issues sont voisines et leurs effets sont opposés :
+chacune porte donc, sous son bouton, la ligne qui dit ce qu'il advient des
+fichiers chargés. Le **nom proposé** au second passage est le fichier
+*réellement écrit* au premier, et non le nom recalculé : on revient pour refaire
+le même fichier, pas pour en empiler une variante.
+
 **Acceptation** — un profil écrit par le prototype Python est accepté sans
 retouche ; un fichier corrompu produit un message clair et aucun rendu.
 
