@@ -25,25 +25,77 @@
 # défaut compile un fichier SwiftUI minimal ; s'il échoue SUR CETTE ERREUR-LÀ,
 # on se replie sur le plus récent des autres SDK qui y parvient, et on le dit.
 #
-# CE QUE LE REPLI NE RÈGLE PAS — constaté le même jour. Le nouveau système de
-# build de SwiftPM (Swift 6.4) compile bien contre le SDK 26.5, mais inscrit
-# « sdk 14.0 » dans l'en-tête du binaire (LC_BUILD_VERSION), là où l'ancien
-# inscrivait « sdk 26.5 ». macOS règle une partie de l'apparence d'AppKit sur
-# cette valeur : un binaire marqué 14.0 tourne avec d'anciennes métriques —
-# ascenseur permanent de 15 points au lieu de 17, accueil de 369 points au lieu
-# de 377. Mesuré, avec le même code, sur les deux marquages. Ce n'est pas le
-# choix du SDK qui en décide : c'est le système de build.
+# ── LE SYSTÈME DE BUILD DÉCIDE DU MARQUAGE, LE MARQUAGE DÉCIDE D'APPKIT ──────
 #
-# QUAND LE RETIRER. Le jour où le script annonce « SDK par défaut… aucun
-# contournement » — Command Line Tools corrigés, ou Xcode complet sélectionné —,
-# ce fichier et ses deux appels (build_app.sh, verifier.sh) peuvent partir,
-# avec la ligne du README.
+# Découvert le 17/09/2026, en cherchant pourquoi l'accueil mesurait 369 points
+# au lieu de 377. C'est le genre de chose qu'on ne retrouve pas deux fois.
 #
-# Usage, depuis un script du dossier :
+# 1. Chaque binaire porte dans son en-tête (LC_BUILD_VERSION) le numéro du SDK
+#    contre lequel il a été compilé. `otool -l <binaire>` le montre, à la
+#    ligne `sdk`.
+#
+# 2. macOS règle une partie de l'apparence d'AppKit et de SwiftUI sur CE
+#    numéro — pas sur le SDK réellement utilisé, pas sur la version du
+#    système. Un binaire marqué d'un vieux SDK reçoit d'anciennes métriques.
+#
+# 3. C'est le SYSTÈME DE BUILD qui écrit ce numéro. Le nouveau système de
+#    SwiftPM, par défaut depuis Swift 6.4, compile bien contre le SDK 26.5 mais
+#    inscrit « sdk 14.0 » — la version minimale du projet. `--sdk` n'y change
+#    rien. L'ancien, `--build-system native`, inscrit « sdk 26.5 ».
+#
+# Mesuré sur cette machine (macOS 27.0), avec le même code :
+#
+#   système de build   marquage   ascenseur permanent   accueil
+#   nouveau            sdk 14.0   15 points             369 points
+#   native             sdk 26.5   17 points             377 points
+#
+# Le binaire du 07/09 — ancien système, marqué 26.5 — mesure 377 sur ce même
+# macOS 27 : le système d'exploitation n'y est pour rien.
+#
+# CE QUI EST CONCERNÉ. Toute build produite par le nouveau système depuis
+# l'installation des Command Line Tools 27.0, le 12/09. Dans ce dépôt, aucune
+# n'a abouti avant le 17/09 — la compilation échouait sur la macro —, et la
+# première date du 17/09 à 16:12 : ce sont donc toutes les builds du 17/09
+# antérieures à ce correctif. Y compris les deux builds de test sur lesquelles
+# le correctif de la colonne des réglages (bb2238a) a été vérifié à l'œil, et
+# la vérification qui l'a étalonné : ascenseur de 15 points, alors qu'il en
+# fait 17 avec le bon marquage. Cet étalonnage est à reprendre.
+#
+# LA PARADE. Les scripts compilent avec `--build-system native` — la chaîne
+# qui a produit toutes les builds validées jusqu'au 07/09 —, et
+# `verifier_marquage_sdk` contrôle après chaque compilation que le binaire est
+# marqué du SDK qu'on a choisi. Un marquage faux arrête le script : des mesures
+# prises sous d'autres métriques ne valent rien, et l'erreur ne se voit pas.
+#
+# L'option est dépréciée (SwiftPM l'annonce à chaque appel). Peu importe : elle
+# part avec le reste du contournement.
+#
+# ── QUAND LE RETIRER ────────────────────────────────────────────────────────
+#
+# Le jour où le script annonce « SDK par défaut… aucun contournement » —
+# Command Line Tools corrigés, ou Xcode complet sélectionné. Retirer alors le
+# repli, les appels des quatre scripts (build_app.sh, verifier.sh,
+# images_reference.sh, campagne_parite.sh) et la ligne du README.
+#
+# MAIS garder `verifier_marquage_sdk` tant que le nouveau système de build n'a
+# pas été éprouvé : s'il marque encore mal avec le SDK par défaut, abandonner
+# `--build-system native` rouvrirait le défaut en silence.
+#
+# ── USAGE ───────────────────────────────────────────────────────────────────
+#
 #   source "$SCRIPT_DIR/sdk_macos.sh"
 #   choisir_sdk_macos || exit 1
+#   swift build -c release "${OPTIONS_SWIFT_BUILD[@]}"
+#   BINAIRE="$(swift build -c release "${OPTIONS_SWIFT_BUILD[@]}" --show-bin-path)/NONPHabillage"
+#   verifier_marquage_sdk "$BINAIRE" || exit 1
+#
+# Les mêmes options pour `--show-bin-path` : les deux systèmes de build ne
+# rangent pas leurs produits au même endroit.
 #
 # SDKROOT déjà défini est respecté : il est éprouvé, jamais remplacé en silence.
+
+# Options de `swift build`, communes à tous les scripts. Voir « La parade ».
+OPTIONS_SWIFT_BUILD=(--build-system native)
 
 # Compile — vérification des types seulement — un fichier SwiftUI qui utilise
 # `@State`. Rend 0 si le SDK passe ; sinon écrit la sortie du compilateur dans
@@ -79,6 +131,8 @@ _erreur_de_macro() {
 
 choisir_sdk_macos() {
     echo "▸ Choix du SDK macOS…"
+    echo "  · système de build : ${OPTIONS_SWIFT_BUILD[*]} — il décide du marquage du"
+    echo "    binaire, donc des métriques d'AppKit (voir Scripts/sdk_macos.sh)"
     local journal
     journal="$(mktemp -t nonp-sonde-sdk-journal)"
 
@@ -168,5 +222,45 @@ choisir_sdk_macos() {
   Détail : Scripts/sdk_macos.sh (contournement daté du 17/09/2026).
 MESSAGE
     rm -f "$journal"
+    return 1
+}
+
+# Le SDK effectivement choisi : SDKROOT s'il est posé, le SDK par défaut sinon.
+_sdk_choisi() {
+    if [[ -n "${SDKROOT:-}" ]]; then echo "$SDKROOT"
+    else xcrun --sdk macosx --show-sdk-path
+    fi
+}
+
+# « 26.5.0 » et « 26.5 » désignent le même SDK.
+_version_courte() {
+    local v="$1"
+    while [[ "$v" == *.0 ]]; do v="${v%.0}"; done
+    echo "$v"
+}
+
+# Contrôle que le binaire est marqué du SDK choisi. Voir « Le système de build
+# décide du marquage » en tête de fichier.
+verifier_marquage_sdk() {
+    local binaire="$1" sdk attendu inscrit
+    sdk="$(_sdk_choisi)"
+    attendu="$(plutil -extract Version raw "$sdk/SDKSettings.plist" 2>/dev/null || echo "?")"
+    inscrit="$(otool -l "$binaire" 2>/dev/null \
+        | awk '/LC_BUILD_VERSION/ { dans = 1 } dans && $1 == "sdk" { print $2; exit }')"
+
+    if [[ -n "$inscrit" && "$(_version_courte "$inscrit")" == "$(_version_courte "$attendu")" ]]; then
+        echo "  ✓ Binaire marqué « sdk $inscrit », comme le SDK utilisé"
+        return 0
+    fi
+    cat >&2 <<MESSAGE
+✗ Binaire marqué « sdk ${inscrit:-illisible} », mais compilé avec le SDK macOS $attendu.
+    $binaire
+
+  macOS règle une partie de l'apparence d'AppKit sur ce marquage : ce binaire
+  tournerait avec les métriques d'un autre SDK, et ses mesures de disposition
+  ne vaudraient rien. C'est le système de build qui écrit ce marquage.
+
+  Voir Scripts/sdk_macos.sh, « Le système de build décide du marquage ».
+MESSAGE
     return 1
 }

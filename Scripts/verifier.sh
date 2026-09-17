@@ -49,14 +49,17 @@ if [[ -z "$CORPUS" && -d "$PROJECT_ROOT/Corpus" ]]; then
     CORPUS="$PROJECT_ROOT/Corpus"
 fi
 
-# SDK macOS — contournement daté du 17/09/2026 : les Command Line Tools 27.0
-# livrent un SDK qui ne compile pas SwiftUI sans Xcode. Voir Scripts/sdk_macos.sh.
+# SDK macOS et système de build — contournement daté du 17/09/2026. Voir
+# Scripts/sdk_macos.sh.
 source "$SCRIPT_DIR/sdk_macos.sh"
 choisir_sdk_macos || exit 1
 
 echo "▸ Compilation…"
-swift build -c debug
-BINAIRE="$(swift build -c debug --show-bin-path)/NONPHabillage"
+swift build -c debug "${OPTIONS_SWIFT_BUILD[@]}"
+BINAIRE="$(swift build -c debug "${OPTIONS_SWIFT_BUILD[@]}" --show-bin-path)/NONPHabillage"
+# Un binaire mal marqué mesurerait sous d'autres métriques : les contrôles de
+# disposition ne vaudraient rien.
+verifier_marquage_sdk "$BINAIRE" || exit 1
 
 ARGS=(--verifier)
 

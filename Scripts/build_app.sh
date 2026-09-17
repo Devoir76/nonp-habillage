@@ -84,19 +84,22 @@ echo "  ✓ aucune dépendance externe — frameworks Apple uniquement"
 
 # --- 1 bis) SDK macOS — contournement daté du 17/09/2026 -----------------
 # Les Command Line Tools 27.0 livrent un SDK qui ne compile pas SwiftUI sans
-# Xcode. Le détail, la cause et quand le retirer : Scripts/sdk_macos.sh.
+# Xcode, et le système de build décide du marquage du binaire — donc des
+# métriques d'AppKit. Le détail, la cause et quand le retirer :
+# Scripts/sdk_macos.sh.
 source "$SCRIPT_DIR/sdk_macos.sh"
 choisir_sdk_macos || exit 1
 
 # --- 2) Compilation SwiftPM ----------------------------------------------
 echo "▸ Compilation ($CONFIG)…"
-swift build -c "$CONFIG"
+swift build -c "$CONFIG" "${OPTIONS_SWIFT_BUILD[@]}"
 
-BUILD_BIN="$(swift build -c "$CONFIG" --show-bin-path)/$EXECUTABLE_NAME"
+BUILD_BIN="$(swift build -c "$CONFIG" "${OPTIONS_SWIFT_BUILD[@]}" --show-bin-path)/$EXECUTABLE_NAME"
 if [[ ! -f "$BUILD_BIN" ]]; then
     echo "✗ Binaire introuvable : $BUILD_BIN" >&2
     exit 1
 fi
+verifier_marquage_sdk "$BUILD_BIN" || exit 1
 
 # --- 3) Assemblage du bundle .app ----------------------------------------
 echo "▸ Assemblage du bundle…"

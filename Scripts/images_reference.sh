@@ -59,9 +59,17 @@ for i in "${!VIDEOS[@]}"; do
     [[ -f "${SRTS[$i]}" ]]   || { echo "✗ Sous-titres introuvables : ${SRTS[$i]}" >&2; exit 1; }
 done
 
+# SDK macOS et système de build — contournement daté du 17/09/2026. Voir
+# Scripts/sdk_macos.sh.
+source "$SCRIPT_DIR/sdk_macos.sh"
+choisir_sdk_macos || exit 1
+
 echo "▸ Compilation…"
-swift build -c release
-BINAIRE="$(swift build -c release --show-bin-path)/NONPHabillage"
+swift build -c release "${OPTIONS_SWIFT_BUILD[@]}"
+BINAIRE="$(swift build -c release "${OPTIONS_SWIFT_BUILD[@]}" --show-bin-path)/NONPHabillage"
+# Les images de référence se jugent à l'œil : sous d'autres métriques, elles
+# montreraient une interface qui n'est pas la vraie.
+verifier_marquage_sdk "$BINAIRE" || exit 1
 
 ARGS=(--images "$SORTIE")
 
