@@ -182,7 +182,8 @@ struct PanneauPersonnaliserView: View {
                 Self.curseurPourcent(Textes.Interface.margeBasse,
                                      aide: Textes.Aide.margeBasse,
                                      valeur: $etat.profil.margeBasseRatio,
-                                     de: 0, a: 0.30)
+                                     de: BornesReglages.margeBasse.lowerBound,
+                                     a: BornesReglages.margeBasse.upperBound)
 
                 // PAS de curseur « Marge intérieure » ici, et c'est délibéré.
                 // Mesuré au lot 5 : sur une 16:9, la marge doit atteindre 22,3 %
@@ -255,7 +256,8 @@ struct PanneauPersonnaliserView: View {
                 Self.curseurPourcent(Textes.Interface.tailleLogo,
                                      aide: Textes.Aide.tailleLogo,
                                      valeur: $etat.profil.logoTailleRatio,
-                                     de: 0.01, a: 0.50)
+                                     de: BornesReglages.tailleLogo.lowerBound,
+                                     a: BornesReglages.tailleLogo.upperBound)
                 Self.curseurPourcent(Textes.Interface.opaciteLogo,
                                      aide: Textes.Aide.opaciteLogo,
                                      valeur: $etat.profil.logoOpacite, de: 0, a: 1)

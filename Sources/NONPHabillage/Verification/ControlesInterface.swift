@@ -37,6 +37,9 @@ enum ControlesInterface {
         r.section("Interface — avertissements de zone")
         avertissements(r)
 
+        r.section("Interface — chaque conseil du bandeau lève l'avertissement")
+        conseilsBandeau(r)
+
         r.section("Interface — les trois usages")
         troisUsages(r)
 
@@ -2534,6 +2537,138 @@ enum ControlesInterface {
             profil: profil, parametres: mep.parametres, police: mep.police,
             rectangleLogo: nil, avecSousTitres: true, largeurVideo: w, hauteurVideo: h)
         r.egal("sans logo : aucun avertissement", sansLogo.count, 0)
+    }
+
+    // MARK: - Conseils du bandeau
+
+    /// **Le conseil donné par l'avertissement « le logo empiète sur la zone des
+    /// sous-titres » lève réellement l'avertissement — dans chaque cas.**
+    ///
+    /// Il disait toujours « Déplacez-le, ou réduisez sa taille ». Constaté à
+    /// l'usage : logo en « Bas G. », taille réduite de 15 % à 8 %, l'avertissement
+    /// reste — un logo ancré en bas se rapproche du bas en rapetissant. Le
+    /// contrôle reproduit d'abord ce constat, puis, pour chaque placement, lit
+    /// le conseil affiché, APPLIQUE chacune des actions qu'il propose, et exige
+    /// qu'elle lève l'avertissement. « Le réduire ne suffira pas » est prouvé
+    /// sur toute la course du curseur.
+    private static func conseilsBandeau(_ r: Rapport) {
+        let T = Textes.Avertissements.self
+
+        /// L'avertissement d'empiètement, s'il y en a un, pour ce profil.
+        func empietement(_ p: ProfilHabillage, _ l: Int, _ h: Int) -> AvertissementZone? {
+            guard let mep = try? MiseEnPageRendu.calculer(
+                profil: p, largeurVideo: l, hauteurVideo: h) else { return nil }
+            let rect = GeometrieLogo.rectangle(
+                profil: p, parametres: mep.parametres,
+                tailleSource: CGSize(width: 128, height: 128),
+                largeurVideo: l, hauteurVideo: h)
+            return AvertissementsZone.examiner(
+                profil: p, parametres: mep.parametres, police: mep.police,
+                rectangleLogo: rect, avecSousTitres: true,
+                largeurVideo: l, hauteurVideo: h)
+                .first { $0.sorte == .logoSurBandeau }
+        }
+
+        /// Les actions qu'un conseil propose, chacune appliquée à un profil.
+        let actions: [(nom: String, conseils: [String], appliquer: (ProfilHabillage) -> ProfilHabillage)] = [
+            ("choisir un coin du haut",
+             [T.conseilCoinHautOuMargeBasse, T.conseilCoinHaut], { p in
+                var q = p
+                if case .coin(let c) = p.logoPosition {
+                    q.logoPosition = .coin(c == .basDroit ? .hautDroit : .hautGauche)
+                }
+                return q }),
+            ("relever la marge basse au maximum",
+             [T.conseilCoinHautOuMargeBasse, T.conseilRelever], { p in
+                var q = p; q.margeBasseRatio = BornesReglages.margeBasse.upperBound; return q }),
+            ("remonter le logo tout en haut",
+             [T.conseilRemonterOuReduire, T.conseilRemonterSeulement], { p in
+                var q = p
+                if case .libre(let x, _) = p.logoPosition { q.logoPosition = .libre(xPct: x, yPct: 0) }
+                return q }),
+            ("réduire à la plus petite taille",
+             [T.conseilRemonterOuReduire, T.conseilReduireOuAbaisserMarge, T.conseilReduire], { p in
+                var q = p; q.logoTailleRatio = BornesReglages.tailleLogo.lowerBound; return q }),
+            ("abaisser la marge basse au minimum",
+             [T.conseilReduireOuAbaisserMarge, T.conseilAbaisserMarge], { p in
+                var q = p; q.margeBasseRatio = BornesReglages.margeBasse.lowerBound; return q }),
+        ]
+
+        func verifierCas(_ nom: String, _ p: ProfilHabillage, _ l: Int, _ h: Int,
+                         attendu: String) {
+            guard let a = empietement(p, l, h) else {
+                r.verifier("\(nom) : l'avertissement est bien là (condition du cas)", false)
+                return
+            }
+            r.verifier("\(nom) : « \(a.message) »",
+                       a.message == T.logoSurBandeau(conseil: attendu))
+            for action in actions where action.conseils.contains(attendu) {
+                r.verifier("\(nom) : \(action.nom) lève l'avertissement",
+                           empietement(action.appliquer(p), l, h) == nil)
+            }
+            if attendu == T.conseilRemonterSeulement {
+                let pas = stride(from: BornesReglages.tailleLogo.lowerBound,
+                                 through: BornesReglages.tailleLogo.upperBound, by: 0.01)
+                let reductibles = pas.filter { t in
+                    var q = p; q.logoTailleRatio = t; return empietement(q, l, h) == nil }
+                r.verifier("\(nom) : « le réduire ne suffira pas » est vrai — aucune "
+                           + "taille de 1 à 50 % ne lève l'avertissement",
+                           reductibles.isEmpty)
+            }
+        }
+
+        var base = ProfilHabillage.neutre
+        base.logoActif = true
+
+        for (format, l, h) in [("16:9", 1920, 1080), ("9:16", 1080, 1920)] {
+            // Le constat d'Éric : « Bas G. », 15 % puis 8 %, l'avertissement reste.
+            var basG = base
+            basG.logoPosition = .coin(.basGauche)
+            basG.logoTailleRatio = 0.15
+            var reduit = basG
+            reduit.logoTailleRatio = 0.08
+            r.verifier("\(format) : constat reproduit — « Bas G. » réduit de 15 % à 8 %, "
+                       + "l'avertissement reste",
+                       empietement(basG, l, h) != nil && empietement(reduit, l, h) != nil)
+
+            verifierCas("\(format), coin bas, logo à 15 %", basG, l, h,
+                        attendu: T.conseilCoinHautOuMargeBasse)
+
+            // Un logo trop grand pour que la marge basse, même au maximum, le
+            // laisse sous la bande : on ne la conseille plus.
+            var grand = basG
+            grand.logoTailleRatio = 0.40
+            verifierCas("\(format), coin bas, logo à 40 %", grand, l, h,
+                        attendu: T.conseilCoinHaut)
+            var margeMax = grand
+            margeMax.margeBasseRatio = BornesReglages.margeBasse.upperBound
+            r.verifier("\(format), coin bas, logo à 40 % : la marge basse au maximum ne "
+                       + "suffirait pas — c'est pourquoi elle n'est pas conseillée",
+                       empietement(margeMax, l, h) != nil)
+
+            var auDessus = base
+            auDessus.logoPosition = .libre(xPct: 50, yPct: 70)
+            auDessus.logoTailleRatio = 0.30
+            verifierCas("\(format), libre, centre au-dessus de la bande", auDessus, l, h,
+                        attendu: T.conseilRemonterOuReduire)
+
+            var dedans = base
+            dedans.logoPosition = .libre(xPct: 50, yPct: 85)
+            verifierCas("\(format), libre, centre dans la bande", dedans, l, h,
+                        attendu: T.conseilRemonterSeulement)
+        }
+
+        // Coin haut : atteignable aux extrêmes — logo à 50 %, marge basse à 30 %.
+        var haut = ProfilHabillage.neutre
+        haut.logoActif = true
+        haut.logoPosition = .coin(.hautGauche)
+        haut.logoTailleRatio = 0.50
+        haut.margeBasseRatio = 0.30
+        haut.lignesMax = 2
+        haut.longueurLigneCible = TailleNommee.normale.longueurLigneCible
+        haut.tailleRatio = TailleNommee.normale.tailleRatio
+        verifierCas("16:9, coin haut, logo à 50 % et marge basse à 30 %", haut, 1920, 1080,
+                    attendu: T.conseilReduireOuAbaisserMarge)
     }
 
     // MARK: - Trois usages

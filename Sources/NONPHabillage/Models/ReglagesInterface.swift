@@ -7,6 +7,20 @@
 
 import Foundation
 
+// MARK: - Bornes des curseurs
+
+/// La course des curseurs du volet qui comptent pour les avertissements.
+///
+/// Rassemblées ici plutôt qu'écrites dans la vue : un conseil n'a de sens que
+/// s'il est réalisable AVEC CES CURSEURS. `AvertissementsZone` s'en sert pour
+/// ne conseiller « réduisez sa taille » que si la plus petite taille permise
+/// lève vraiment l'avertissement, et « relevez la marge basse » que si la plus
+/// haute y parvient.
+enum BornesReglages {
+    static let tailleLogo: ClosedRange<Double> = 0.01...0.50
+    static let margeBasse: ClosedRange<Double> = 0...0.30
+}
+
 // MARK: - Tailles nommées
 
 /// Les quatre tailles de sous-titre proposées à l'utilisateur.

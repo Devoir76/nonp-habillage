@@ -66,9 +66,13 @@ enum AvertissementsZone {
                 profil: profil, parametres: parametres, police: police,
                 largeurVideo: largeurVideo)
             if rectangleLogo.intersects(zone) {
+                let conseil = conseilBandeau(
+                    profil: profil, parametres: parametres, police: police,
+                    rectangleLogo: rectangleLogo,
+                    largeurVideo: largeurVideo, hauteurVideo: hauteurVideo)
                 avertissements.append(AvertissementZone(
                     sorte: .logoSurBandeau,
-                    message: Textes.Avertissements.logoSurBandeau))
+                    message: Textes.Avertissements.logoSurBandeau(conseil: conseil)))
             }
         }
 
@@ -89,6 +93,90 @@ enum AvertissementsZone {
         }
 
         return avertissements
+    }
+
+    // MARK: - Conseil
+
+    /// Ce qu'il faut conseiller quand le logo empiète sur la zone des
+    /// sous-titres — et SEULEMENT ce qui marche.
+    ///
+    /// Chaque action candidate est SIMULÉE dans la vraie géométrie, aux bornes
+    /// des curseurs : la plus petite taille de logo, la marge basse la plus
+    /// haute ou la plus basse, un coin du haut. Une action n'entre dans le
+    /// conseil que si elle lève l'avertissement. Rien n'est déduit d'une règle
+    /// générale qui aurait ses exceptions — mesuré, « réduire » levait
+    /// l'avertissement d'un coin bas à 1–3 % de taille, et un coin haut
+    /// empiétait aux extrêmes.
+    ///
+    /// Le texte suit le placement, comme décidé le 17/09 :
+    /// - coin bas : un coin du haut, ou relever la marge basse — jamais
+    ///   réduire ;
+    /// - placement libre : remonter, ou réduire si la plus petite taille suffit
+    ///   — sinon « le réduire ne suffira pas » ; remonter est simulé aussi,
+    ///   logo porté tout en haut de l'image ;
+    /// - coin haut : réduire, ou abaisser la marge basse.
+    static func conseilBandeau(
+        profil: ProfilHabillage,
+        parametres: ParametresMiseEnPage,
+        police: PoliceSousTitre,
+        rectangleLogo: CGRect,
+        largeurVideo: Int,
+        hauteurVideo: Int
+    ) -> String? {
+        /// Le logo empiète-t-il encore, le profil modifié ? Diamètre du logo et
+        /// marge basse sont recalculés par le moteur de mise en page lui-même,
+        /// sans en recopier les formules.
+        func empiete(_ p: ProfilHabillage) -> Bool {
+            let recalcul = MoteurMiseEnPage.calculer(
+                profil: p, largeur: largeurVideo, hauteur: hauteurVideo,
+                tailleForcee: parametres.taille)
+            var q = parametres
+            q.diametreLogo = recalcul.diametreLogo
+            q.margeLogo = recalcul.margeLogo
+            q.margeBasse = recalcul.margeBasse
+            let rect = GeometrieLogo.rectangle(
+                profil: p, parametres: q, tailleSource: rectangleLogo.size,
+                largeurVideo: largeurVideo, hauteurVideo: hauteurVideo)
+            let zone = zoneSousTitres(profil: p, parametres: q, police: police,
+                                      largeurVideo: largeurVideo)
+            return rect.intersects(zone)
+        }
+        var plusPetit = profil
+        plusPetit.logoTailleRatio = BornesReglages.tailleLogo.lowerBound
+        var margeHaute = profil
+        margeHaute.margeBasseRatio = BornesReglages.margeBasse.upperBound
+        var margeNulle = profil
+        margeNulle.margeBasseRatio = BornesReglages.margeBasse.lowerBound
+
+        let T = Textes.Avertissements.self
+        switch profil.logoPosition {
+        case .coin(let coin) where coin == .basGauche || coin == .basDroit:
+            var enHaut = profil
+            enHaut.logoPosition = .coin(coin == .basGauche ? .hautGauche : .hautDroit)
+            switch (!empiete(enHaut), !empiete(margeHaute)) {
+            case (true, true): return T.conseilCoinHautOuMargeBasse
+            case (true, false): return T.conseilCoinHaut
+            case (false, true): return T.conseilRelever
+            case (false, false): return nil
+            }
+        case .coin:
+            switch (!empiete(plusPetit), !empiete(margeNulle)) {
+            case (true, true): return T.conseilReduireOuAbaisserMarge
+            case (true, false): return T.conseilReduire
+            case (false, true): return T.conseilAbaisserMarge
+            case (false, false): return nil
+            }
+        case .libre(let xPct, _):
+            // Remonté tout en haut — la position est bornée à l'image.
+            var enHaut = profil
+            enHaut.logoPosition = .libre(xPct: xPct, yPct: 0)
+            switch (!empiete(enHaut), !empiete(plusPetit)) {
+            case (true, true): return T.conseilRemonterOuReduire
+            case (true, false): return T.conseilRemonterSeulement
+            case (false, true): return T.conseilReduire
+            case (false, false): return nil
+            }
+        }
     }
 
     /// Le rectangle que les sous-titres peuvent occuper, à `lignesMax` lignes.

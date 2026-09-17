@@ -99,9 +99,40 @@ enum Textes {
     /// rend enfin utiles — on voit le défaut AVANT d'encoder, et on peut
     /// déplacer le logo à la souris pour le corriger sur-le-champ.
     enum Avertissements {
-        static let logoSurBandeau =
-            "Le logo empiète sur la zone des sous-titres. Déplacez-le, "
-            + "ou réduisez sa taille."
+        // ── Le logo empiète sur la zone des sous-titres ─────────────────────
+        //
+        // Un seul constat, et un conseil qui dépend du placement. Il disait
+        // toujours « Déplacez-le, ou réduisez sa taille » — et réduire ne sert
+        // à rien pour un logo ancré dans un coin bas : réduit, son haut se
+        // rapproche du bas, et il reste dans la bande (mesuré : l'avertissement
+        // persiste de 4 % à 50 % de taille, il ne tombe qu'à 1–3 %, un logo
+        // presque invisible). Chaque conseil n'est donné que si
+        // `AvertissementsZone` a vérifié, dans la vraie géométrie, qu'il lève
+        // l'avertissement — et le harnais le revérifie cas par cas.
+        static let logoSurBandeau = "Le logo empiète sur la zone des sous-titres."
+        /// Coin bas : un coin du haut, ou la bande qui remonte.
+        static let conseilCoinHautOuMargeBasse =
+            "Choisissez un coin du haut, ou relevez la marge basse."
+        static let conseilCoinHaut = "Choisissez un coin du haut."
+        static let conseilRelever = "Relevez la marge basse."
+        /// Placement libre, le centre du logo hors de la bande : réduire le
+        /// logo l'en écarte.
+        static let conseilRemonterOuReduire = "Remontez-le, ou réduisez sa taille."
+        /// Placement libre, le centre du logo DANS la bande : aucune taille
+        /// n'y échappe. Le conseil ferme explicitement la porte à l'action
+        /// inutile — c'était le défaut d'origine.
+        static let conseilRemonterSeulement = "Remontez-le : le réduire ne suffira pas."
+        /// Coin haut — possible, aux extrêmes : logo à 50 %, marge basse au-delà
+        /// de 26 %.
+        static let conseilReduireOuAbaisserMarge =
+            "Réduisez sa taille, ou abaissez la marge basse."
+        static let conseilReduire = "Réduisez sa taille."
+        static let conseilAbaisserMarge = "Abaissez la marge basse."
+
+        static func logoSurBandeau(conseil: String?) -> String {
+            guard let conseil else { return logoSurBandeau }
+            return logoSurBandeau + " " + conseil
+        }
         static let logoHorsMargesSures =
             "Le logo touche le bord de l'image. Certaines plateformes rognent "
             + "les bords : éloignez-le un peu."
