@@ -74,11 +74,8 @@ struct PanneauPersonnaliserView: View {
             Self.choixSegmente(Textes.Interface.taille,
                                aide: Textes.Aide.taille, selection: Binding(
                 get: { etat.tailleNommee },
-                set: { etat.tailleNommee = $0 })) {
-                ForEach(TailleNommee.allCases) { t in
-                    Text(Textes.Interface.nomTaille(t)).tag(t)
-                }
-            }
+                set: { etat.tailleNommee = $0 }),
+                options: TailleNommee.allCases.map { ($0, Textes.Interface.nomTaille($0)) })
 
             if let mep = etat.miseEnPage {
                 Text(Textes.Interface.tailleEtLongueurLigne(
@@ -140,10 +137,9 @@ struct PanneauPersonnaliserView: View {
                 Self.choixSegmente(Textes.Interface.modeBandeau,
                                    aide: Textes.Aide.modeBandeau, selection: Binding(
                     get: { etat.profil.bandeauMode },
-                    set: { etat.profil.bandeauMode = $0 })) {
-                    Text(Textes.Interface.modePleineLargeur).tag(ModeBandeau.pleineLargeur)
-                    Text(Textes.Interface.modeAjuste).tag(ModeBandeau.ajuste)
-                }
+                    set: { etat.profil.bandeauMode = $0 }),
+                    options: [(ModeBandeau.pleineLargeur, Textes.Interface.modePleineLargeur),
+                              (ModeBandeau.ajuste, Textes.Interface.modeAjuste)])
 
                 Self.selecteurCouleur(Textes.Interface.couleurBandeau,
                                       aide: Textes.Aide.couleurBandeau,
@@ -300,18 +296,22 @@ struct PanneauPersonnaliserView: View {
     /// aussi la disposition la plus lisible pour un choix segmenté, qui se lit
     /// comme une rangée d'options et non comme la valeur d'un champ.
     ///
+    /// Le sélecteur lui-même n'est plus un `Picker` SwiftUI, dont les segments
+    /// de largeur égale débordaient de la colonne (DC-2) : voir
+    /// `SelecteurSegmente`.
+    ///
     /// `static` : le contrôle de disposition mesure CETTE fonction, pas une
     /// copie de sa disposition écrite à côté.
     @MainActor
-    static func choixSegmente<Valeur: Hashable, Options: View>(
+    static func choixSegmente<Valeur: Hashable>(
         _ titre: String, aide: String,
         selection: Binding<Valeur>,
-        @ViewBuilder options: () -> Options) -> some View {
+        options: [(Valeur, String)]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             LibelleSurveille(titre)
-            Picker("", selection: selection, content: options)
-                .pickerStyle(.segmented)
-                .labelsHidden()
+            SelecteurSegmente(options: options.map { (valeur: $0.0, libelle: $0.1) },
+                              selection: selection)
+                .accessibilityLabel(titre)
         }
         .help(aide)
     }
