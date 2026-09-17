@@ -32,9 +32,19 @@ fenêtre : `.windowResizability(.contentMinSize)` et `CadreAuContenu`, qui lit l
 taille minimale du contenu. C'est le même motif que la colonne rognée — une
 disposition calculée une fois, que SwiftUI ne refait pas.
 
-**Pourquoi les contrôles ne le voient pas.** Les segments sont dessinés par
+**Pourquoi les contrôles ne le voyaient pas.** Les segments sont dessinés par
 AppKit : `LibelleSurveille` ne peut pas les instrumenter, et `sizeThatFits`
 rend 316 points — la largeur que SwiftUI attribue, pas celle qu'AppKit dessine.
+
+**Correctif — `917817b`, sur `fix/dc2-selecteur-taille`, en attente de vérification
+à l'œil.** Mesuré dans la hiérarchie AppKit : le sélecteur « Taille » passait de
+16…332 à 16…402 après une mesure de taille. Ses segments avaient tous la largeur
+du plus long libellé (386 points) ; aucun cadre SwiftUI ne changeait rien.
+`SelecteurSegmente` — un `NSSegmentedControl` aux segments taillés à leur
+libellé — réclame 300 points et tient même remis à sa largeur idéale. Le
+harnais le vérifie désormais en lisant le cadre réel des contrôles après une
+mesure ; il voit DC-2 sur l'ancien sélecteur. La fiche rejoindra les corrigés
+quand Éric l'aura vu tenir dans l'application.
 
 **Où.** `PanneauPersonnaliserView.choixSegmente` ; « Largeur du fond » est
 construit de la même façon, mais tient dans sa largeur idéale (228 points).
