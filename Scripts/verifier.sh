@@ -49,6 +49,11 @@ if [[ -z "$CORPUS" && -d "$PROJECT_ROOT/Corpus" ]]; then
     CORPUS="$PROJECT_ROOT/Corpus"
 fi
 
+# SDK macOS — contournement daté du 17/09/2026 : les Command Line Tools 27.0
+# livrent un SDK qui ne compile pas SwiftUI sans Xcode. Voir Scripts/sdk_macos.sh.
+source "$SCRIPT_DIR/sdk_macos.sh"
+choisir_sdk_macos || exit 1
+
 echo "▸ Compilation…"
 swift build -c debug
 BINAIRE="$(swift build -c debug --show-bin-path)/NONPHabillage"

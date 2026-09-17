@@ -63,6 +63,11 @@ réencodage — rien n'est perdu au passage.
 ./Scripts/verifier.sh             # le harnais de contrôles
 ```
 
+**Sur macOS 27**, la compilation demande un contournement : les Command Line
+Tools 27.0 ne livrent pas le plugin des macros SwiftUI, et les scripts se
+replient sur le SDK macOS 26.5 en le disant — contournement daté du 17/09/2026,
+expliqué dans [`Scripts/sdk_macos.sh`](Scripts/sdk_macos.sh).
+
 Une build de test ne s'installe jamais dans `/Applications` : elle porte un
 identifiant distinct pour ne pas se faire prendre pour une version installée.
 

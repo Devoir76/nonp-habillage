@@ -82,6 +82,12 @@ if [[ "$DEP_COUNT" != "0" ]]; then
 fi
 echo "  ✓ aucune dépendance externe — frameworks Apple uniquement"
 
+# --- 1 bis) SDK macOS — contournement daté du 17/09/2026 -----------------
+# Les Command Line Tools 27.0 livrent un SDK qui ne compile pas SwiftUI sans
+# Xcode. Le détail, la cause et quand le retirer : Scripts/sdk_macos.sh.
+source "$SCRIPT_DIR/sdk_macos.sh"
+choisir_sdk_macos || exit 1
+
 # --- 2) Compilation SwiftPM ----------------------------------------------
 echo "▸ Compilation ($CONFIG)…"
 swift build -c "$CONFIG"
