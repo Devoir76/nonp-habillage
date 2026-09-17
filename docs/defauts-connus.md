@@ -10,8 +10,11 @@ Un défaut quitte cette liste quand il est corrigé, avec le commit qui le corri
 
 ## DC-2 — « Taille » peut déborder de la colonne après une mesure de taille
 
-**Consigné le 17/09/2026**, en préparant la planche de DC-1. **Constaté en
-capture ; pas encore observé dans l'application** — à vérifier à l'œil.
+**Consigné le 17/09/2026**, en préparant la planche de DC-1, sur une
+reproduction en capture. **Confirmé dans l'application le même jour** par Éric,
+sur une build correctement marquée (SDK 26.5) : « Très grande » s'affiche
+« Très gra », coupé par le bord de la colonne. Ce n'est plus un risque de banc
+d'essai.
 
 **Ce qu'on voit.** Le sélecteur segmenté « Taille » des sous-titres dessine ses
 quatre segments à sa largeur idéale, environ 386 points, au lieu des 316 de la
@@ -24,11 +27,10 @@ vraie colonne, affichée deux fois telle quelle, puis deux fois après un
 fois. Ni l'apparence, ni l'état actif, ni la hauteur de la fenêtre n'y
 changent rien (huit combinaisons capturées).
 
-**Pourquoi c'est à prendre au sérieux.** L'application fait calculer des
-tailles à sa fenêtre : `.windowResizability(.contentMinSize)` et
-`CadreAuContenu`, qui lit la taille minimale du contenu. C'est le même motif que
-la colonne rognée — une disposition calculée une fois, que SwiftUI ne refait
-pas.
+**Pourquoi l'application le produit.** Elle fait calculer des tailles à sa
+fenêtre : `.windowResizability(.contentMinSize)` et `CadreAuContenu`, qui lit la
+taille minimale du contenu. C'est le même motif que la colonne rognée — une
+disposition calculée une fois, que SwiftUI ne refait pas.
 
 **Pourquoi les contrôles ne le voient pas.** Les segments sont dessinés par
 AppKit : `LibelleSurveille` ne peut pas les instrumenter, et `sizeThatFits`
