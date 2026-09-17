@@ -1812,7 +1812,8 @@ enum ControlesInterface {
     ///
     /// **Ce qu'il ne voit pas.** Un libellé qui ne passe pas par
     /// `LibelleSurveille`. Les segments d'un sélecteur, dessinés par AppKit —
-    /// or ils peuvent déborder, voir DC-2. Le nom du fichier logo, qui a le
+    /// ils ont débordé (DC-2), et c'est `debordements` qui les surveille. Le
+    /// nom du fichier logo, qui a le
     /// droit de se tronquer par le milieu. Les explications en petits
     /// caractères, qui se replient et ne se tronquent pas.
     @MainActor

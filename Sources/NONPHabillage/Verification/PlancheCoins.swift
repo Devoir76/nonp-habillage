@@ -18,7 +18,7 @@
 //   --seuils   la preuve par l'image que `LibelleSurveille` voit juste ;
 //   --colonne  la vraie colonne capturée, pour prouver qu'un changement ne
 //              modifie aucun pixel ;
-//   --dc2      la reproduction de DC-2.
+//   --dc2      la reproduction de DC-2, corrigé.
 //
 // ── Pourquoi une vraie fenêtre, capturée ────────────────────────────────────
 //
@@ -157,8 +157,9 @@ enum PlancheCoins {
 
         // `--dc2` : la reproduction de DC-2. La vraie colonne, deux fois
         // affichée sans mesure préalable, deux fois après un `fittingSize` :
-        // dans le second cas, « Taille » reste figé à sa largeur idéale et
-        // déborde. Voir docs/defauts-connus.md.
+        // dans le second cas, « Taille » restait figé à sa largeur idéale et
+        // débordait. Corrigé par 917817b — les quatre captures le montrent
+        // désormais entier.
         if args.contains("--dc2") {
             let logo = AppState(memoire: false)
             logo.profil.logoActif = true
