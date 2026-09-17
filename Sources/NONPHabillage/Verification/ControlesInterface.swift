@@ -52,6 +52,9 @@ enum ControlesInterface {
         r.section("Interface — aucun libellé de la colonne n'est tronqué")
         MainActor.assumeIsolated { troncatures(r) }
 
+        r.section("Interface — aucun contrôle ne déborde de la colonne, même après une mesure")
+        MainActor.assumeIsolated { debordements(r) }
+
         r.section("Interface — la colonne des réglages ne dépend pas de l'ascenseur")
         MainActor.assumeIsolated { colonneEtAscenseur(r) }
 
@@ -1716,6 +1719,127 @@ enum ControlesInterface {
         var libelles: [String] = []
     }
 
+    // MARK: - Débordements
+
+    /// **Aucun contrôle AppKit ne dépasse le bord de la colonne — même après
+    /// que la taille de la fenêtre a été calculée.**
+    ///
+    /// C'est DC-2 : « Très grande » s'affichait « Très gra ». Le sélecteur
+    /// segmenté de SwiftUI, aux segments de largeur égale, réclame 386 points ;
+    /// dès que la taille est calculée — `fittingSize`, ce que font
+    /// `.windowResizability(.contentMinSize)` et `CadreAuContenu` —, AppKit le
+    /// remet à cette largeur et SwiftUI ne la corrige plus.
+    ///
+    /// Aucune mesure SwiftUI ne le voit : `sizeThatFits` rend la largeur que
+    /// SwiftUI attribue, pas celle qu'AppKit dessine, et `LibelleSurveille` ne
+    /// peut pas instrumenter les segments. Le contrôle lit donc le cadre RÉEL
+    /// de chaque contrôle AppKit, dans la hiérarchie de vues, après avoir
+    /// provoqué la mesure. Il reproduit exactement ce que les captures
+    /// montraient : 16…332 sans mesure, 16…402 après.
+    @MainActor
+    private static func debordements(_ r: Rapport) {
+        _ = NSApplication.shared
+        let bord = Fenetre.margeReglages + Fenetre.largeurUtileReglages
+
+        // Il doit d'abord voir DC-2 sur l'ancien sélecteur, construit comme il
+        // l'était.
+        let ancien = VStack(alignment: .leading, spacing: 4) {
+            Text(Textes.Interface.taille)
+            Picker("", selection: .constant(TailleNommee.normale)) {
+                ForEach(TailleNommee.allCases) { t in
+                    Text(Textes.Interface.nomTaille(t)).tag(t)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+        let vu = controlesQuiDebordent(ancien, bord: bord)
+        r.verifier("le contrôle voit DC-2 : l'ancien sélecteur « Taille », après une "
+                   + "mesure, dépasse le bord (" + (vu.map {
+                       "\($0.nom) jusqu'à \(Int($0.bordDroit))" }.first ?? "rien")
+                   + " pour \(Int(bord)))",
+                   !vu.isEmpty)
+
+        let nu = AppState(memoire: false)
+        let complet = AppState(memoire: false)
+        complet.profil.logoActif = true
+        complet.profil.logoFichier = URL(fileURLWithPath: "/x/logo-nonp.png")
+        complet.profil.bandeauActif = true
+        // Le grisé atteint bien le sélecteur AppKit : sans sous-titres, il ne
+        // se clique pas ; avec, il se clique.
+        let taille = PanneauPersonnaliserView.choixSegmente(
+            Textes.Interface.taille, aide: "", selection: .constant(TailleNommee.normale),
+            options: TailleNommee.allCases.map { ($0, Textes.Interface.nomTaille($0)) })
+        let actif = selecteursActifs(taille)
+        let desactive = selecteursActifs(taille.disabled(true))
+        let colonneSansST = selecteursActifs(PanneauPersonnaliserView().environmentObject(nu))
+        r.verifier("le sélecteur segmenté est actif par défaut",
+                   actif == [true])
+        r.verifier("… et `.disabled` le rend inactif, pas seulement pâle",
+                   desactive == [false])
+        r.verifier("sans sous-titres, les sélecteurs de la colonne sont inactifs "
+                   + "(\(colonneSansST.count) trouvé(s))",
+                   !colonneSansST.isEmpty && !colonneSansST.contains(true))
+
+        for (nom, etat) in [("sans logo ni bandeau", nu), ("logo et bandeau", complet)] {
+            let debord = controlesQuiDebordent(
+                PanneauPersonnaliserView().environmentObject(etat), bord: bord)
+            r.verifier("\(nom) : après une mesure de taille, aucun contrôle ne dépasse "
+                       + "le bord de la colonne (\(Int(bord)))"
+                       + (debord.isEmpty ? "" : " — " + debord.map {
+                           "\($0.nom) jusqu'à \(Int($0.bordDroit))" }.joined(separator: ", ")),
+                       debord.isEmpty)
+        }
+    }
+
+    /// Le sélecteur AppKit reçoit-il le grisé de SwiftUI ? Il ne l'hérite pas
+    /// de lui-même : `SelecteurSegmente` le lui transmet, et c'est ce qui
+    /// l'empêche de rester cliquable sans sous-titres.
+    @MainActor
+    private static func selecteursActifs<V: View>(_ contenu: V) -> [Bool] {
+        let hote = NSHostingView(rootView: ColonneReglages { contenu }.frame(height: 900))
+        let fenetre = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: Fenetre.largeurReglages, height: 900),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        fenetre.isReleasedWhenClosed = false
+        fenetre.contentView = hote
+        hote.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        defer { fenetre.close() }
+        func toutes(_ vue: NSView) -> [NSView] { vue.subviews + vue.subviews.flatMap(toutes) }
+        return toutes(hote).compactMap { ($0 as? NSSegmentedControl)?.isEnabled }
+    }
+
+    /// Les contrôles AppKit qui dépassent `bord`, le contenu posé dans la vraie
+    /// colonne, APRÈS une mesure `fittingSize` — la condition de DC-2.
+    @MainActor
+    private static func controlesQuiDebordent<V: View>(
+        _ contenu: V, bord: CGFloat) -> [(nom: String, bordDroit: CGFloat)] {
+        let hote = NSHostingView(rootView: ColonneReglages { contenu }.frame(height: 900))
+        hote.layoutSubtreeIfNeeded()
+        _ = hote.fittingSize
+        let fenetre = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: Fenetre.largeurReglages, height: 900),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        fenetre.isReleasedWhenClosed = false
+        fenetre.contentView = hote
+        hote.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        defer { fenetre.close() }
+
+        func toutes(_ vue: NSView) -> [NSView] { vue.subviews + vue.subviews.flatMap(toutes) }
+        return toutes(hote).compactMap { vue in
+            let classe = String(describing: type(of: vue))
+            guard classe.hasPrefix("AppKitPlatformViewHost") else { return nil }
+            let cadre = vue.convert(vue.bounds, to: hote)
+            guard cadre.maxX > bord + 0.5 else { return nil }
+            // « …Adaptor<SystemSegmentedControl>> » → « SystemSegmentedControl »
+            let nom = classe.components(separatedBy: "<").last?
+                .trimmingCharacters(in: CharacterSet(charactersIn: ">")) ?? classe
+            return (nom, cadre.maxX)
+        }
+    }
+
     // MARK: - Colonne et ascenseur
 
     /// **Le contenu de la colonne garde sa largeur, quoi que fasse l'ascenseur.**
@@ -1843,11 +1967,8 @@ enum ControlesInterface {
             (T.ajoutezDesSousTitres, AnyView(Text(T.ajoutezDesSousTitres)
                 .font(.caption).fixedSize(horizontal: false, vertical: true))),
             (T.taille, AnyView(Volet.choixSegmente(
-                T.taille, aide: A.taille, selection: .constant(TailleNommee.allCases[0])) {
-                    ForEach(TailleNommee.allCases) { t in
-                        Text(T.nomTaille(t)).tag(t)
-                    }
-                })),
+                T.taille, aide: A.taille, selection: .constant(TailleNommee.allCases[0]),
+                options: TailleNommee.allCases.map { ($0, T.nomTaille($0)) }))),
             (T.police, AnyView(Volet.choixPolice(
                 aide: A.police, selection: .constant(ProfilHabillage.neutre.police)))),
             (T.couleurTexte, AnyView(Volet.selecteurCouleur(
@@ -1859,10 +1980,9 @@ enum ControlesInterface {
             (T.bandeauActif, AnyView(Volet.interrupteur(
                 T.bandeauActif, aide: A.bandeauActif, actif: .constant(true)))),
             (T.modeBandeau, AnyView(Volet.choixSegmente(
-                T.modeBandeau, aide: A.modeBandeau, selection: .constant(ModeBandeau.pleineLargeur)) {
-                    Text(T.modePleineLargeur).tag(ModeBandeau.pleineLargeur)
-                    Text(T.modeAjuste).tag(ModeBandeau.ajuste)
-                })),
+                T.modeBandeau, aide: A.modeBandeau, selection: .constant(ModeBandeau.pleineLargeur),
+                options: [(ModeBandeau.pleineLargeur, T.modePleineLargeur),
+                          (ModeBandeau.ajuste, T.modeAjuste)]))),
             (T.couleurBandeau, AnyView(Volet.selecteurCouleur(
                 T.couleurBandeau, aide: A.couleurBandeau, valeur: .constant(ProfilHabillage.neutre.bandeauCouleur)))),
             (T.hauteurFixe, AnyView(Volet.interrupteur(
