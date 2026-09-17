@@ -59,7 +59,7 @@ struct PanneauPersonnaliserView: View {
     /// ajoutant un. Le message dit quoi faire.
     private var sectionSousTitres: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(Textes.Interface.sousTitres).font(.headline)
+            LibelleSurveille(Textes.Interface.sousTitres).font(.headline)
 
             if !etat.aSousTitres {
                 Text(Textes.Interface.ajoutezDesSousTitres)
@@ -128,7 +128,7 @@ struct PanneauPersonnaliserView: View {
     /// pas laisser croire qu'un bandeau sera gravé.
     private var sectionBandeau: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(Textes.Interface.bandeau).font(.headline)
+            LibelleSurveille(Textes.Interface.bandeau).font(.headline)
 
             VStack(alignment: .leading, spacing: 10) {
             Self.interrupteur(Textes.Interface.bandeauActif,
@@ -218,15 +218,17 @@ struct PanneauPersonnaliserView: View {
 
     private var sectionLogo: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(Textes.Interface.logo).font(.headline)
+            LibelleSurveille(Textes.Interface.logo).font(.headline)
 
             if etat.profil.logoActif, let fichier = etat.profil.logoFichier {
                 HStack {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                     Text(fichier.lastPathComponent).lineLimit(1).truncationMode(.middle)
                     Spacer()
-                    Button(Textes.Interface.retirerLogo) { etat.retirerLogo() }
-                        .buttonStyle(.link)
+                    Button { etat.retirerLogo() } label: {
+                        LibelleSurveille(Textes.Interface.retirerLogo)
+                    }
+                    .buttonStyle(.link)
                         .help(Textes.Aide.retirerLogo)
                 }
 
@@ -262,7 +264,9 @@ struct PanneauPersonnaliserView: View {
                                      aide: Textes.Aide.opaciteLogo,
                                      valeur: $etat.profil.logoOpacite, de: 0, a: 1)
             } else {
-                Button(Textes.Interface.choisirLogo) { choisirLogo() }
+                Button { choisirLogo() } label: {
+                    LibelleSurveille(Textes.Interface.choisirLogo)
+                }
                     .help(Textes.Aide.choisirLogo)
             }
         }
@@ -304,7 +308,7 @@ struct PanneauPersonnaliserView: View {
         selection: Binding<Valeur>,
         @ViewBuilder options: () -> Options) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(titre)
+            LibelleSurveille(titre)
             Picker("", selection: selection, content: options)
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -315,7 +319,7 @@ struct PanneauPersonnaliserView: View {
     /// Le choix de la police. Libellé à gauche, comme tout menu déroulant.
     @MainActor
     static func choixPolice(aide: String, selection: Binding<String>) -> some View {
-        Picker(Textes.Interface.police, selection: selection) {
+        Picker(selection: selection) {
             ForEach(PolicesSures.disponibles, id: \.self) { f in
                 Text(f).font(.custom(f, size: 13)).tag(f)
             }
@@ -325,6 +329,8 @@ struct PanneauPersonnaliserView: View {
             ForEach(PolicesSures.toutes, id: \.self) { f in
                 Text(f).tag(f)
             }
+        } label: {
+            LibelleSurveille(Textes.Interface.police)
         }
         .frame(maxWidth: 280)
         .help(aide)
@@ -340,10 +346,12 @@ struct PanneauPersonnaliserView: View {
     @MainActor
     static func selecteurCouleur(_ titre: String, aide: String,
                                  valeur: Binding<CouleurProfil>) -> some View {
-        ColorPicker(titre, selection: Binding(
+        ColorPicker(selection: Binding(
             get: { valeur.wrappedValue.couleurSwiftUI },
             set: { valeur.wrappedValue = CouleurProfil(couleurSwiftUI: $0) }),
-            supportsOpacity: true)
+            supportsOpacity: true) {
+            LibelleSurveille(titre)
+        }
         .frame(maxWidth: 210)
         .help(aide)
     }
@@ -352,7 +360,7 @@ struct PanneauPersonnaliserView: View {
     @MainActor
     static func interrupteur(_ titre: String, aide: String,
                              actif: Binding<Bool>) -> some View {
-        Toggle(titre, isOn: actif).help(aide)
+        Toggle(isOn: actif) { LibelleSurveille(titre) }.help(aide)
     }
 
     /// Un pas-à-pas dont le libellé porte la valeur : « Lignes maximum : 2 ».
@@ -360,7 +368,7 @@ struct PanneauPersonnaliserView: View {
     static func pasAPas(_ titre: String, aide: String, valeur: Binding<Int>,
                         de min: Int, a max: Int) -> some View {
         Stepper(value: valeur, in: min...max) {
-            Text("\(titre) : \(valeur.wrappedValue)")
+            LibelleSurveille("\(titre) : \(valeur.wrappedValue)")
         }
         .frame(maxWidth: 220)
         .help(aide)
@@ -374,16 +382,19 @@ struct PanneauPersonnaliserView: View {
     /// titres se TRONQUENT — « Haut gau… », « Haut dr… ». La ligne voudrait
     /// 422 points et en reçoit 316. On a longtemps appelé cela une
     /// « dégradation acceptable » ; un libellé tronqué est visible de
-    /// l'utilisateur, et ne l'est pas. Les contrôles ne peuvent pas le voir :
-    /// ils ne mesurent que la hauteur. Voir docs/defauts-connus.md, DC-1.
+    /// l'utilisateur, et ne l'est pas. Les contrôles, qui ne mesuraient que la
+    /// hauteur, ne le voyaient pas ; `LibelleSurveille` le leur montre
+    /// désormais. Voir docs/defauts-connus.md, DC-1.
     @MainActor
     static func coinsDuLogo(aide: String,
                             position: Binding<PositionLogo>) -> some View {
         HStack(spacing: 6) {
-            Text(Textes.Interface.positionLogo)
+            LibelleSurveille(Textes.Interface.positionLogo)
             ForEach(CoinLogo.allCases, id: \.self) { coin in
-                Button(Textes.Interface.nomCoin(coin)) {
+                Button {
                     position.wrappedValue = .coin(coin)
+                } label: {
+                    LibelleSurveille(Textes.Interface.nomCoin(coin))
                 }
                 .buttonStyle(.bordered)
                 .tint(position.wrappedValue == .coin(coin) ? .accentColor : nil)
@@ -404,9 +415,10 @@ struct PanneauPersonnaliserView: View {
                                 valeur: Binding<Double>,
                                 de min: Double, a max: Double) -> some View {
         HStack {
-            Text(titre).frame(width: Fenetre.largeurLibelleCurseur, alignment: .leading)
+            LibelleSurveille(titre)
+                .frame(width: Fenetre.largeurLibelleCurseur, alignment: .leading)
             Slider(value: valeur, in: min...max)
-            Text("\(Int((valeur.wrappedValue * 100).rounded())) %")
+            LibelleSurveille("\(Int((valeur.wrappedValue * 100).rounded())) %")
                 .font(.caption.monospacedDigit())
                 .frame(width: 44, alignment: .trailing)
         }

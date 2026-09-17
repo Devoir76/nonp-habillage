@@ -27,6 +27,11 @@ enum Verification {
     static func maybeRun() {
         let args = CommandLine.arguments
 
+        // Planche des boutons de coin du logo (DC-1).
+        if args.contains("--planche-coins") {
+            exit(MainActor.assumeIsolated { PlancheCoins.executer(arguments: args) })
+        }
+
         // Capture de l'interface (lot 5).
         if args.contains("--capture") {
             exit(MainActor.assumeIsolated { CaptureInterface.executer(arguments: args) })

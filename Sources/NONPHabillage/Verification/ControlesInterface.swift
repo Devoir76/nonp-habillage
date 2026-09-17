@@ -49,6 +49,9 @@ enum ControlesInterface {
         r.section("Interface — aucun libellé de la colonne ne se casse")
         MainActor.assumeIsolated { libellesDeLaColonne(r) }
 
+        r.section("Interface — aucun libellé de la colonne n'est tronqué")
+        MainActor.assumeIsolated { troncatures(r) }
+
         r.section("Interface — la colonne des réglages ne dépend pas de l'ascenseur")
         MainActor.assumeIsolated { colonneEtAscenseur(r) }
 
@@ -1525,7 +1528,7 @@ enum ControlesInterface {
     /// la tenant pour une « dégradation acceptable » ; elle ne l'est pas, elle
     /// se voit : les boutons de coin affichent « Haut gau… », « Haut dr… ».
     /// Voir docs/defauts-connus.md, DC-1. Qu'il passe ne dit rien des titres
-    /// tronqués.
+    /// tronqués : c'est `troncatures` qui les cherche.
     ///
     /// Les lignes sont construites par les MÊMES fonctions que le volet
     /// (`PanneauPersonnaliserView.choixSegmente`, `selecteurCouleur`,
@@ -1626,6 +1629,91 @@ enum ControlesInterface {
                                                  proposee largeur: CGFloat) -> CGFloat {
         NSHostingController(rootView: vue)
             .sizeThatFits(in: CGSize(width: largeur, height: 100_000)).width
+    }
+
+    // MARK: - Troncatures
+
+    /// **Aucun libellé de la colonne n'est tronqué à la largeur de contrôle.**
+    ///
+    /// C'est DC-1 : « Haut ga… », « Haut d… » sont restés des semaines dans la
+    /// colonne, et tous les contrôles passaient. `libellesDeLaColonne` mesure
+    /// la HAUTEUR : il attrape un libellé qui se replie, pas un titre qui se
+    /// tronque. Et la largeur naturelle d'une ligne ne dit pas où la troncature
+    /// commence — un bouton comprime sa marge avant son texte : les abréviations
+    /// « Haut G. », que la largeur naturelle déclarait trop larges (329 points),
+    /// restent entières jusqu'à 290 points et se tronquent à 280. C'est la
+    /// capture qui l'a montré.
+    ///
+    /// La mesure passe donc par `LibelleSurveille`, qui compare ce que chaque
+    /// libellé reçoit à ce que son texte entier demande. Validée contre des
+    /// captures de vraies fenêtres : 56 libellés, sept largeurs, aucun désaccord
+    /// (`--planche-coins <dossier> --seuils`).
+    ///
+    /// **Ce qu'il ne voit pas.** Un libellé qui ne passe pas par
+    /// `LibelleSurveille`. Les segments d'un sélecteur, dessinés par AppKit —
+    /// or ils peuvent déborder, voir DC-2. Le nom du fichier logo, qui a le
+    /// droit de se tronquer par le milieu. Les explications en petits
+    /// caractères, qui se replient et ne se tronquent pas.
+    @MainActor
+    private static func troncatures(_ r: Rapport) {
+        _ = NSApplication.shared
+        let etroit = Fenetre.largeurDeControleReglages
+
+        // Le détecteur doit d'abord prouver qu'il sait échouer, et qu'il ne
+        // crie pas au loup.
+        let long = "Un libellé bien trop long pour la place qu'on lui laisse"
+        let force = libellesTronques(LibelleSurveille(long), largeur: 80)
+        r.verifier("le détecteur voit un libellé tronqué (80 points pour un "
+                   + "texte qui en demande davantage)", force == [long])
+        let entier = libellesTronques(LibelleSurveille("Court"), largeur: 200)
+        r.verifier("le détecteur ne signale pas un libellé entier", entier.isEmpty)
+
+        // La colonne, dans les états qui montrent le plus de libellés.
+        let nu = AppState(memoire: false)
+        let logo = AppState(memoire: false)
+        logo.profil.logoActif = true
+        logo.profil.logoFichier = URL(fileURLWithPath: "/x/logo-nonp.png")
+        let complet = AppState(memoire: false)
+        complet.profil.logoActif = true
+        complet.profil.logoFichier = URL(fileURLWithPath: "/x/logo-nonp.png")
+        complet.profil.bandeauActif = true
+        let etats: [(String, AppState)] = [
+            ("sans logo", nu), ("logo chargé", logo), ("logo et bandeau", complet)]
+        for (nom, etat) in etats {
+            let tronques = libellesTronques(
+                PanneauPersonnaliserView().environmentObject(etat), largeur: etroit)
+            r.verifier("\(nom) : aucun libellé tronqué à \(Int(etroit)) points"
+                       + (tronques.isEmpty ? ""
+                          : " (tronqués : " + tronques.joined(separator: ", ") + ")"),
+                       tronques.isEmpty)
+        }
+    }
+
+    /// Les libellés tronqués d'une vue posée à une largeur donnée, tels que
+    /// `LibelleSurveille` les publie.
+    ///
+    /// Une vraie fenêtre, jamais montrée : les préférences ne remontent qu'une
+    /// fois la vue installée.
+    @MainActor
+    static func libellesTronques<V: View>(_ vue: V, largeur: CGFloat) -> [String] {
+        let releve = ReleveTroncatures()
+        let hote = NSHostingView(rootView: vue
+            .frame(width: largeur, alignment: .leading)
+            .onPreferenceChange(LibellesTronques.self) { releve.libelles = $0 })
+        let fenetre = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: largeur + 40, height: 200),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        fenetre.isReleasedWhenClosed = false
+        fenetre.contentView = hote
+        hote.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        hote.layoutSubtreeIfNeeded()
+        fenetre.close()
+        return releve.libelles
+    }
+
+    private final class ReleveTroncatures {
+        var libelles: [String] = []
     }
 
     // MARK: - Colonne et ascenseur
