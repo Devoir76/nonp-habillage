@@ -78,7 +78,15 @@ enum Fenetre {
 
     /// Largeur de la colonne des réglages : assez pour un curseur et son
     /// libellé sans que le texte se replie ligne à ligne.
-    static let largeurReglages: CGFloat = 360
+    ///
+    /// 365 points depuis le 17/09, contre 360 auparavant. Les cinq points
+    /// viennent des métriques réelles d'AppKit, mesurées sur un binaire
+    /// correctement marqué (voir Scripts/sdk_macos.sh) : deux pour l'ascenseur,
+    /// qui fait 17 points et non 15, et trois pour « Taille », dont les quatre
+    /// segments réclament 300 points au minimum. C'est la colonne qui s'élargit,
+    /// pas la marge qui baisse : `margeDeSecuriteReglages` est l'exigence, et
+    /// un sélecteur à sa taille naturelle n'est pas un réglage à corriger.
+    static let largeurReglages: CGFloat = 365
     /// Marge intérieure de cette colonne, de chaque côté.
     static let margeReglages: CGFloat = 16
     /// Place que prend l'ascenseur quand le système affiche des barres de
@@ -92,7 +100,11 @@ enum Fenetre {
     /// Le contrôle de disposition la compare à la largeur que le système donne
     /// VRAIMENT à un ascenseur permanent : c'est une réserve, elle ne doit pas
     /// être plus petite que ce qu'elle réserve.
-    static let largeurBarreDefilement: CGFloat = 15
+    ///
+    /// 17 points, mesurés sur macOS 27 — permanent comme superposé. Elle en a
+    /// valu 15, étalonnée le 17/09 sur un binaire mal marqué, dont AppKit
+    /// dessinait l'ascenseur aux anciennes dimensions.
+    static let largeurBarreDefilement: CGFloat = 17
     /// La largeur du contenu de la colonne — IMPOSÉE, et non laissée à la zone
     /// défilante. Voir `ColonneReglages`.
     static let largeurUtileReglages: CGFloat =
@@ -100,12 +112,16 @@ enum Fenetre {
     /// L'écart que les contrôles exigent entre ce que les réglages réclament et
     /// la largeur qu'ils reçoivent.
     ///
-    /// Les contrôles mesuraient à 313 points pour 313 points de colonne : un
+    /// Les contrôles mesuraient à 313 points pour 313 points de contenu : un
     /// contrôle qui passe au point près ne voit pas une dérive d'un point, et
     /// la colonne, elle, rognait. Les réglages doivent donc tenir à
     /// `largeurDeControleReglages`, plus étroite de cette marge : il faudra
     /// qu'un réglage grossisse de 16 points avant qu'une coupe devienne
     /// possible, et le contrôle tombera bien avant.
+    ///
+    /// NE PAS la baisser pour faire passer un contrôle : un contrôle taillé sur
+    /// la mesure ne mesure plus rien. Si un réglage ne tient plus, c'est la
+    /// colonne qui s'élargit, ou le réglage qui s'assagit.
     static let margeDeSecuriteReglages: CGFloat = 16
     /// La largeur à laquelle se mesure la disposition de la colonne.
     static let largeurDeControleReglages: CGFloat =
@@ -315,7 +331,9 @@ struct ContenuFenetre: View {
 /// « 15 % » : tout ce qui s'aligne à droite de la colonne. Un changement d'état
 /// relançait parfois la disposition, d'où un défaut qui allait et venait.
 ///
-/// Le contenu reçoit donc `Fenetre.largeurUtileReglages` (313 points) quel que
+/// (Ces chiffres sont ceux du défaut, colonne de 360 points.)
+///
+/// Le contenu reçoit donc `Fenetre.largeurUtileReglages` (316 points) quel que
 /// soit l'état de l'ascenseur, calé à gauche. Ascenseur permanent : il occupe
 /// exactement la place réservée. Ascenseur superposé : cette place reste vide,
 /// et c'est là qu'il se dessine quand on défile, au lieu de recouvrir un

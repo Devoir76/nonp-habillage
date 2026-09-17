@@ -1519,9 +1519,13 @@ enum ControlesInterface {
     /// Un libellé qui se replie ajoute une ligne de texte, donc de la hauteur :
     /// il ne peut pas passer inaperçu. Un contrôle qui se comprime sans se
     /// replier — un sélecteur segmenté qui raccourcit ses segments, un bouton
-    /// de coin qui rogne son titre — ne change pas de hauteur, et reste donc
-    /// permis : c'est la dégradation acceptable, celle qui n'écrit pas de
-    /// travers.
+    /// de coin qui rogne son titre — ne change pas de hauteur.
+    ///
+    /// **Ce contrôle est donc aveugle à la troncature.** Il avait été écrit en
+    /// la tenant pour une « dégradation acceptable » ; elle ne l'est pas, elle
+    /// se voit : les boutons de coin affichent « Haut gau… », « Haut dr… ».
+    /// Voir docs/defauts-connus.md, DC-1. Qu'il passe ne dit rien des titres
+    /// tronqués.
     ///
     /// Les lignes sont construites par les MÊMES fonctions que le volet
     /// (`PanneauPersonnaliserView.choixSegmente`, `selecteurCouleur`,
@@ -1537,9 +1541,9 @@ enum ControlesInterface {
     /// réglages sur une même ligne le rendrait aveugle à leur étroitesse.
     ///
     /// **Et elle se prend avec une marge.** Le contenu reçoit
-    /// `largeurUtileReglages` (313 points) ; les lignes se mesurent à
+    /// `largeurUtileReglages` (316 points) ; les lignes se mesurent à
     /// `largeurDeControleReglages`, plus étroite de `margeDeSecuriteReglages`.
-    /// Mesurer à 313 pour 313, c'était passer au point près — donc ne rien voir
+    /// Mesurer à 313 pour 313 reçus, c'était passer au point près — donc ne rien voir
     /// d'une dérive d'un point.
     @MainActor
     private static func libellesDeLaColonne(_ r: Rapport) {
@@ -1649,8 +1653,9 @@ enum ControlesInterface {
         _ = NSApplication.shared
 
         // La réserve couvre-t-elle ce que le système donne vraiment à un
-        // ascenseur permanent ? Une réserve de 15 points pour un ascenseur de
-        // 17 rouvrirait le défaut à l'identique.
+        // ascenseur permanent ? Elle a valu 15 points pour un ascenseur de 17,
+        // étalonnée sur un binaire mal marqué : c'est ce contrôle qui l'a vu,
+        // dès que le marquage a été juste.
         let systeme = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
         r.verifier("la place réservée à l'ascenseur couvre l'ascenseur permanent "
                    + "du système (\(Int(Fenetre.largeurBarreDefilement)) points "

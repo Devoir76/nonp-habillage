@@ -368,9 +368,14 @@ struct PanneauPersonnaliserView: View {
 
     /// Les quatre coins, en un clic.
     ///
-    /// Libellé en ligne, et il y reste : mesuré, il tient. Les boutons bordés
-    /// se compriment sans que le texte se replie — c'est la dégradation
-    /// acceptable, et le contrôle de disposition la distingue d'un repli.
+    /// Libellé en ligne, et il y reste : mesuré, il ne se replie pas.
+    ///
+    /// ⚠︎ DÉFAUT CONNU, non corrigé : les boutons bordés se compriment, et leurs
+    /// titres se TRONQUENT — « Haut gau… », « Haut dr… ». La ligne voudrait
+    /// 422 points et en reçoit 316. On a longtemps appelé cela une
+    /// « dégradation acceptable » ; un libellé tronqué est visible de
+    /// l'utilisateur, et ne l'est pas. Les contrôles ne peuvent pas le voir :
+    /// ils ne mesurent que la hauteur. Voir docs/defauts-connus.md, DC-1.
     @MainActor
     static func coinsDuLogo(aide: String,
                             position: Binding<PositionLogo>) -> some View {

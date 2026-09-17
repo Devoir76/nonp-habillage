@@ -59,7 +59,8 @@
 # antérieures à ce correctif. Y compris les deux builds de test sur lesquelles
 # le correctif de la colonne des réglages (bb2238a) a été vérifié à l'œil, et
 # la vérification qui l'a étalonné : ascenseur de 15 points, alors qu'il en
-# fait 17 avec le bon marquage. Cet étalonnage est à reprendre.
+# fait 17 avec le bon marquage. Cet étalonnage a été repris sur
+# fix/colonne-metriques-reelles : colonne de 365 points, réserve de 17.
 #
 # LA PARADE. Les scripts compilent avec `--build-system native` — la chaîne
 # qui a produit toutes les builds validées jusqu'au 07/09 —, et
