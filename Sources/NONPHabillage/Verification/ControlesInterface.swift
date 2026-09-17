@@ -1526,8 +1526,8 @@ enum ControlesInterface {
     ///
     /// **Ce contrôle est donc aveugle à la troncature.** Il avait été écrit en
     /// la tenant pour une « dégradation acceptable » ; elle ne l'est pas, elle
-    /// se voit : les boutons de coin affichent « Haut gau… », « Haut dr… ».
-    /// Voir docs/defauts-connus.md, DC-1. Qu'il passe ne dit rien des titres
+    /// se voit : les boutons de coin ont affiché « Haut gau… », « Haut dr… »
+    /// (DC-1, corrigé par 5a1374a). Qu'il passe ne dit rien des titres
     /// tronqués : c'est `troncatures` qui les cherche.
     ///
     /// Les lignes sont construites par les MÊMES fonctions que le volet
