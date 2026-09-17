@@ -59,6 +59,9 @@ enum ControlesInterface {
         imageDAccueil(r)
         MainActor.assumeIsolated { dispositionImageAccueil(r) }
 
+        r.section("Interface — le logo suit la souris")
+        MainActor.assumeIsolated { glissementLogo(r) }
+
         r.section("Interface — retirer la vidéo")
         MainActor.assumeIsolated { retirerLaVideo(r) }
 
@@ -974,6 +977,158 @@ enum ControlesInterface {
             fond: fond, profil: pleineLargeur, replique: nil)
         r.verifier("mode « pleine-largeur » : aucune bande vide sur l'accueil",
                    sansLigne.map { !ImagesReference.differe($0.image, de: fond) } == true)
+    }
+
+    // MARK: - Glissement du logo
+
+    /// **Déplacer vers la droite déplace vers la droite** — et seulement vers la
+    /// droite.
+    ///
+    /// Rien ne le vérifiait, et le placement à la souris était faux : logo en
+    /// haut à gauche, un pas vers la droite le faisait tomber au bas de l'image,
+    /// le centre était inatteignable, et en 9:16 le logo sautait en bas à
+    /// droite. Le geste confondait l'origine de la fenêtre et celle de l'image —
+    /// voir `GlissementLogo`.
+    ///
+    /// **Ce que le contrôle éprouve.** Un glissement ne se simule pas : AppKit
+    /// ignore les événements souris synthétiques. Le contrôle rejoue donc
+    /// EXACTEMENT ce que fait le geste — centre à la saisie, translation, puis
+    /// `AppState.deplacerLogo` et la vraie géométrie du logo — et mesure où le
+    /// logo atterrit, en pixels de la vidéo, en 16:9 et en 9:16. Ce qu'il ne
+    /// voit pas : que la vue appelle bien ces fonctions avec la translation.
+    ///
+    /// Avant tout, il prouve qu'il aurait vu le défaut : l'ancienne formule,
+    /// rejouée avec l'origine mesurée de l'image, doit échouer.
+    @MainActor
+    private static func glissementLogo(_ r: Rapport) {
+        guard let urlLogo = fabriquerLogoDEssai() else {
+            r.verifier("logo d'essai", false); return
+        }
+
+        for (format, l, h) in [("16:9", 1920, 1080), ("9:16", 1080, 1920)] {
+            guard let fond = fondDeControle(largeur: l, hauteur: h) else {
+                r.verifier("\(format) : fond de contrôle", false); continue
+            }
+            let etat = AppState(memoire: false)
+            etat.chargerLogo(urlLogo)
+            etat.poserFondsDeControle([(instant: 0, image: fond, luminosite: 0.5)])
+            let image = CGSize(width: l, height: h)
+            // La taille à laquelle la fenêtre par défaut affiche cette image.
+            let affichee = Apercu.tailleAffichee(image: image,
+                                                 dans: CGSize(width: 782, height: 492))
+            // Tolérance : un pixel et demi de la vidéo — `GeometrieLogo` arrondit
+            // au pixel.
+            let tx = 1.5 / CGFloat(l), ty = 1.5 / CGFloat(h)
+
+            func centre() -> CGPoint {
+                GlissementLogo.centre(rectangle: etat.rectangleLogo ?? .zero, image: image)
+            }
+            /// Rejoue le geste : saisie, puis translations successives, en
+            /// points d'écran depuis la saisie. Rend le centre après chacune.
+            func glisser(depuis depart: PositionLogo, _ translations: [CGSize]) -> (CGPoint, [CGPoint]) {
+                etat.profil.logoPosition = depart
+                let c0 = centre()
+                return (c0, translations.map { t in
+                    etat.deplacerLogo(versFraction: GlissementLogo.position(
+                        centreDepart: c0, translation: t, affichee: affichee))
+                    return centre()
+                })
+            }
+            let pasX = affichee.width * 0.05, pasY = affichee.height * 0.05
+
+            // 0. Le contrôle aurait vu le défaut. L'ancienne formule : la
+            //    position du pointeur dans l'espace de la fenêtre, divisée par la
+            //    taille de l'image. Origine mesurée de l'image dans cet espace.
+            let origine = format == "16:9" ? CGPoint(x: 16, y: 371) : CGPoint(x: 268, y: 345)
+            etat.profil.logoPosition = .coin(.hautGauche)
+            let ancienDepart = centre()
+            let pointeur = CGPoint(x: origine.x + (ancienDepart.x * affichee.width) + pasX,
+                                   y: origine.y + ancienDepart.y * affichee.height)
+            etat.deplacerLogo(versFraction: CGPoint(x: pointeur.x / affichee.width,
+                                                    y: pointeur.y / affichee.height))
+            let ancienArrivee = centre()
+            r.verifier("\(format) : le contrôle aurait vu le défaut — avec l'ancienne "
+                       + "formule, un pas vers la droite déplaçait le logo de "
+                       + String(format: "%+.2f", ancienArrivee.y - ancienDepart.y)
+                       + " en hauteur",
+                       abs(ancienArrivee.y - ancienDepart.y) > ty)
+
+            // 1. Vers la droite, depuis le coin haut-gauche : x suit, y ne bouge pas.
+            let (c1, droite) = glisser(depuis: .coin(.hautGauche),
+                                       (1...5).map { CGSize(width: CGFloat($0) * pasX, height: 0) })
+            let derivesY = droite.map { abs($0.y - c1.y) }.max() ?? 0
+            let ecartsX = droite.enumerated().map { i, c in
+                abs((c.x - c1.x) - CGFloat(i + 1) * 0.05) }.max() ?? 0
+            r.verifier("\(format) : vers la droite depuis le haut à gauche, le logo "
+                       + "ne bouge pas en hauteur (dérive max "
+                       + String(format: "%.1f", derivesY * CGFloat(h)) + " px)",
+                       derivesY <= ty)
+            r.verifier("\(format) : … et il suit le pointeur en largeur (écart max "
+                       + String(format: "%.1f", ecartsX * CGFloat(l)) + " px)",
+                       ecartsX <= tx)
+
+            // 2. Vers le bas, depuis le centre : y suit, x ne bouge pas.
+            let (c2, bas) = glisser(depuis: .libre(xPct: 50, yPct: 50),
+                                    (1...5).map { CGSize(width: 0, height: CGFloat($0) * pasY) })
+            let derivesX = bas.map { abs($0.x - c2.x) }.max() ?? 0
+            let ecartsY = bas.enumerated().map { i, c in
+                abs((c.y - c2.y) - CGFloat(i + 1) * 0.05) }.max() ?? 0
+            r.verifier("\(format) : vers le bas depuis le centre, le logo ne bouge pas "
+                       + "en largeur (dérive max "
+                       + String(format: "%.1f", derivesX * CGFloat(l)) + " px) et "
+                       + "descend avec le pointeur (écart max "
+                       + String(format: "%.1f", ecartsY * CGFloat(h)) + " px)",
+                       derivesX <= tx && ecartsY <= ty)
+
+            // 3. Saisir sans bouger ne fait pas sauter le logo.
+            let (c3, immobile) = glisser(depuis: .coin(.basDroit), [.zero])
+            r.verifier("\(format) : saisir le logo sans bouger ne le déplace pas",
+                       abs(immobile[0].x - c3.x) <= tx && abs(immobile[0].y - c3.y) <= ty)
+
+            // 4. Le centre est atteignable.
+            etat.profil.logoPosition = .coin(.hautGauche)
+            let c4 = centre()
+            let (_, versCentre) = glisser(depuis: .coin(.hautGauche), [CGSize(
+                width: (0.5 - c4.x) * affichee.width, height: (0.5 - c4.y) * affichee.height)])
+            r.verifier("\(format) : le centre de l'image est atteignable ("
+                       + String(format: "%.3f, %.3f", versCentre[0].x, versCentre[0].y) + ")",
+                       abs(versCentre[0].x - 0.5) <= tx && abs(versCentre[0].y - 0.5) <= ty)
+
+            // 5. Tiré au-delà du coin bas-droit, le logo s'y arrête, dans
+            //    l'image ; ramené au point de saisie, il revient à sa place —
+            //    aucune dérive ne s'accumule.
+            let loin = CGSize(width: 2 * affichee.width, height: 2 * affichee.height)
+            etat.profil.logoPosition = .libre(xPct: 50, yPct: 50)
+            let c5 = centre()
+            etat.deplacerLogo(versFraction: GlissementLogo.position(
+                centreDepart: c5, translation: loin, affichee: affichee))
+            let rectBord = etat.rectangleLogo ?? .zero
+            etat.deplacerLogo(versFraction: GlissementLogo.position(
+                centreDepart: c5, translation: .zero, affichee: affichee))
+            let retour = centre()
+            r.verifier("\(format) : tiré au-delà du coin bas-droit, le logo s'y arrête, "
+                       + "dans l'image",
+                       abs(rectBord.maxX - CGFloat(l)) <= 1 && abs(rectBord.minY) <= 1)
+            r.verifier("\(format) : ramené au point de saisie, il revient à sa place",
+                       abs(retour.x - c5.x) <= tx && abs(retour.y - c5.y) <= ty)
+
+            // 6. La poignée est là où le logo est dessiné : en HAUT pour un coin
+            //    du haut. C'est le retournement de repère Core Graphics → écran.
+            let marge = CGFloat(etat.miseEnPage?.parametres.margeLogo ?? 0)
+                * affichee.width / CGFloat(l)
+            etat.profil.logoPosition = .coin(.hautGauche)
+            let haut = GlissementLogo.cadreAffiche(rectangle: etat.rectangleLogo ?? .zero,
+                                                   image: image, affichee: affichee)
+            etat.profil.logoPosition = .coin(.basDroit)
+            let basDroit = GlissementLogo.cadreAffiche(rectangle: etat.rectangleLogo ?? .zero,
+                                                       image: image, affichee: affichee)
+            r.verifier("\(format) : la poignée d'un logo en haut à gauche est en haut à "
+                       + "gauche de l'aperçu",
+                       abs(haut.minX - marge) <= 1 && abs(haut.minY - marge) <= 1)
+            r.verifier("\(format) : celle d'un logo en bas à droite, en bas à droite",
+                       abs(basDroit.maxX - (affichee.width - marge)) <= 1
+                       && abs(basDroit.maxY - (affichee.height - marge)) <= 1)
+        }
     }
 
     /// Un logo d'essai sur disque : `RenduLogo` lit un fichier, pas une image en

@@ -18,6 +18,10 @@ struct ApercuView: View {
 
     @EnvironmentObject private var etat: AppState
 
+    /// Le centre du logo au moment où on l'a saisi. Tant qu'un glissement est
+    /// en cours, le logo se place par rapport à LUI — voir `GlissementLogo`.
+    @State private var centreAuDepart: CGPoint?
+
     var body: some View {
         VStack(spacing: 8) {
             imageOuAttente
@@ -63,34 +67,38 @@ struct ApercuView: View {
     @ViewBuilder
     private func poigneeLogo(image: CGImage, affichee: CGSize) -> some View {
         if let rect = etat.rectangleLogo {
-            let echelle = affichee.width / CGFloat(image.width)
-            // Le rectangle vient de Core Graphics (origine en bas) ; SwiftUI
-            // compte depuis le haut.
-            let x = rect.minX * echelle
-            let y = (CGFloat(image.height) - rect.maxY) * echelle
-            let l = rect.width * echelle
-            let h = rect.height * echelle
+            let tailleImage = CGSize(width: image.width, height: image.height)
+            let cadre = GlissementLogo.cadreAffiche(
+                rectangle: rect, image: tailleImage, affichee: affichee)
+            let l = max(cadre.width, 24)
+            let h = max(cadre.height, 24)
 
             Rectangle()
                 .fill(Color.clear)
                 .contentShape(Rectangle())
-                .frame(width: max(l, 24), height: max(h, 24))
-                .offset(x: x, y: y)
+                .frame(width: l, height: h)
+                .offset(x: cadre.minX, y: cadre.minY)
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
                         .strokeBorder(Color.accentColor.opacity(0.9),
                                       style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                        .frame(width: max(l, 24), height: max(h, 24))
-                        .offset(x: x, y: y)
+                        .frame(width: l, height: h)
+                        .offset(x: cadre.minX, y: cadre.minY)
                         .allowsHitTesting(false)
                 )
                 .gesture(
-                    DragGesture(minimumDistance: 1, coordinateSpace: .named("apercu"))
+                    // La TRANSLATION, dans l'espace global : ni origine à
+                    // retrancher, ni repère qui bouge avec le logo.
+                    DragGesture(minimumDistance: 1, coordinateSpace: .global)
                         .onChanged { valeur in
-                            etat.deplacerLogo(versFraction: CGPoint(
-                                x: valeur.location.x / affichee.width,
-                                y: valeur.location.y / affichee.height))
+                            let depart = centreAuDepart
+                                ?? GlissementLogo.centre(rectangle: rect, image: tailleImage)
+                            if centreAuDepart == nil { centreAuDepart = depart }
+                            etat.deplacerLogo(versFraction: GlissementLogo.position(
+                                centreDepart: depart, translation: valeur.translation,
+                                affichee: affichee))
                         }
+                        .onEnded { _ in centreAuDepart = nil }
                 )
                 .help(Textes.Interface.deplacerLogo)
         }

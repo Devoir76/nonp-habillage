@@ -220,7 +220,6 @@ struct ContenuFenetre: View {
             minHeight: hauteurMinimale,
             idealHeight: hauteurIdeale,
             maxHeight: .infinity)
-        .coordinateSpace(name: "apercu")
     }
 
     /// Trois états, dans l'ordre où on les rencontre : l'accueil nu, l'accueil
