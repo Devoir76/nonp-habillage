@@ -133,9 +133,18 @@ enum Textes {
             guard let conseil else { return logoSurBandeau }
             return logoSurBandeau + " " + conseil
         }
+        /// Il disait « Le logo touche le bord de l'image » : faux. Il se
+        /// déclenche dès que le logo entre dans la marge de sécurité — 5 % de
+        /// la largeur à gauche et à droite, 5 % de la hauteur en haut et en
+        /// bas, placement libre seulement —, et un logo visiblement à distance
+        /// du bord faisait douter d'un réglage correct. Le message dit ce qu'il
+        /// mesure, et que l'aperçu est juste : le logo y est entier, le risque
+        /// est à la diffusion. Une ligne sous l'aperçu, à la largeur par défaut
+        /// comme à la largeur minimale — mesuré. Affiché sous l'aperçu
+        /// seulement, d'où « ici ».
         static let logoHorsMargesSures =
-            "Le logo touche le bord de l'image. Certaines plateformes rognent "
-            + "les bords : éloignez-le un peu."
+            "Le logo est dans la marge de sécurité de 5 % : entier ici, "
+            + "il risque d'être rogné à la diffusion."
     }
 
     // MARK: - Interface (lot 5)
