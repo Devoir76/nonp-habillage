@@ -88,11 +88,28 @@ enum Fenetre {
     /// C'est ce qui manquait aux contrôles : ils mesuraient à 328 points, la
     /// colonne moins ses marges, en oubliant l'ascenseur. Or « Taille » se
     /// cassait précisément entre les deux.
+    ///
+    /// Le contrôle de disposition la compare à la largeur que le système donne
+    /// VRAIMENT à un ascenseur permanent : c'est une réserve, elle ne doit pas
+    /// être plus petite que ce qu'elle réserve.
     static let largeurBarreDefilement: CGFloat = 15
-    /// La largeur la plus étroite qu'un réglage puisse recevoir. C'est à
-    /// celle-ci que se mesure la disposition de la colonne.
+    /// La largeur du contenu de la colonne — IMPOSÉE, et non laissée à la zone
+    /// défilante. Voir `ColonneReglages`.
     static let largeurUtileReglages: CGFloat =
         largeurReglages - 2 * margeReglages - largeurBarreDefilement
+    /// L'écart que les contrôles exigent entre ce que les réglages réclament et
+    /// la largeur qu'ils reçoivent.
+    ///
+    /// Les contrôles mesuraient à 313 points pour 313 points de colonne : un
+    /// contrôle qui passe au point près ne voit pas une dérive d'un point, et
+    /// la colonne, elle, rognait. Les réglages doivent donc tenir à
+    /// `largeurDeControleReglages`, plus étroite de cette marge : il faudra
+    /// qu'un réglage grossisse de 16 points avant qu'une coupe devienne
+    /// possible, et le contrôle tombera bien avant.
+    static let margeDeSecuriteReglages: CGFloat = 16
+    /// La largeur à laquelle se mesure la disposition de la colonne.
+    static let largeurDeControleReglages: CGFloat =
+        largeurUtileReglages - margeDeSecuriteReglages
     /// Colonne réservée au libellé d'un curseur, à gauche de sa course.
     static let largeurLibelleCurseur: CGFloat = 130
     /// En deçà, l'aperçu ne montrerait plus rien d'utile.
@@ -263,12 +280,7 @@ struct ContenuFenetre: View {
 
             // Droite : les réglages, en colonne défilante de largeur constante.
             // Défilante, donc TOUS atteignables quelle que soit la hauteur.
-            ScrollView {
-                PanneauPersonnaliserView()
-                    .padding(Fenetre.margeReglages)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(width: Fenetre.largeurReglages)
+            ColonneReglages { PanneauPersonnaliserView() }
         }
         .frame(maxHeight: .infinity)
     }
@@ -284,6 +296,50 @@ struct ContenuFenetre: View {
         if panneau.runModal() == .OK, let url = panneau.url {
             etat.habiller(vers: url)
         }
+    }
+}
+
+/// La colonne défilante des réglages, à droite de l'aperçu.
+///
+/// **La largeur du contenu est imposée**, et ne dépend jamais de l'ascenseur.
+///
+/// Elle était laissée à la `ScrollView`, qui propose à son contenu la largeur
+/// qu'elle a sous la main au moment de la disposition — 360 points moins les
+/// marges, soit 328. Mais l'ascenseur de macOS va et vient : permanent,
+/// superposé, présent ou non selon Réglages Système › Apparence, la souris
+/// branchée, la hauteur du contenu. Quand il devient permanent APRÈS la
+/// disposition, la zone visible tombe à 345 points et le contenu reste à 360 :
+/// SwiftUI ne repropose pas la largeur. Mesuré, dans les deux sens et à
+/// plusieurs reprises — le contenu garde ses 328 points, et les 15 derniers
+/// passent sous l'ascenseur. C'était « Retirer le log », « 15 » au lieu de
+/// « 15 % » : tout ce qui s'aligne à droite de la colonne. Un changement d'état
+/// relançait parfois la disposition, d'où un défaut qui allait et venait.
+///
+/// Le contenu reçoit donc `Fenetre.largeurUtileReglages` (313 points) quel que
+/// soit l'état de l'ascenseur, calé à gauche. Ascenseur permanent : il occupe
+/// exactement la place réservée. Ascenseur superposé : cette place reste vide,
+/// et c'est là qu'il se dessine quand on défile, au lieu de recouvrir un
+/// réglage.
+///
+/// Générique sur son contenu pour que le contrôle de disposition éprouve CE
+/// conteneur, avec une sonde à la place du volet — et non une copie de sa
+/// disposition écrite à côté.
+struct ColonneReglages<Contenu: View>: View {
+
+    private let contenu: Contenu
+
+    init(@ViewBuilder contenu: () -> Contenu) {
+        self.contenu = contenu()
+    }
+
+    var body: some View {
+        ScrollView {
+            contenu
+                .frame(width: Fenetre.largeurUtileReglages, alignment: .leading)
+                .padding(Fenetre.margeReglages)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(width: Fenetre.largeurReglages)
     }
 }
 

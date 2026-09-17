@@ -49,6 +49,9 @@ enum ControlesInterface {
         r.section("Interface — aucun libellé de la colonne ne se casse")
         MainActor.assumeIsolated { libellesDeLaColonne(r) }
 
+        r.section("Interface — la colonne des réglages ne dépend pas de l'ascenseur")
+        MainActor.assumeIsolated { colonneEtAscenseur(r) }
+
         r.section("Interface — l'accueil montre une image de la vidéo")
         imageDAccueil(r)
         MainActor.assumeIsolated { dispositionImageAccueil(r) }
@@ -369,7 +372,7 @@ enum ControlesInterface {
     private static func hauteurPanneauReglages(_ etat: AppState) -> CGFloat {
         let hote = NSHostingView(
             rootView: PanneauPersonnaliserView().environmentObject(etat)
-                .frame(width: Fenetre.largeurReglages - 32))
+                .frame(width: Fenetre.largeurUtileReglages))
         hote.layoutSubtreeIfNeeded()
         return hote.fittingSize.height
     }
@@ -845,23 +848,20 @@ enum ControlesInterface {
         // Les réglages : la colonne est défilante, donc tous atteignables quelle
         // que soit la hauteur. Ce qui doit être vérifié, c'est qu'ils tiennent
         // en LARGEUR — une colonne trop étroite rognerait un curseur.
+        //
+        // Il y avait ici « les réglages tiennent dans la colonne sans être
+        // rognés (313 points pour 313) ». Ce contrôle ne pouvait pas échouer :
+        // il mesurait `fittingSize` d'un volet enfermé dans `.frame(width:)`,
+        // qui rend la largeur imposée quoi que réclame le contenu. Et il passait
+        // pendant que la colonne rognait. La largeur se mesure désormais dans
+        // `libellesDeLaColonne`, avec une marge, par une mesure capable de voir
+        // un débordement ; et `colonneEtAscenseur` éprouve le conteneur réel.
         let etat = AppState(memoire: false)
         etat.profil.logoActif = true
         etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
-        let hote = NSHostingView(
-            rootView: PanneauPersonnaliserView().environmentObject(etat)
-                .frame(width: Fenetre.largeurUtileReglages))
-        hote.layoutSubtreeIfNeeded()
-        let taille = hote.fittingSize
-        // Cette mesure ne dit RIEN des libellés — `fittingSize` d'une vue
-        // contrainte rend la largeur qu'on lui a imposée. C'est
-        // `libellesDeLaColonne` qui s'en charge, ligne par ligne.
-        r.verifier("les réglages tiennent dans la colonne sans être rognés "
-                   + "(\(Int(taille.width)) points pour "
-                   + "\(Int(Fenetre.largeurUtileReglages)))",
-                   taille.width <= Fenetre.largeurUtileReglages + 1)
+        let hauteur = hauteurPanneauReglages(etat)
         r.verifier("la colonne des réglages a une hauteur exploitable "
-                   + "(\(Int(taille.height)) points, défilante)", taille.height > 200)
+                   + "(\(Int(hauteur)) points, défilante)", hauteur > 200)
 
         // Et la fenêtre minimale doit vraiment loger les deux colonnes.
         r.verifier("la largeur minimale loge l'aperçu et les réglages",
@@ -1535,15 +1535,26 @@ enum ControlesInterface {
     /// appariées, elles échouent ici ; l'une sous l'autre, elles passent. Mais
     /// c'est la seule disposition que ce contrôle sache voir : remettre deux
     /// réglages sur une même ligne le rendrait aveugle à leur étroitesse.
+    ///
+    /// **Et elle se prend avec une marge.** Le contenu reçoit
+    /// `largeurUtileReglages` (313 points) ; les lignes se mesurent à
+    /// `largeurDeControleReglages`, plus étroite de `margeDeSecuriteReglages`.
+    /// Mesurer à 313 pour 313, c'était passer au point près — donc ne rien voir
+    /// d'une dérive d'un point.
     @MainActor
     private static func libellesDeLaColonne(_ r: Rapport) {
         _ = NSApplication.shared
-        let etroit = Fenetre.largeurUtileReglages
+        let recue = Fenetre.largeurUtileReglages
+        let etroit = Fenetre.largeurDeControleReglages
 
-        r.verifier("la largeur de mesure retranche l'ascenseur de la colonne "
-                   + "défilante (\(Int(etroit)) points, et non "
+        r.verifier("la largeur que reçoit le contenu retranche l'ascenseur de la "
+                   + "colonne défilante (\(Int(recue)) points, et non "
                    + "\(Int(Fenetre.largeurReglages - 2 * Fenetre.margeReglages)))",
-                   etroit < Fenetre.largeurReglages - 2 * Fenetre.margeReglages)
+                   recue < Fenetre.largeurReglages - 2 * Fenetre.margeReglages)
+        r.verifier("la mesure se prend avec une marge : \(Int(etroit)) points "
+                   + "pour \(Int(recue)) reçus, et non à l'égalité",
+                   recue - etroit >= Fenetre.margeDeSecuriteReglages
+                   && Fenetre.margeDeSecuriteReglages > 0)
 
         for (nom, vue) in lignesDeLaColonne() {
             let contrainte = hauteurLigne(vue, largeur: etroit)
@@ -1568,16 +1579,153 @@ enum ControlesInterface {
         }
 
         // Et le volet entier, à cette même largeur : rien ne dépasse.
-        let etat = AppState(memoire: false)
-        etat.profil.logoActif = true
-        etat.profil.logoFichier = URL(fileURLWithPath: "/x.png")
-        let hote = NSHostingView(
-            rootView: PanneauPersonnaliserView().environmentObject(etat)
-                .frame(width: etroit))
-        hote.layoutSubtreeIfNeeded()
-        r.verifier("le volet entier tient à \(Int(etroit)) points sans être rogné "
-                   + "(\(Int(hote.fittingSize.width)))",
-                   hote.fittingSize.width <= etroit + 1)
+        //
+        // La mesure doit d'abord prouver qu'elle SAIT échouer : l'ancienne,
+        // `fittingSize` sous `.frame(width:)`, rendait la largeur imposée et
+        // ne pouvait donc que passer. Une vue rigide de 40 points trop large
+        // doit se voir.
+        let rigide = largeurReclamee(Color.clear.frame(width: etroit + 40),
+                                     proposee: etroit)
+        r.verifier("la mesure de largeur voit un débordement (une vue de "
+                   + "\(Int(etroit + 40)) points, proposée à \(Int(etroit)), en "
+                   + "réclame \(Int(rigide)))",
+                   rigide > etroit + 39)
+
+        // Deux états du volet : sans logo, et celui du défaut constaté — logo
+        // chargé, pas de sous-titres. Le format de la vidéo n'y change rien :
+        // aucun réglage de la colonne n'en dépend en largeur. Le nom de logo
+        // est long exprès : c'est lui qui pousse « Retirer le logo » au bord.
+        let nu = AppState(memoire: false)
+        let logo = AppState(memoire: false)
+        logo.profil.logoActif = true
+        logo.profil.logoFichier = URL(
+            fileURLWithPath: "/x/logo-de-la-chaine-version-definitive-rond-fond-transparent.png")
+        let etats: [(String, AppState)] = [("sans logo", nu), ("logo chargé", logo)]
+        for (nom, etat) in etats {
+            let reclamee = largeurReclamee(
+                PanneauPersonnaliserView().environmentObject(etat), proposee: etroit)
+            r.verifier("\(nom) : le volet entier tient à \(Int(etroit)) points "
+                       + "(il en réclame \(Int(reclamee.rounded(.up)))), soit "
+                       + "\(Int(recue - reclamee)) de marge sur les \(Int(recue)) reçus",
+                       reclamee <= etroit + 0.5)
+        }
+    }
+
+    /// La largeur que réclame une vue quand on lui en propose `largeur`.
+    ///
+    /// Passe par `NSHostingController.sizeThatFits(in:)` : la vue répond à une
+    /// proposition, et si son contenu est plus large, elle le dit. Surtout pas
+    /// `fittingSize` d'une vue enfermée dans `.frame(width:)` — ce cadre-là
+    /// rend la largeur qu'on lui impose, et le débordement reste dedans.
+    @MainActor
+    private static func largeurReclamee<V: View>(_ vue: V,
+                                                 proposee largeur: CGFloat) -> CGFloat {
+        NSHostingController(rootView: vue)
+            .sizeThatFits(in: CGSize(width: largeur, height: 100_000)).width
+    }
+
+    // MARK: - Colonne et ascenseur
+
+    /// **Le contenu de la colonne garde sa largeur, quoi que fasse l'ascenseur.**
+    ///
+    /// Le défaut constaté à l'usage : « Retirer le log », « 15 » au lieu de
+    /// « 15 % ». La `ScrollView` proposait à son contenu la largeur disponible
+    /// au moment de la disposition, et ne la reproposait pas quand l'ascenseur
+    /// changeait d'état — permanent ou superposé, selon Réglages Système, la
+    /// souris branchée, la hauteur du contenu. Ascenseur devenu permanent, la
+    /// zone visible passait à 345 points, le contenu restait à 328 plus ses
+    /// marges, et les 15 derniers points disparaissaient.
+    ///
+    /// Aucune mesure sur une vue isolée ne peut voir cela : il faut la vraie
+    /// zone défilante, dans une vraie fenêtre, et faire basculer l'ascenseur.
+    /// Le conteneur éprouvé est `ColonneReglages` lui-même ; une sonde prend la
+    /// place du volet et rapporte la largeur et le bord droit qu'elle reçoit.
+    ///
+    /// Le défaut était intermittent : une seule disposition ne prouve rien. Le
+    /// contrôle enchaîne donc les bascules dans les deux sens, et vérifie
+    /// chaque état.
+    @MainActor
+    private static func colonneEtAscenseur(_ r: Rapport) {
+        _ = NSApplication.shared
+
+        // La réserve couvre-t-elle ce que le système donne vraiment à un
+        // ascenseur permanent ? Une réserve de 15 points pour un ascenseur de
+        // 17 rouvrirait le défaut à l'identique.
+        let systeme = NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy)
+        r.verifier("la place réservée à l'ascenseur couvre l'ascenseur permanent "
+                   + "du système (\(Int(Fenetre.largeurBarreDefilement)) points "
+                   + "réservés pour \(Int(systeme)))",
+                   Fenetre.largeurBarreDefilement >= systeme)
+
+        let sonde = SondeLargeur()
+        let hote = NSHostingView(rootView: ColonneReglages {
+            // Plus haute que la fenêtre : il y a de quoi défiler, donc un
+            // ascenseur à afficher.
+            Color.clear
+                .frame(height: 2000)
+                .background(GeometryReader { g in
+                    Color.clear
+                        .onAppear { sonde.cadre = g.frame(in: .global) }
+                        .onChange(of: g.frame(in: .global)) { _, n in sonde.cadre = n }
+                })
+        })
+        let fenetre = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: Fenetre.largeurReglages, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        fenetre.isReleasedWhenClosed = false
+        fenetre.contentView = hote
+        defer { fenetre.close() }
+
+        func disposer() {
+            hote.layoutSubtreeIfNeeded()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+            hote.layoutSubtreeIfNeeded()
+        }
+        disposer()
+        guard let zone = zoneDefilante(dans: hote) else {
+            r.verifier("la colonne des réglages est bien une zone défilante AppKit", false)
+            return
+        }
+
+        // Partir de l'état opposé à celui du système, puis alterner : chaque
+        // état est atteint en venant de l'autre, dans les deux sens.
+        let depart: NSScroller.Style = zone.scrollerStyle == .legacy ? .overlay : .legacy
+        var styles: [NSScroller.Style] = []
+        for i in 0..<6 { styles.append(i % 2 == 0 ? depart : (depart == .legacy ? .overlay : .legacy)) }
+
+        for (i, style) in styles.enumerated() {
+            zone.scrollerStyle = style
+            disposer()
+            let nom = style == .legacy ? "ascenseur permanent" : "ascenseur superposé"
+            let visible = zone.contentView.convert(zone.contentView.bounds, to: nil)
+            let largeur = sonde.cadre.width
+            // La marge de droite que garde le contenu dans la zone visible.
+            let marge = visible.maxX - sonde.cadre.maxX
+            r.verifier("bascule \(i + 1), \(nom) : le contenu reçoit ses "
+                       + "\(Int(Fenetre.largeurUtileReglages)) points "
+                       + "(\(Int(largeur)))",
+                       abs(largeur - Fenetre.largeurUtileReglages) < 0.5)
+            r.verifier("bascule \(i + 1), \(nom) : il garde sa marge entière avant "
+                       + "le bord visible (\(Int(marge)) points pour "
+                       + "\(Int(Fenetre.margeReglages)) exigés, zone visible de "
+                       + "\(Int(visible.width)))",
+                       marge >= Fenetre.margeReglages - 0.5)
+        }
+    }
+
+    /// Ce que rapporte la sonde posée à la place du volet.
+    private final class SondeLargeur {
+        var cadre: CGRect = .zero
+    }
+
+    /// La `NSScrollView` que SwiftUI a construite pour la `ScrollView`.
+    @MainActor
+    private static func zoneDefilante(dans vue: NSView) -> NSScrollView? {
+        if let zone = vue as? NSScrollView { return zone }
+        for sous in vue.subviews {
+            if let zone = zoneDefilante(dans: sous) { return zone }
+        }
+        return nil
     }
 
     /// Toutes les lignes de la colonne qui portent un libellé, y compris les
