@@ -1,15 +1,24 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-// PlancheCoins.swift — DC-1 : les propositions pour les boutons de coin, côte à
-// côte, à la largeur réelle de la colonne.
+// PlancheCoins.swift — DC-1 : la ligne des boutons de coin, avant et après,
+// à la largeur réelle de la colonne.
 //
-// `--planche-coins <dossier>`
+// `--planche-coins <dossier> [--seuils | --colonne | --dc2]`
 //
-// Rien n'est choisi ici : Éric choisit sur la planche. La proposition retenue
-// ira remplacer `PanneauPersonnaliserView.coinsDuLogo`, ses textes rejoindront
-// `Textes` — ceux des propositions vivent ici tant qu'elles ne sont que des
-// propositions, et partiront avec elles.
+// ── Ce qui a été décidé ─────────────────────────────────────────────────────
+//
+// Le 17/09, cette planche présentait quatre propositions : A, abréviations ;
+// B, icônes de coin ; C, grille figurant l'image ; D, mots entiers disposés en
+// carré. Toutes tenaient sans troncature à 300 points. Éric a retenu A. Les
+// trois autres sont parties avec la décision ; elles restent lisibles au
+// commit 352eebb, qui produit la planche des quatre.
+//
+// Reste la comparaison AVANT / APRÈS, et trois usages qui survivent au choix :
+//   --seuils   la preuve par l'image que `LibelleSurveille` voit juste ;
+//   --colonne  la vraie colonne capturée, pour prouver qu'un changement ne
+//              modifie aucun pixel ;
+//   --dc2      la reproduction de DC-2.
 //
 // ── Pourquoi une vraie fenêtre, capturée ────────────────────────────────────
 //
@@ -37,35 +46,23 @@ enum PlancheCoins {
     // MARK: - Les propositions
 
     enum Proposition: String, CaseIterable {
-        case actuelle, abreviations, icones, grille169, grille916, motsEnCarre
+        case avant, retenue
 
         var titre: String {
             switch self {
-            case .actuelle: return "Actuelle — DC-1"
-            case .abreviations: return "A — Abréviations"
-            case .icones: return "B — Icônes de coin"
-            case .grille169: return "C — Grille, vidéo 16:9"
-            case .grille916: return "C — Grille, vidéo 9:16"
-            case .motsEnCarre: return "D — Mots entiers, en carré"
+            case .avant: return "Avant — noms complets (DC-1)"
+            case .retenue: return "Après — A, abréviations"
             }
         }
 
         @MainActor @ViewBuilder
         func vue(position: Binding<PositionLogo>) -> some View {
             switch self {
-            case .actuelle:
+            case .avant:
+                NomsComplets(position: position)
+            case .retenue:
                 PanneauPersonnaliserView.coinsDuLogo(
                     aide: Textes.Aide.positionLogo, position: position)
-            case .abreviations:
-                CoinsAbreges(position: position)
-            case .icones:
-                CoinsIcones(position: position)
-            case .grille169:
-                CoinsGrille(position: position, rapport: 16.0 / 9.0)
-            case .grille916:
-                CoinsGrille(position: position, rapport: 9.0 / 16.0)
-            case .motsEnCarre:
-                CoinsMotsEnCarre(position: position)
             }
         }
     }
@@ -73,7 +70,7 @@ enum PlancheCoins {
     // MARK: - Mesure
 
     /// Les cinq états que la ligne doit tenir : quatre coins, et la position
-    /// libre — dont le nom, dans la grille, est le plus long.
+    /// libre.
     static let positions: [PositionLogo] =
         CoinLogo.allCases.map { .coin($0) } + [.libre(xPct: 50, yPct: 50)]
 
@@ -188,21 +185,21 @@ enum PlancheCoins {
             return 0
         }
         // `--seuils` : la preuve par l'image que le détecteur de troncature voit
-        // juste. La ligne A et la ligne actuelle, de 316 à 250 points, capturées
+        // juste. La ligne retenue et celle d'avant, de 316 à 250 points, capturées
         // ; le détecteur doit désigner exactement les libellés que l'image
         // montre tronqués.
         if args.contains("--seuils") {
             for w in [316, 300, 290, 280, 270, 260, 250] {
-                let a = libellesTronques(Proposition.abreviations.vue(position: .constant(.coin(.hautGauche))), largeur: CGFloat(w))
-                let c = libellesTronques(Proposition.actuelle.vue(position: .constant(.coin(.hautGauche))), largeur: CGFloat(w))
-                print("  \(w) points — A : \(a.isEmpty ? "aucun" : a.joined(separator: ", ")) ; actuelle : \(c.isEmpty ? "aucun" : c.joined(separator: ", "))")
+                let a = libellesTronques(Proposition.retenue.vue(position: .constant(.coin(.hautGauche))), largeur: CGFloat(w))
+                let c = libellesTronques(Proposition.avant.vue(position: .constant(.coin(.hautGauche))), largeur: CGFloat(w))
+                print("  \(w) points — après : \(a.isEmpty ? "aucun" : a.joined(separator: ", ")) ; avant : \(c.isEmpty ? "aucun" : c.joined(separator: ", "))")
             }
             for w in [316, 300, 290, 280, 270, 260, 250] {
                 let v = VStack(alignment: .leading) {
-                    Proposition.abreviations.vue(position: .constant(.coin(.hautGauche)))
+                    Proposition.retenue.vue(position: .constant(.coin(.hautGauche)))
                         .frame(width: CGFloat(w), alignment: .leading)
                         .overlay(alignment: .leading) { Rectangle().stroke(Color.red).frame(width: CGFloat(w)) }
-                    Proposition.actuelle.vue(position: .constant(.coin(.hautGauche)))
+                    Proposition.avant.vue(position: .constant(.coin(.hautGauche)))
                         .frame(width: CGFloat(w), alignment: .leading)
                 }.padding(8).padding(.trailing, 60).background(Color(nsColor: .windowBackgroundColor))
                 _ = capturerFenetre(v, apparence: NSAppearance(named: .aqua),
@@ -358,177 +355,25 @@ private struct PanneauPlanche: View {
     }
 }
 
-// MARK: - Le bouton choisi se voit
+// MARK: - Avant
 
-/// `.tint(.accentColor)` sur un bouton `.bordered` — ce que fait la ligne
-/// actuelle — ne change RIEN à l'écran, en clair comme en sombre : la planche
-/// l'a montré. Le coin retenu n'est signalé nulle part. Les propositions à
-/// boutons le montrent en style proéminent, sans quoi on les comparerait à la
-/// grille, qui, elle, le montre.
-private struct BoutonCoin<Etiquette: View>: View {
-    let choisi: Bool
-    let action: () -> Void
-    @ViewBuilder let etiquette: () -> Etiquette
-
-    var body: some View {
-        if choisi {
-            Button(action: action, label: etiquette).buttonStyle(.borderedProminent)
-        } else {
-            Button(action: action, label: etiquette).buttonStyle(.bordered)
-        }
-    }
-}
-
-// MARK: - A — Abréviations
-
-/// Le changement le plus léger : on garde des mots, raccourcis. Le nom complet
-/// en infobulle.
-private struct CoinsAbreges: View {
+/// La ligne telle qu'elle était jusqu'au 17/09 : noms complets, coin choisi
+/// signalé par la seule couleur du texte. Gardée pour la comparaison, et pour
+/// `--seuils` : c'est sur elle que le détecteur de troncature a été validé.
+private struct NomsComplets: View {
     @Binding var position: PositionLogo
-
-    static func abrege(_ coin: CoinLogo) -> String {
-        switch coin {
-        case .hautGauche: return "Haut G."
-        case .hautDroit: return "Haut D."
-        case .basGauche: return "Bas G."
-        case .basDroit: return "Bas D."
-        }
-    }
 
     var body: some View {
         HStack(spacing: 6) {
             LibelleSurveille(Textes.Interface.positionLogo)
             ForEach(CoinLogo.allCases, id: \.self) { coin in
-                BoutonCoin(choisi: position == .coin(coin),
-                           action: { position = .coin(coin) }) {
-                    LibelleSurveille(Self.abrege(coin))
+                Button { position = .coin(coin) } label: {
+                    LibelleSurveille(Textes.Interface.nomCoin(coin))
                 }
-                .help(Textes.Interface.nomCoin(coin))
+                .buttonStyle(.bordered)
+                .tint(position == .coin(coin) ? .accentColor : nil)
             }
         }
         .font(.caption)
-    }
-}
-
-// MARK: - B — Icônes de coin
-
-/// Un symbole système par coin — un rectangle dont le coin est plein. Le nom
-/// complet en infobulle et pour VoiceOver.
-private struct CoinsIcones: View {
-    @Binding var position: PositionLogo
-
-    static func symbole(_ coin: CoinLogo) -> String {
-        switch coin {
-        case .hautGauche: return "rectangle.inset.topleft.filled"
-        case .hautDroit: return "rectangle.inset.topright.filled"
-        case .basGauche: return "rectangle.inset.bottomleft.filled"
-        case .basDroit: return "rectangle.inset.bottomright.filled"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            LibelleSurveille(Textes.Interface.positionLogo)
-            ForEach(CoinLogo.allCases, id: \.self) { coin in
-                BoutonCoin(choisi: position == .coin(coin),
-                           action: { position = .coin(coin) }) {
-                    Image(systemName: Self.symbole(coin)).font(.body)
-                }
-                .help(Textes.Interface.nomCoin(coin))
-                .accessibilityLabel(Textes.Interface.nomCoin(coin))
-            }
-        }
-        .font(.caption)
-    }
-}
-
-// MARK: - C — Grille figurant l'image
-
-/// Une vignette aux proportions de la vidéo, dont on clique le coin. Elle
-/// montre ce qu'on choisit au lieu de le nommer, et fait écho au glisser-déposer
-/// du logo sur l'aperçu. Le coin retenu est nommé à côté : c'est ce qui la rend
-/// lisible sans infobulle.
-private struct CoinsGrille: View {
-    @Binding var position: PositionLogo
-    /// Largeur sur hauteur de la vidéo.
-    let rapport: CGFloat
-
-    private var taille: CGSize {
-        rapport >= 1
-            ? CGSize(width: 40 * rapport, height: 40)
-            : CGSize(width: 56 * rapport, height: 56)
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            LibelleSurveille(Textes.Interface.positionLogo)
-            vignette
-            LibelleSurveille(nomChoisi).foregroundStyle(.secondary)
-        }
-        .font(.caption)
-    }
-
-    private var nomChoisi: String {
-        if case .coin(let c) = position { return Textes.Interface.nomCoin(c) }
-        return "Position libre"
-    }
-
-    private var vignette: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) { zone(.hautGauche); zone(.hautDroit) }
-            HStack(spacing: 0) { zone(.basGauche); zone(.basDroit) }
-        }
-        .frame(width: taille.width, height: taille.height)
-        .background(RoundedRectangle(cornerRadius: 4).fill(Color.secondary.opacity(0.15)))
-        .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Color.secondary.opacity(0.6)))
-    }
-
-    private func zone(_ coin: CoinLogo) -> some View {
-        let choisi = position == .coin(coin)
-        let alignement: Alignment = {
-            switch coin {
-            case .hautGauche: return .topLeading
-            case .hautDroit: return .topTrailing
-            case .basGauche: return .bottomLeading
-            case .basDroit: return .bottomTrailing
-            }
-        }()
-        return Button { position = .coin(coin) } label: {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(choisi ? Color.accentColor : Color.secondary.opacity(0.45))
-                .frame(width: 9, height: 9)
-                .padding(4)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignement)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(Textes.Interface.nomCoin(coin))
-        .accessibilityLabel(Textes.Interface.nomCoin(coin))
-    }
-}
-
-// MARK: - D — Mots entiers, en carré
-
-/// Ma proposition : les noms COMPLETS, disposés comme les coins qu'ils
-/// désignent. Rien n'est abrégé ni caché dans une infobulle, et la disposition
-/// dit la même chose que les mots. Elle coûte une ligne de hauteur.
-private struct CoinsMotsEnCarre: View {
-    @Binding var position: PositionLogo
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            LibelleSurveille(Textes.Interface.positionLogo)
-            Grid(horizontalSpacing: 6, verticalSpacing: 6) {
-                GridRow { bouton(.hautGauche); bouton(.hautDroit) }
-                GridRow { bouton(.basGauche); bouton(.basDroit) }
-            }
-        }
-        .font(.caption)
-    }
-
-    private func bouton(_ coin: CoinLogo) -> some View {
-        BoutonCoin(choisi: position == .coin(coin), action: { position = .coin(coin) }) {
-            LibelleSurveille(Textes.Interface.nomCoin(coin)).frame(minWidth: 84)
-        }
     }
 }

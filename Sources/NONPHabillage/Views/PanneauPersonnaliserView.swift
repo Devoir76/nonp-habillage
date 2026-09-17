@@ -376,28 +376,30 @@ struct PanneauPersonnaliserView: View {
 
     /// Les quatre coins, en un clic.
     ///
-    /// Libellé en ligne, et il y reste : mesuré, il ne se replie pas.
+    /// Titres ABRÉGÉS — « Haut G. », « Bas D. » —, nom complet en infobulle et
+    /// pour VoiceOver. Les noms complets voulaient 422 points pour 316 reçus, et
+    /// s'affichaient « Haut ga… », « Haut d… » : DC-1, corrigé le 17/09 en
+    /// retenant la proposition A de la planche (`--planche-coins`).
     ///
-    /// ⚠︎ DÉFAUT CONNU, non corrigé : les boutons bordés se compriment, et leurs
-    /// titres se TRONQUENT — « Haut gau… », « Haut dr… ». La ligne voudrait
-    /// 422 points et en reçoit 316. On a longtemps appelé cela une
-    /// « dégradation acceptable » ; un libellé tronqué est visible de
-    /// l'utilisateur, et ne l'est pas. Les contrôles, qui ne mesuraient que la
-    /// hauteur, ne le voyaient pas ; `LibelleSurveille` le leur montre
-    /// désormais. Voir docs/defauts-connus.md, DC-1.
+    /// Les abréviations restent entières jusqu'à 290 points — la largeur
+    /// naturelle de la ligne, 329 points, n'est pas le seuil : un bouton
+    /// comprime sa marge avant son texte. C'est `LibelleSurveille` qui le dit,
+    /// validé contre des captures.
+    ///
+    /// Le coin choisi est un bouton PLEIN, comme sur la planche. La ligne
+    /// précédente ne le signalait que par la couleur du texte.
     @MainActor
     static func coinsDuLogo(aide: String,
                             position: Binding<PositionLogo>) -> some View {
         HStack(spacing: 6) {
             LibelleSurveille(Textes.Interface.positionLogo)
             ForEach(CoinLogo.allCases, id: \.self) { coin in
-                Button {
-                    position.wrappedValue = .coin(coin)
-                } label: {
-                    LibelleSurveille(Textes.Interface.nomCoin(coin))
+                BoutonCoin(choisi: position.wrappedValue == .coin(coin),
+                           action: { position.wrappedValue = .coin(coin) }) {
+                    LibelleSurveille(Textes.Interface.nomCoinAbrege(coin))
                 }
-                .buttonStyle(.bordered)
-                .tint(position.wrappedValue == .coin(coin) ? .accentColor : nil)
+                .help(Textes.Interface.nomCoin(coin))
+                .accessibilityLabel(Textes.Interface.nomCoin(coin))
             }
         }
         .font(.caption)
@@ -424,6 +426,24 @@ struct PanneauPersonnaliserView: View {
         }
         .frame(maxWidth: 420)
         .help(aide)
+    }
+}
+
+/// Un bouton de coin : plein s'il est choisi, bordé sinon.
+///
+/// `.tint(.accentColor)` sur un bouton bordé ne colore que son texte ; le style
+/// proéminent se voit d'un coup d'œil.
+struct BoutonCoin<Etiquette: View>: View {
+    let choisi: Bool
+    let action: () -> Void
+    @ViewBuilder let etiquette: () -> Etiquette
+
+    var body: some View {
+        if choisi {
+            Button(action: action, label: etiquette).buttonStyle(.borderedProminent)
+        } else {
+            Button(action: action, label: etiquette).buttonStyle(.bordered)
+        }
     }
 }
 

@@ -305,11 +305,23 @@ enum Textes {
         static let positionLogo = "Position"
         static let tailleLogo = "Taille"
         static let opaciteLogo = "Opacité"
-        static let deplacerLogo = "Faites glisser le logo sur l'aperçu pour le placer."
+        static let deplacerLogo = "Glissez le logo sur l'aperçu."
         static let logoRond = "Recadrer en cercle"
         static let logoRondExplication =
             "Découpe le disque inscrit, bord lissé. Inutile si votre PNG est "
             + "déjà détouré." 
+
+        /// Le titre des boutons de coin. Abrégé : les noms complets ne tenaient
+        /// pas dans la colonne et se tronquaient (DC-1). Le nom complet reste
+        /// en infobulle et pour VoiceOver — `nomCoin`.
+        static func nomCoinAbrege(_ coin: CoinLogo) -> String {
+            switch coin {
+            case .hautGauche: return "Haut G."
+            case .hautDroit: return "Haut D."
+            case .basGauche: return "Bas G."
+            case .basDroit: return "Bas D."
+            }
+        }
 
         static func nomCoin(_ coin: CoinLogo) -> String {
             switch coin {
