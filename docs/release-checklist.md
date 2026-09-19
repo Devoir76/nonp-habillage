@@ -12,20 +12,18 @@ c'est la moitié de cette checklist en moins.
 
 ---
 
-## Avant tout — le verrou qui reste
+## Avant tout — les verrous
 
-Ce point n'est pas une case parmi d'autres. Tant qu'il tient, **il n'y a pas de
-release publique.**
+Ces points ne sont pas des cases parmi d'autres : tant qu'un seul tient, **il
+n'y a pas de release publique.** Les trois sont tombés le 06/09.
 
-- [ ] **L'icône a été vue dans un vrai Dock**, en clair **et** en sombre.
-      `Resources/AppIcon.icns` existe depuis le 06/09 — l'inversion nue, fond
-      `#0B0B0E`, marque bleue — et la build ne signale plus rien. Le fond a été
-      choisi sur mesure et sur planche, mais la planche est une simulation : un
-      Dock réel est translucide et prend la couleur du fond d'écran. C'est le
-      seul point que ni la mesure ni la simulation ne peuvent trancher.
-
-Les deux autres verrous sont tombés le 06/09 :
-
+- [x] **L'icône a été vue dans un vrai Dock, le 06/09**, en clair **et** en
+      sombre. C'est la date qui fait preuve, pas la case.
+      `Resources/AppIcon.icns` — l'inversion nue, fond `#0B0B0E`, marque
+      bleue — avait été choisi sur mesure et sur planche, mais une planche est
+      une simulation : un Dock réel est translucide et prend la couleur du fond
+      d'écran. C'était le seul point que ni la mesure ni la simulation ne
+      pouvaient trancher ; il fallait regarder, sur une vraie machine.
 - [x] **L'invariant nº5 est levé.** La campagne de parité a fait la preuve, et
       Éric a tranché : l'app native est l'outil de production, le prototype
       reste un filet. Motif dans [`campagne-parite.md`](campagne-parite.md) et
@@ -69,7 +67,9 @@ Les deux autres verrous sont tombés le 06/09 :
       téléchargement (macOS 14 aujourd'hui).
 - [ ] Le texte de licence est dans le bundle
       (`Contents/Resources/Licenses/LICENSE`), et c'est bien la MPL-2.0.
-- [ ] `codesign --verify --deep --strict` passe sur le bundle final.
+- [ ] `codesign --verify --deep --strict` passe sur le bundle final. Ce
+      contrôle-là ne dit rien de l'archive : l'aller-retour sur le ZIP est à
+      « Distribution ».
 - [ ] Commit ayant produit le binaire identifié sans ambiguïté, et tag posé
       exactement dessus.
 
@@ -93,9 +93,43 @@ Le harnais couvre le moteur ; ces points-là demandent un œil.
 
 ## Distribution
 
-Rien n'est publié à ce jour, et rien ne le sera avant les deux verrous du haut.
-Quand ce sera le cas, deux canaux, et l'ordre compte : le tag d'abord, la
-distribution ensuite — un tag posé ne publie rien.
+Rien n'est publié à ce jour. Quand ce sera le cas, deux canaux, et l'ordre
+compte : le tag d'abord, la distribution ensuite — un tag posé ne publie rien.
+
+> ⛔ **UN ZIP PUBLIÉ NE SE RÉGÉNÈRE JAMAIS.** Son empreinte est publiée et le
+> build n'est pas reproductible (horodatages, signature ad-hoc) : régénérer
+> produit un fichier **différent** sous le même nom. Toute correction, **même
+> d'une ligne**, impose une **version nouvelle** — bump, nouveau ZIP, nouvelle
+> empreinte, page mise à jour.
+
+Cette règle commande tout ce qui suit. Le reste de cette section vient du
+retour d'expérience de la publication de NONP Transcription : chaque case y a
+coûté un incident.
+
+### Signature et archive (ce dépôt)
+
+- [ ] Archive créée avec `ditto -c -k --sequesterRsrc --keepParent` — **jamais**
+      `zip -r` : il casse liens symboliques et métadonnées, donc la signature du
+      bundle, et l'utilisateur reçoit « l'application est endommagée ».
+- [ ] **Vérification aller-retour sur l'archive réellement produite** :
+      décompresser le ZIP final, puis `codesign -v --deep --strict` **et** le
+      Designated Requirement sur l'app **extraite**. Vérifier le bundle avant
+      compression ne prouve rien sur l'archive.
+
+### Texte de la page / README
+
+- [ ] La page annonce **macOS 14 (Sonoma) minimum** *et* « **Apple Silicon
+      requis — non compatible Mac Intel** ». Le binaire est arm64 uniquement
+      (contrôle : `lipo -archs` sur chaque exécutable du bundle → `arm64` seul),
+      et **rien dans le bundle ne le signale à l'utilisateur avant le
+      téléchargement** : sans cette mention, un possesseur de Mac Intel
+      télécharge une app qui ne s'ouvrira jamais et conclut qu'elle est cassée.
+- [ ] **Aucun repli « clic droit → Ouvrir »** dans les instructions : invalide
+      depuis macOS 15 pour une app ad-hoc non notarisée. L'utilisateur qui
+      l'essaie n'obtient rien, et conclut lui aussi que l'app est cassée.
+- [ ] Libellés Gatekeeper vérifiés **en déroulant le parcours réel** avec le ZIP
+      téléchargé depuis le site — jamais de mémoire : texte du premier
+      avertissement, « Déplacer vers la corbeille », « Ouvrir quand même ».
 
 ### Release GitHub (après le tag)
 
@@ -110,18 +144,48 @@ distribution ensuite — un tag posé ne publie rien.
 À dérouler **en une seule fois** : un site qui annonce une version et en sert
 une autre est pire que pas de mise à jour du tout.
 
-- [ ] Archive produite avec
-      `ditto -c -k --sequesterRsrc --keepParent`, nommée d'après la version.
+- [ ] Archive produite et vérifiée selon « Signature et archive » ci-dessus,
+      nommée d'après la version.
 - [ ] Empreinte SHA-256 calculée sur l'archive **réellement déposée**.
 - [ ] `SHA256SUMS.txt` mis à jour.
 - [ ] **Alias `-latest` repointé** vers la nouvelle archive. L'oublier laisse
-      l'alias servir silencieusement la version précédente.
+      l'alias servir silencieusement la version précédente. Son contrôle est à
+      « Mise en ligne » ci-dessous.
 - [ ] Page de téléchargement : version affichée, nom du fichier (lien **et**
       `aria-label` **et** texte du bouton), poids, empreinte, bloc JSON-LD.
 - [ ] Après déploiement : re-télécharger **depuis le site** et vérifier que
       l'empreinte correspond à celle annoncée.
 - [ ] Archive de la version précédente retirée du dossier servi ; son empreinte
       reste au CHANGELOG.
+
+### Mise en ligne
+
+> ⚠️ Ces points s'exécutent **côté site** (`nonp-unified-src/`, déploiement
+> depuis `nonp-unified-deploy/`), **pas dans ce dépôt**. La checklist les liste
+> parce qu'ils conditionnent une publication réussie, pas parce qu'ils s'y font.
+
+- [ ] `_headers` : `Content-Disposition: attachment` sur le `.zip` servi — évite
+      les manipulations de Safari.
+- [ ] `og:image` pointe vers la production, donc **invérifiable en preview**.
+      Après mise en production : image en 200, puis « Scrape Again » sur le
+      débogueur Facebook (compte connecté) — FB mémorise un 404 plusieurs jours.
+- [ ] **Retrait ou purge d'un fichier** : le retirer du dossier ne le retire pas
+      du site (il faut un déploiement), et le cache de bord le sert encore après
+      le déploiement. Toute vérification de purge se fait **avec un paramètre
+      anti-cache** (`?nocache=…` → `BYPASS`) ; sans lui, purge réussie et purge
+      ratée sont indiscernables.
+- [ ] **Avant déploiement : comparer le dossier servi à la production, pas à
+      Git.** Le déploiement est tout ou rien : tout ce qui traîne part avec.
+      Exclure de la comparaison les chemins derrière une authentification — ils
+      renvoient la page de connexion, pas les fichiers.
+- [ ] **Vérifier l'effet, jamais le message** : pas de `| grep` sur une sortie
+      de build (il peut masquer un plantage), aucune confiance aux « ✓ » d'un
+      outil (une option inexistante peut afficher l'aide et sortir en code 0).
+      Contrôler l'état résultant.
+- [ ] **Alias `-latest` : redirection 302**, jamais 301 — la cible change à
+      chaque version et ne doit pas être mise en cache — et vérifier
+      l'**empreinte du fichier servi via l'alias**, pas seulement le code de
+      redirection.
 
 ## Après une première publication
 
