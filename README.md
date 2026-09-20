@@ -38,11 +38,48 @@ c'est vérifié à chaque compilation sur un corpus réel.
 Les blocs trop longs pour tenir à l'écran sont redécoupés **pour l'affichage
 seulement**, et les minutages recalculés au prorata ne sortent jamais du rendu.
 
+## Télécharger
+
+La dernière version publiée, avec son archive et son empreinte :
+**[github.com/Devoir76/nonp-habillage/releases/latest](https://github.com/Devoir76/nonp-habillage/releases/latest)**
+
 ## Ce qu'il faut
 
-- macOS 14 ou plus récent.
-- Rien d'autre. Pas de FFmpeg à installer, pas de bibliothèque tierce : tout
-  passe par AVFoundation, Core Text et VideoToolbox, livrés avec macOS.
+- macOS 14 (Sonoma) ou plus récent
+- Un Mac Apple Silicon (M1, M2, M3, M4…)
+
+Les Mac à processeur Intel ne sont pas pris en charge.
+Pour vérifier : menu Pomme → À propos de ce Mac. Si la ligne « Puce »
+indique « Apple M… », c'est bon.
+
+Rien d'autre. Pas de FFmpeg à installer, pas de bibliothèque tierce : tout
+passe par AVFoundation, Core Text et VideoToolbox, livrés avec macOS.
+
+L'application n'est pas certifiée par Apple — c'est un choix, expliqué
+plus bas. Au premier lancement, macOS affiche un avertissement. Il se
+lève en deux clics, la marche à suivre est juste en dessous.
+
+## Ouvrir l'application la première fois
+
+macOS bloque au premier lancement les applications qui ne passent pas par
+l'App Store ou par un certificat de développeur payant. NONP Habillage est
+dans ce cas : le code source est public et vérifiable par n'importe qui,
+mais Apple ne l'a pas contresigné.
+
+Sur macOS 15 et plus récent :
+1. Double-cliquez l'application. Un message dit qu'elle n'a pas pu être
+   vérifiée. Cliquez « Terminé ».
+2. Ouvrez Réglages Système → Confidentialité et sécurité.
+3. Descendez jusqu'à la ligne mentionnant NONP Habillage et cliquez
+   « Ouvrir quand même ».
+4. Confirmez avec votre mot de passe ou Touch ID.
+
+Sur macOS 14 :
+Clic droit sur l'application → Ouvrir → Ouvrir dans la fenêtre suivante.
+
+L'avertissement ne revient plus pour cette version. Il réapparaîtra à chaque
+nouvelle version téléchargée : c'est la même manipulation, une fois par mise
+à jour.
 
 ## Formats acceptés
 
@@ -71,6 +108,18 @@ le disant — contournement daté du 17/09/2026, expliqué dans
 
 Une build de test ne s'installe jamais dans `/Applications` : elle porte un
 identifiant distinct pour ne pas se faire prendre pour une version installée.
+
+## Retours et signalements
+
+Un défaut, une incohérence, une idée :
+
+- les **Issues** du dépôt —
+  [github.com/Devoir76/nonp-habillage/issues](https://github.com/Devoir76/nonp-habillage/issues) ;
+- ou par courriel à **devoirdememoire@pm.me**, avec un objet commençant par
+  « NONP Habillage — ».
+
+Un rapport utile dit la version de l'application, celle de macOS, et ce qui
+était attendu à la place de ce qui s'est produit.
 
 ## Licence
 

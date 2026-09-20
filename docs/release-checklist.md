@@ -39,8 +39,9 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
 
 1. **Validation d'usage** de la version candidate, sur vidéos réelles, en 16:9
    **et** en 9:16. Le prototype n'arbitre plus, mais il reste installé : sur un
-   doute de rendu, `./Scripts/campagne_parite.sh` remet les deux côte à côte en
-   une commande.
+   doute de rendu, l'outil local de campagne de parité remet les deux côte à
+   côte en une commande. Il ne fait pas partie du dépôt — il pointe un chemin
+   de machine et un prototype non publié.
 2. **Harnais complet au vert**, corpus et prototype compris :
    `./Scripts/verifier.sh --corpus <dossier de .srt>` — aucun échec, et
    **aucune rubrique non exécutée** ; une rubrique sautée n'est pas une
@@ -58,11 +59,12 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
 ## Vérification du `.app` compilé (avant le tag)
 
 - [ ] Version affichée (`CFBundleShortVersionString`) = la version cible.
-      Elle vaut `0.1.0` dans `Resources/Info.plist` tant que rien n'est publié.
+      Elle vaut `1.0.0` dans `Resources/Info.plist` depuis la préparation de
+      la première publication.
 - [ ] `CFBundleVersion` (numéro de build) cohérent et **croissant**.
 - [ ] Identifiant de bundle = celui de **production**, obtenu par `--release`.
       Une build de test porte `com.nonp.habillage.test` et ne s'installe
-      **jamais** dans `/Applications` (CLAUDE.md, « Build »).
+      **jamais** dans `/Applications`.
 - [ ] `LSMinimumSystemVersion` cohérent avec ce qui est annoncé au
       téléchargement (macOS 14 aujourd'hui).
 - [ ] Le texte de licence est dans le bundle
@@ -111,6 +113,10 @@ coûté un incident.
 - [ ] Archive créée avec `ditto -c -k --sequesterRsrc --keepParent` — **jamais**
       `zip -r` : il casse liens symboliques et métadonnées, donc la signature du
       bundle, et l'utilisateur reçoit « l'application est endommagée ».
+- [ ] **Une copie de `LICENSE` à la racine du ZIP**, en plus de celle déjà
+      présente dans le bundle (`Contents/Resources/Licenses/LICENSE`) — par
+      cohérence avec l'archive de NONP Transcription. Le point s'exécute à
+      l'empaquetage : il ne modifie pas le bundle, donc pas `build_app.sh`.
 - [ ] **Vérification aller-retour sur l'archive réellement produite** :
       décompresser le ZIP final, puis `codesign -v --deep --strict` **et** le
       Designated Requirement sur l'app **extraite**. Vérifier le bundle avant
@@ -124,9 +130,10 @@ coûté un incident.
       et **rien dans le bundle ne le signale à l'utilisateur avant le
       téléchargement** : sans cette mention, un possesseur de Mac Intel
       télécharge une app qui ne s'ouvrira jamais et conclut qu'elle est cassée.
-- [ ] **Aucun repli « clic droit → Ouvrir »** dans les instructions : invalide
-      depuis macOS 15 pour une app ad-hoc non notarisée. L'utilisateur qui
-      l'essaie n'obtient rien, et conclut lui aussi que l'app est cassée.
+- [ ] **Aucun repli « clic droit → Ouvrir » présenté pour macOS 15 ou plus
+      récent** : invalide depuis macOS 15 pour une app ad-hoc non notarisée.
+      L'utilisateur qui l'essaie n'obtient rien, et conclut lui aussi que
+      l'app est cassée. Le repli reste valide — et documenté — pour macOS 14.
 - [ ] Libellés Gatekeeper vérifiés **en déroulant le parcours réel** avec le ZIP
       téléchargé depuis le site — jamais de mémoire : texte du premier
       avertissement, « Déplacer vers la corbeille », « Ouvrir quand même ».

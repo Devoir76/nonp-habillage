@@ -78,13 +78,23 @@ fi
 # de l'app relu par le prototype — ne le peut pas : seul le prototype sait ce
 # qu'il accepte. L'app écrit donc des profils, et le prototype les relit.
 # LECTURE SEULE : rien n'est écrit dans le dossier du prototype (invariant nº5).
-if [[ -f "$PROTOTYPE" ]]; then
+# ⚠️ DEUX conditions, pas une. Le garde ne testait que le prototype : les
+# scripts de comparaison ayant été retirés du dépôt le 20/09 (ils pointent un
+# chemin local et un prototype non publié), un clone sur une machine QUI A le
+# prototype appelait un fichier absent — `set -e`, code 2, et le harnais
+# mourait AVANT d'exécuter le moindre contrôle Swift. Mesuré, pas supposé.
+if [[ -f "$PROTOTYPE" && -f "$SCRIPT_DIR/profils_python.py" ]]; then
     echo "▸ Profils écrits par l'app, relus par le prototype…"
     TMP_PROFILS="$(mktemp -d -t nonp-habillage-profils)"
     trap 'rm -rf "$TMP_PROFILS"' EXIT
     "$BINAIRE" --profils "$TMP_PROFILS" > /dev/null
     python3 "$SCRIPT_DIR/profils_python.py" \
         --profils "$TMP_PROFILS" --prototype "$PROTOTYPE"
+elif [[ ! -f "$SCRIPT_DIR/profils_python.py" ]]; then
+    echo "  ⚠️  Scripts/profils_python.py absent — relecture des profils non"
+    echo "     exécutée. C'est la moitié du critère d'acceptation du lot 6."
+    echo "     Ce script ne fait pas partie du dépôt public : il compare à un"
+    echo "     prototype non publié."
 else
     echo "  ⚠️  Prototype introuvable ($PROTOTYPE) — relecture des profils non"
     echo "     exécutée. C'est la moitié du critère d'acceptation du lot 6."
@@ -93,7 +103,7 @@ fi
 if [[ -n "$CORPUS" ]]; then
     ARGS+=(--corpus "$CORPUS")
 
-    if [[ -f "$PROTOTYPE" ]]; then
+    if [[ -f "$PROTOTYPE" && -f "$SCRIPT_DIR/parite_python.py" ]]; then
         echo "▸ Interrogation du prototype Python (lecture seule)…"
         # Le JSON contient le texte des sous-titres : dossier temporaire, effacé
         # en sortie, jamais dans l'arborescence du dépôt.
@@ -106,6 +116,10 @@ if [[ -n "$CORPUS" ]]; then
             --corpus "$CORPUS" --sortie "$REFERENCE" \
             --prototype "$PROTOTYPE" --largeur "$LARGEUR" --hauteur "$HAUTEUR"
         ARGS+=(--or-python "$REFERENCE")
+    elif [[ ! -f "$SCRIPT_DIR/parite_python.py" ]]; then
+        echo "  ⚠️  Scripts/parite_python.py absent — parité non exécutée."
+        echo "     Ce script ne fait pas partie du dépôt public : il compare à"
+        echo "     un prototype non publié."
     else
         echo "  ⚠️  Prototype introuvable ($PROTOTYPE) — parité non exécutée."
     fi

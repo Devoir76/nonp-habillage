@@ -75,8 +75,8 @@
 #
 # Le jour où le script annonce « SDK par défaut… aucun contournement » —
 # Command Line Tools corrigés, ou Xcode complet sélectionné. Retirer alors le
-# repli, les appels des quatre scripts (build_app.sh, verifier.sh,
-# images_reference.sh, campagne_parite.sh) et la ligne du README.
+# repli, les appels des trois scripts (build_app.sh, verifier.sh,
+# images_reference.sh) et la ligne du README.
 #
 # MAIS garder `verifier_marquage_sdk` tant que le nouveau système de build n'a
 # pas été éprouvé : s'il marque encore mal avec le SDK par défaut, abandonner

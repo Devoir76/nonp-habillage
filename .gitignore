@@ -32,3 +32,17 @@ profil.json
 
 # Config locale de l'assistant
 .claude/
+
+# ── Outils d'atelier — retirés du suivi le 20/09, conservés sur le disque ────
+#
+# Ils pointent ~/Developer/NONP-Habillage, un chemin qui n'existe que sur la
+# machine d'Éric, et comparent à un prototype Python non publié. Sur un dépôt
+# public, ils décriraient un dispositif que personne ne peut reproduire.
+#
+# ⚠️ Les retirer du suivi ne les retire PAS de l'historique : ils restent
+# lisibles dans chaque commit passé. Leur purge est à faire dans la passe
+# `git filter-repo --invert-paths`, avant toute publication.
+CLAUDE.md
+Scripts/campagne_parite.sh
+Scripts/parite_python.py
+Scripts/profils_python.py

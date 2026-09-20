@@ -281,8 +281,10 @@ l'invariant nº4 interdit d'en substituer une autre.
 **Ce que cela coûte.** Un profil produit par l'app n'est pas utilisable dans le
 prototype. En pratique : on règle dans l'app, on grave dans l'app.
 
-**Contrôlé par** : `Scripts/profils_python.py`, appelé par `./Scripts/verifier.sh`
-quand le prototype est présent. Le nom des fichiers porte l'attente — `accepte-*`
+**Contrôlé par** : `profils_python.py`, appelé par `./Scripts/verifier.sh` quand
+le prototype **et** le script sont présents. Ce script ne fait pas partie du
+dépôt public : il compare à un prototype non publié, et la rubrique s'annonce
+« non exécutée » en son absence. Le nom des fichiers porte l'attente — `accepte-*`
 doit passer, `amende-*` doit être refusé **et seulement** pour ce que la version 2
 a changé. Depuis le 28/08, l'app n'écrit plus que des `amende-*`.
 
