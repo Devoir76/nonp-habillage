@@ -74,6 +74,14 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
      nonp.fr, resserrer le site de `https://nonp.fr` vers
      `https://nonp.fr/habillage`. Ce n'est pas un texte daté mais une
      imprécision qui se corrige au même moment.
+   - **Sujet `privacy`, CONDITIONNEL.** Il n'est pas posé aujourd'hui : le
+     dépôt porte `offline`, qui dit un fait mesuré — zéro appel réseau dans
+     tout `Sources/` —, là où `privacy` dirait une intention que le `README.md`
+     ne revendique pas. **Si** le README gagne la phrase « 100 % local, aucun
+     accès réseau » que portera la page `/habillage`, **alors** le sujet
+     s'ajoute, justifié par la documentation et non par une interprétation.
+     L'ordre ne s'inverse jamais : **la métadonnée suit la documentation, qui
+     suit le code.**
 9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
 
@@ -217,6 +225,32 @@ zéro occurrence sur les trois surfaces. Les noms n'étaient jamais entrés — 
 vidéos vivent hors de l'arborescence, et les messages de commit décrivent les
 sources par leur provenance. C'est la bonne habitude : **nommer une source par
 ce qu'elle est, pas par qui elle montre.**
+
+## Vérifier ce que GitHub sert — présence et absence ne se mesurent pas pareil
+
+Deux moitiés, et confondre les deux fait conclure à l'envers.
+
+**Une PRÉSENCE se vérifie par l'API `contents`, jamais par
+`raw.githubusercontent.com`.** Le CDN sert une version périmée pendant un
+temps qu'on ne contrôle pas : un fichier fraîchement poussé y apparaît encore
+sans sa modification. Mesuré le 2026-09-20 — `raw` rendait 6 411 octets quand
+le fichier en faisait 6 514, et j'ai failli en conclure à une poussée
+incomplète. L'API `contents` ne passe pas par ce cache et rendait déjà les
+6 514 octets attendus.
+
+**Une ABSENCE se vérifie sur les DEUX, CDN compris — et se revérifie plus
+tard.** C'est la moitié qui compte, parce qu'elle est celle du jour où l'on
+retire quelque chose qui ne doit plus être lisible. Le même cache qui retarde
+une nouveauté **continue de servir ce qu'on vient d'effacer**. Un `raw` en 404
+juste après le retrait ne prouve rien de durable ; un `raw` en 200 sur du
+contenu retiré prouve, lui, que ce n'est pas fini.
+
+- [ ] Présence : `api.github.com/repos/…/contents/<chemin>` — jamais `raw`.
+- [ ] Absence : `contents`, **et** `raw.githubusercontent.com`, **et** l'accès
+      par empreinte (`/commits/<sha>`), en requête **non authentifiée** — une
+      session connectée voit un dépôt privé exactement comme un dépôt public.
+- [ ] Absence : **recontrôler après quelques heures.** Le cache expire seul, et
+      c'est seulement au second passage qu'on sait.
 
 ## La règle du couple — profils d'exemple
 
