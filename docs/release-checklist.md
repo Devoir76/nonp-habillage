@@ -87,6 +87,50 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
 - [ ] Commit ayant produit le binaire identifié sans ambiguïté, et tag posé
       exactement dessus.
 
+## Les vidéos de test — la recette, pour que rien ne se saute
+
+> Le harnais exige une vidéo réelle pour trois rubriques. Sans elle, elles
+> s'annoncent « non exécutées » — et une rubrique sautée n'est pas une rubrique
+> réussie. **La rubrique du blanc de tête n'avait jamais tourné jusqu'au
+> 20/09**, faute d'une source qui en porte un ; elle a échoué à sa première
+> exécution. Une donnée manquante se fabrique : elle est ci-dessous.
+
+- [ ] **Une vidéo ordinaire** pour la recopie de l'audio et le compte d'images.
+      N'importe quel MP4 réel avec une piste son.
+- [ ] **Une vidéo à blanc de tête**, que rien ne fournit naturellement. Elle se
+      fabrique en deux commandes, depuis n'importe quelle source :
+
+```sh
+# 1. un extrait court, à la cadence voulue
+ffmpeg -y -i <source.mp4> -t 8 -r 30 -c:v libx264 -preset ultrafast -g 48 \
+       -c:a aac base-30.mp4
+
+# 2. le vide de tête, posé sur LES DEUX PISTES par la liste d'édition
+ffmpeg -y -itsoffset 0.5 -i base-30.mp4 -map 0:v -map 0:a -c copy \
+       blanc-de-tete.mp4
+
+# contrôle : les deux pistes doivent démarrer après zéro
+ffprobe -v error -show_entries stream=codec_type,start_time -of csv=p=0 \
+        blanc-de-tete.mp4
+```
+
+⚠︎ **Les deux pistes, pas seulement la vidéo.** Un `-itsoffset` appliqué au seul
+flux vidéo produit une source asymétrique : l'exportateur ne retire alors rien,
+par la règle du min qui protège la synchronisation du son, et la sortie fait
+bien la durée de la source. C'est voulu — mais cela ne met pas la rubrique à
+l'épreuve de ce qu'elle mesure.
+
+- [ ] Lancer le harnais avec les deux :
+      `./Scripts/verifier.sh --corpus <dossier> --video blanc-de-tete.mp4`
+- [ ] **Vérifier qu'il ne reste AUCUNE rubrique non exécutée.** Si l'une le
+      reste, son motif nomme la donnée qui manque : la fabriquer, pas l'accepter.
+
+**Ce que la campagne du 20/09 a établi**, 16 sources croisant les offsets
+0,3 / 0,5 / 0,7 / 1,0 s et les cadences 24 / 25 / 30 / 60 i/s : le résidu de
+durée vaut 0,000 à 0,001 s et **ne croît ni avec l'offset ni avec la cadence**.
+C'est un arrondi de frontière. La tolérance du contrôle vaut donc **une image**,
+proportionnelle à la granularité du média, et non un seuil en secondes.
+
 ## La règle du couple — profils d'exemple
 
 > **Gelés pour la 1.0.0.** Aucun changement de valeurs, de noms de fichiers, de

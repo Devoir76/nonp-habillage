@@ -205,9 +205,17 @@ final class ExportateurVideo: @unchecked Sendable {
         //     et chaque réplique paraissait d'autant plus tôt qu'elle.
         //
         // Le retirer ramène tout à zéro, comme ffmpeg le fait de toute entrée.
-        // On prend le PLUS PETIT des deux pistes : retirer d'une ce que l'autre
-        // n'a pas désynchroniserait le son, qu'on recopie précisément sans y
-        // toucher.
+        //
+        // ⚠️ RÈGLE DU MIN — on prend le PLUS PETIT des deux pistes : retirer
+        // d'une ce que l'autre n'a pas désynchroniserait le son, qu'on recopie
+        // précisément sans y toucher. Une source dont la vidéo ouvre sur 0,5 s
+        // de vide et dont l'audio commence à zéro ne se raccourcit donc PAS :
+        // c'est voulu, et la sortie fait bien la durée de la source.
+        //
+        // Tout contrôle qui prédit la durée de sortie doit appliquer LA MÊME
+        // règle — `ControlesExport.blancDeTete` le fait explicitement. Un
+        // attendu calculé sur le seul blanc vidéo accuse le moteur d'un écart
+        // qu'il produit à dessein ; c'est arrivé le 20/09.
         var origineSource = try await Self.blancDeTete(pisteVideo)
         if let pisteAudio {
             origineSource = min(origineSource, try await Self.blancDeTete(pisteAudio))

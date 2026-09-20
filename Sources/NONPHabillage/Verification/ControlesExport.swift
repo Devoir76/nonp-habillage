@@ -243,10 +243,25 @@ enum ControlesExport {
                          motif: "aucune vidéo réelle fournie — passer --video <fichier>")
             return
         }
+        // ⚠️ LE MÊME MIN QUE L'EXPORTATEUR, et pour la même raison.
+        //
+        // `ExportateurVideo` ne retire que `min(blancVidéo, blancAudio)` : retirer
+        // d'une piste ce que l'autre n'a pas désynchroniserait le son, qu'il
+        // recopie échantillon par échantillon sans y toucher. Un attendu calculé
+        // sur le seul blanc vidéo contredisait donc l'exportateur dès que les
+        // deux pistes ne s'ouvrent pas sur le même vide — et le contrôle échouait
+        // en accusant un comportement voulu. Mesuré le 20/09 sur une source à
+        // blanc vidéo seul : 0,5 s d'écart, imputés à tort au moteur.
         let vide = (try? bloquant {
-            guard let piste = try await AVURLAsset(url: videoReelle)
+            let asset = AVURLAsset(url: videoReelle)
+            guard let pisteVideo = try await asset
                 .loadTracks(withMediaType: .video).first else { return 0.0 }
-            return try await ExportateurVideo.blancDeTete(piste).seconds
+            var v = try await ExportateurVideo.blancDeTete(pisteVideo).seconds
+            if let pisteAudio = try await asset
+                .loadTracks(withMediaType: .audio).first {
+                v = min(v, try await ExportateurVideo.blancDeTete(pisteAudio).seconds)
+            }
+            return v
         }) ?? 0
         guard vide > 0 else {
             r.nonExecute("le compte d'images sur une source à blanc de tête",
@@ -272,15 +287,36 @@ enum ControlesExport {
             }
             let obtenue = (try? bloquant {
                 try await AVURLAsset(url: sortie).load(.duration) })?.seconds ?? 0
+            // TOLÉRANCE : UNE IMAGE, pas un nombre de secondes en dur.
+            //
+            // Campagne du 20/09 — 16 sources, offsets 0,3 / 0,5 / 0,7 / 1,0 s
+            // croisés avec 24, 25, 30 et 60 i/s. Le résidu mesuré vaut 0,000 à
+            // 0,001 s, soit 0,06 image au pire, et il NE CROÎT NI avec l'offset
+            // NI avec la cadence. C'est donc un arrondi de frontière, pas une
+            // dérive du moteur : une tolérance proportionnelle à la granularité
+            // du média la décrit, un seuil en secondes la masquerait.
+            //
+            // Une image laisse 16× la marge du pire résidu mesuré à 60 i/s, et
+            // resserre le contrôle par rapport aux 0,05 s d'avant — 16,7 ms à
+            // 60 i/s, 41,7 ms à 24. Un écart d'une image entière, lui, serait
+            // une vraie image perdue ou gagnée : c'est exactement ce qu'on veut
+            // voir échouer.
+            let cadence = (try? bloquant {
+                guard let piste = try await AVURLAsset(url: videoReelle)
+                    .loadTracks(withMediaType: .video).first else { return 0.0 }
+                return Double(try await piste.load(.nominalFrameRate))
+            }) ?? 0
+            let uneImage = cadence > 0 ? 1.0 / cadence : 0.05
             r.verifier("un blanc de tête de \(String(format: "%.3f", vide)) s ne "
                        + "rallonge pas la vidéo produite "
                        + "(\(String(format: "%.3f", obtenue)) s pour "
-                       + "\(String(format: "%.3f", attendue)) s attendues)",
-                       abs(obtenue - attendue) < 0.05)
+                       + "\(String(format: "%.3f", attendue)) s attendues, "
+                       + "tolérance 1 image = \(String(format: "%.3f", uneImage)) s)",
+                       abs(obtenue - attendue) < uneImage)
             r.verifier("et le bilan annonce la durée du fichier produit, pas "
                        + "celle qu'il a lue "
                        + "(\(String(format: "%.3f", bilan.dureeVideo)) s)",
-                       abs(bilan.dureeVideo - attendue) < 0.05)
+                       abs(bilan.dureeVideo - attendue) < uneImage)
         } catch {
             r.verifier("export d'une source à blanc de tête — "
                        + "\(CommandeExport.message(pour: error))", false)
