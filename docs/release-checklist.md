@@ -176,8 +176,13 @@ et c'est le scan lui-même qui l'a trouvée, en se signalant sur son propre
 texte. Elle vient du réflexe sain de documenter ce qu'on vérifie : elle se
 reproduira si rien ne la nomme.
 
-La liste vit **hors du dépôt public**, avec le document de scan d'historique,
-dans les notes privées du projet. Ce qui se documente ici, c'est la MÉTHODE :
+La liste vit **hors du dépôt public**, dans les notes privées du projet :
+
+```
+NONP-traces/session-20260920/filet-noms-reels.txt
+```
+
+Ce qui se documente ici, c'est la MÉTHODE, jamais les unités :
 
 - des unités **sans aucune espace**, insécables par un retour à la ligne —
   même raison qu'à la table de substitution ;
