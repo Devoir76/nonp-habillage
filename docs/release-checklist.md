@@ -343,6 +343,29 @@ coûté un incident.
       téléchargé depuis le site — jamais de mémoire : texte du premier
       avertissement, « Déplacer vers la corbeille », « Ouvrir quand même ».
 
+> ### ⚖️ Arbitrage en attente — le libellé Gatekeeper concerne DEUX pages
+>
+> Les deux applications voisineront sur le même site, et elles ne citent pas le
+> même message système.
+>
+> - `/transcription`, **déjà publiée**, écrit : « macOS affiche *…ne peut pas
+>   être ouverte car Apple ne peut pas vérifier…* ».
+> - Le texte d'Habillage écrit : « un message dit qu'elle n'a pas pu être
+>   vérifiée ».
+>
+> Les deux disent la même chose ; un seul peut être le libellé réel. Une copie
+> de l'application a reçu l'attribut `com.apple.quarantine` le 20/09 pour qu'Éric
+> déroule le vrai parcours et relève les mots exacts — c'est le contrôle nº 7 de
+> la fiche de test.
+>
+> **Quand ce relevé existera, la vérité mesurée s'appliquera AUX DEUX PAGES.**
+> Si `/transcription` s'écarte du dialogue réel, elle se corrige au même moment,
+> bien qu'elle soit déjà en ligne : deux pages du même site qui décrivent
+> différemment le même écran d'Apple, c'est l'une des deux qui se trompe.
+>
+> **Aucun des deux textes n'a été modifié** — ce sont ceux d'Éric. La correction
+> lui sera proposée, il tranchera.
+
 ### Release GitHub (après le tag)
 
 - [ ] Release créée **sur le tag de version**, avec en asset l'archive ZIP
@@ -365,6 +388,23 @@ une autre est pire que pas de mise à jour du tout.
       « Mise en ligne » ci-dessous.
 - [ ] Page de téléchargement : version affichée, nom du fichier (lien **et**
       `aria-label` **et** texte du bouton), poids, empreinte, bloc JSON-LD.
+- [ ] **Les deux mentions de compatibilité, VERBATIM.** Reprises telles quelles
+      de `/transcription`, déjà publiée et déjà relue, pour que les deux pages
+      du site disent la chose d'une seule manière. À placer aux mêmes endroits :
+
+      ligne 1, à côté du bouton de téléchargement —
+      > pour macOS 14 (Sonoma) ou plus récent, Mac Apple Silicon (puce M1, M2, M3…)
+
+      ligne 2, sous le poids du fichier —
+      > Non compatible avec les Mac Intel.
+
+      **Ce sont des citations, pas des modèles à reformuler.** Mesuré le
+      2026-09-20 sur l'artefact publié de Transcription : ses trois binaires
+      Mach-O — l'exécutable, FFmpeg et whisper-cli — sont `arm64` seul, et sa
+      page l'annonce exactement ainsi. Habillage est dans le même cas, vérifié
+      au `lipo` sur le bundle compilé. Rien à changer dans le `README.md` ni
+      dans le `CHANGELOG.md` : ils portent déjà les deux informations côte à
+      côte, jamais la version de macOS seule.
 - [ ] Après déploiement : re-télécharger **depuis le site** et vérifier que
       l'empreinte correspond à celle annoncée.
 - [ ] Archive de la version précédente retirée du dossier servi ; son empreinte
