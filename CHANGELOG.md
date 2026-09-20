@@ -28,16 +28,13 @@ valide, et l'inverse aussi.
 
 **Aperçu en direct** sur une image de la vidéo, avec le choix du plan — du plus
 sombre au plus clair — pour vérifier que le texte reste lisible partout. Deux
-avertissements de placement s'affichent avant l'encodage. Le premier — le logo
-empiète sur la zone des sous-titres — peut s'accompagner d'un conseil ; quand
-il y en a un, il a été simulé dans la vraie géométrie, et l'application ne
-propose donc jamais une action qui ne lèverait pas l'avertissement. À chaque
-position correspond un petit jeu d'actions jugées utiles, et elles seules sont
-simulées : réduire un logo ancré dans un coin bas ne lèverait l'avertissement
-qu'à une taille où il ne se voit plus, ce n'est donc pas proposé. Si aucune de
-ces actions ne lève l'avertissement, il s'affiche sans conseil plutôt qu'avec
-un conseil inutile. Le second — le logo entre dans la marge de sécurité — est
-un constat, et ne propose rien.
+avertissements de placement s'affichent avant l'encodage. Celui du logo sur la
+zone des sous-titres peut s'accompagner d'un conseil : chaque position a son
+petit jeu d'actions jugées utiles, elles seules sont simulées dans la vraie
+géométrie, et aucune n'est proposée si elle ne lève pas l'avertissement. Quand
+aucune ne le lève, l'avertissement s'affiche sans conseil plutôt qu'avec un
+conseil inutile. Le second, sur la marge de sécurité, est un constat : il ne
+propose rien.
 
 **Profils.** L'habillage complet s'enregistre dans un fichier `.json`
 échangeable — c'est ce qui permet à un groupe de figer son apparence et de la

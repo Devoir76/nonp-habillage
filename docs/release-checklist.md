@@ -53,14 +53,18 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
    compilé, jamais sur les sources.
 7. **Test du binaire compilé** : lancement, un export court, un export logo
    seul, un export sous-titres seuls.
-8. **Le jour du tag, juste avant de le poser** — deux textes datent, et ils ne
-   peuvent pas être justes avant ce moment :
+8. **Le jour du tag, juste avant de le poser** — trois textes datent, et ils
+   ne peuvent pas être justes avant ce moment :
    - **La date de l'entrée `[1.0.0]` du `CHANGELOG.md`** se fixe ici. Elle y est
      posée à titre indicatif et porte son propre avertissement ; une date de
      journal qui ne tombe pas le jour du tag fait mentir les deux.
    - **La phrase « Rien n'est encore publié »** du bloc « État du projet » du
      `README.md` est remplacée par l'état réel de la release. Vraie jusqu'ici,
      elle devient fausse à la seconde où le tag est poussé.
+   - **Le commentaire de `Resources/Info.plist`** au-dessus de
+     `CFBundleShortVersionString` — « Version 1.0.0, en préparation. Rien n'est
+     publié. » — perd sa seconde phrase et cesse d'annoncer une préparation.
+     Même famille que la précédente : vraie tant que le tag n'est pas posé.
 9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
 

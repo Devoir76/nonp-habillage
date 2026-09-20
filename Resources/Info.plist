@@ -33,7 +33,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
 
-    <!-- Version : socle. Rien n'est publié. -->
+    <!-- Version 1.0.0, en préparation. Rien n'est publié. -->
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
 

@@ -43,6 +43,8 @@ seulement**, et les minutages recalculés au prorata ne sortent jamais du rendu.
 La dernière version publiée, avec son archive et son empreinte :
 **[github.com/Devoir76/nonp-habillage/releases/latest](https://github.com/Devoir76/nonp-habillage/releases/latest)**
 
+Ce que chaque version apporte : [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Ce qu'il faut
 
 - macOS 14 (Sonoma) ou plus récent
@@ -130,6 +132,7 @@ il n'y a d'ailleurs aucune dépendance du tout.
 
 | Document | Ce qu'on y trouve |
 | --- | --- |
+| [`CHANGELOG.md`](CHANGELOG.md) | Ce que chaque version apporte, et l'empreinte de son archive |
 | [`docs/adr/0001-…`](docs/adr/0001-app-compagnon-avfoundation.md) | Les décisions d'architecture et leur pourquoi |
 | [`docs/CAHIER-DES-LOTS.md`](docs/CAHIER-DES-LOTS.md) | Le découpage du travail, lot par lot |
 | [`docs/divergences-prototype.md`](docs/divergences-prototype.md) | Chaque écart volontaire avec le prototype Python |
