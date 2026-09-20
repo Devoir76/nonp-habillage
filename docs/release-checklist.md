@@ -55,9 +55,10 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
    seul, un export sous-titres seuls.
 8. **Le jour du tag, juste avant de le poser** — trois textes datent, et ils
    ne peuvent pas être justes avant ce moment :
-   - **La date de l'entrée `[1.0.0]` du `CHANGELOG.md`** se fixe ici. Elle y est
-     posée à titre indicatif et porte son propre avertissement ; une date de
-     journal qui ne tombe pas le jour du tag fait mentir les deux.
+   - **La date de l'entrée `[1.0.0]` du `CHANGELOG.md`** se fixe ici. L'entrée
+     porte « non publiée » jusqu'à ce moment — un journal public qui affiche une
+     date annonce une version téléchargeable, et il n'y en a aucune tant que le
+     tag n'est pas posé. Remplacer « non publiée » par la date du jour.
    - **La phrase « Rien n'est encore publié »** du bloc « État du projet » du
      `README.md` est remplacée par l'état réel de la release. Vraie jusqu'ici,
      elle devient fausse à la seconde où le tag est poussé.

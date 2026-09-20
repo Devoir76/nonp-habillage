@@ -5,10 +5,14 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
-## [1.0.0] — 2026-09-19
+## [1.0.0] — non publiée
 
-> ⚠︎ **Date à aligner sur celle du tag.** Elle est posée ici à titre indicatif ;
-> si le tag est posé un autre jour, corriger avant publication.
+> ⚠︎ **Rien n'est publié à ce jour.** Cette version est préparée, pas sortie :
+> aucun tag n'est posé, aucune archive n'existe. **La date se fixe ici le jour
+> où le tag est posé**, et pas avant — une date écrite d'avance annoncerait au
+> lecteur une version qu'il pourrait télécharger. Voir l'étape 8 de
+> `docs/release-checklist.md`, qui porte ce geste avec les deux autres textes
+> datés.
 
 Première version publique.
 
