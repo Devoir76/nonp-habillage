@@ -154,6 +154,50 @@ cette rubrique est seulement la première à rendre visible. **Non élucidé au
 20/09.** Ne pas fabriquer les vidéos de test par `-c copy` d'un extrait tant que
 ce point n'est pas tranché : on mesurerait deux choses à la fois.
 
+## Le filet de détection des noms réels — il ne connaît que ce qu'on lui donne
+
+> **Règle, née le 20/09 d'un angle mort.** Le filet avait été construit sur les
+> noms trouvés dans le dépôt ce jour-là. Une campagne de mesure a ensuite
+> employé **quatre sources nouvelles**, portant des noms de personnes et des
+> intitulés du corpus — et un « zéro strict » obtenu avec l'ancien filet ne
+> disait rien à leur sujet : **un filet ne peut pas attraper un nom qu'il ne
+> connaît pas.** Le contrôle paraissait vert et ne regardait rien.
+
+**Tout nom réel entrant dans une mesure, un banc d'essai ou une fixture
+s'ajoute au filet LE JOUR MÊME**, avant la mesure si possible, sinon juste
+après — et le scan des trois surfaces est rejoué avec le filet élargi.
+
+⛔ **La liste des noms ne figure PAS dans ce dépôt, et ne doit jamais y
+figurer.** L'écrire ici reviendrait à réintroduire en clair, dans un dépôt
+public, exactement ce que la réécriture d'historique en a retiré — **le filet
+deviendrait la fuite qu'il sert à détecter.** L'erreur a été commise le 20/09,
+et c'est le scan lui-même qui l'a trouvée, en se signalant sur son propre
+texte. Elle vient du réflexe sain de documenter ce qu'on vérifie : elle se
+reproduira si rien ne la nomme.
+
+La liste vit **hors du dépôt public**, avec le document de scan d'historique,
+dans les notes privées du projet. Ce qui se documente ici, c'est la MÉTHODE :
+
+- des unités **sans aucune espace**, insécables par un retour à la ligne —
+  même raison qu'à la table de substitution ;
+- **mesurées sans faux positif** avant d'entrer dans le filet, contre tous les
+  blobs de tous les commits ;
+- écartées si elles mordent un identifiant légitime, fût-ce une seule fois.
+
+- [ ] Avant toute poussée, rejouer le scan des trois surfaces avec le filet
+      complet, tenu hors dépôt, **commits du jour inclus**.
+- [ ] Vérifier que le scan SAIT VOIR avant de croire ses zéros : planter une
+      aiguille sur une branche jetable, la faire trouver, puis la retirer. Un
+      « zéro » par environnement cassé est indiscernable d'un « zéro » par
+      absence — c'est arrivé le 20/09, une variable `path` écrasée en zsh ayant
+      vidé le `PATH` au milieu d'un scan.
+
+**Vérifié le 2026-09-20**, filet élargi aux quatre sources du banc de mesure :
+zéro occurrence sur les trois surfaces. Les noms n'étaient jamais entrés — les
+vidéos vivent hors de l'arborescence, et les messages de commit décrivent les
+sources par leur provenance. C'est la bonne habitude : **nommer une source par
+ce qu'elle est, pas par qui elle montre.**
+
 ## La règle du couple — profils d'exemple
 
 > **Gelés pour la 1.0.0.** Aucun changement de valeurs, de noms de fichiers, de
