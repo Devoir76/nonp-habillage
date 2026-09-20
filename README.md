@@ -40,6 +40,9 @@ seulement**, et les minutages recalculés au prorata ne sortent jamais du rendu.
 
 ## Télécharger
 
+> **La première version n'est pas encore publiée.** Le lien ci-dessous sera
+> actif dès sa sortie.
+
 La dernière version publiée, avec son archive et son empreinte :
 **[github.com/Devoir76/nonp-habillage/releases/latest](https://github.com/Devoir76/nonp-habillage/releases/latest)**
 

@@ -53,7 +53,7 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
    compilé, jamais sur les sources.
 7. **Test du binaire compilé** : lancement, un export court, un export logo
    seul, un export sous-titres seuls.
-8. **Le jour du tag, juste avant de le poser** — trois textes datent, et ils
+8. **Le jour du tag, juste avant de le poser** — quatre textes datent, et ils
    ne peuvent pas être justes avant ce moment :
    - **La date de l'entrée `[1.0.0]` du `CHANGELOG.md`** se fixe ici. L'entrée
      porte « non publiée » jusqu'à ce moment — un journal public qui affiche une
@@ -66,6 +66,14 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
      `CFBundleShortVersionString` — « Version 1.0.0, en préparation. Rien n'est
      publié. » — perd sa seconde phrase et cesse d'annoncer une préparation.
      Même famille que la précédente : vraie tant que le tag n'est pas posé.
+   - **L'encadré « La première version n'est pas encore publiée »** de la
+     section « Télécharger » du `README.md` se RETIRE. Il protège le visiteur
+     d'un lien `releases/latest` vide ; le tag posé et la release créée, il
+     devient faux à son tour.
+   - **L'encart « About » du dépôt** : quand la page `/habillage` existera sur
+     nonp.fr, resserrer le site de `https://nonp.fr` vers
+     `https://nonp.fr/habillage`. Ce n'est pas un texte daté mais une
+     imprécision qui se corrige au même moment.
 9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
 
