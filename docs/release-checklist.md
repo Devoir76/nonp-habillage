@@ -101,18 +101,29 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
       fabrique en deux commandes, depuis n'importe quelle source :
 
 ```sh
-# 1. un extrait court, à la cadence voulue
+# 1. une base à espacement d'images RÉGULIER, audio RECOPIÉ
+#    · -r fixe la cadence et régularise l'espacement
+#    · -c:a copy est indispensable : réencoder en AAC ajoute ~0,024 s
+#      d'amorçage, et le vide de l'audio ne vaut alors plus celui de la vidéo
 ffmpeg -y -i <source.mp4> -t 8 -r 30 -c:v libx264 -preset ultrafast -g 48 \
-       -c:a aac base-30.mp4
+       -c:a copy base-30.mp4
 
 # 2. le vide de tête, posé sur LES DEUX PISTES par la liste d'édition
 ffmpeg -y -itsoffset 0.5 -i base-30.mp4 -map 0:v -map 0:a -c copy \
        blanc-de-tete.mp4
 
-# contrôle : les deux pistes doivent démarrer après zéro
+# contrôle : les deux pistes doivent démarrer après zéro, À LA MÊME VALEUR
 ffprobe -v error -show_entries stream=codec_type,start_time -of csv=p=0 \
         blanc-de-tete.mp4
+#   attendu :  video,0.500000
+#              audio,0.500000
 ```
+
+⚠︎ **Les deux valeurs doivent être ÉGALES.** Si l'audio affiche 0,476 au lieu de
+0,500, c'est qu'il a été réencodé quelque part : le vide effectif devient celui
+de l'audio, par la règle du min, et la source n'éprouve plus le cas symétrique.
+La première version de cette recette avait ce défaut — elle réencodait en AAC —
+et produisait sans le dire des sources asymétriques.
 
 ⚠︎ **Les deux pistes, pas seulement la vidéo.** Un `-itsoffset` appliqué au seul
 flux vidéo produit une source asymétrique : l'exportateur ne retire alors rien,
@@ -125,11 +136,23 @@ l'épreuve de ce qu'elle mesure.
 - [ ] **Vérifier qu'il ne reste AUCUNE rubrique non exécutée.** Si l'une le
       reste, son motif nomme la donnée qui manque : la fabriquer, pas l'accepter.
 
-**Ce que la campagne du 20/09 a établi**, 16 sources croisant les offsets
-0,3 / 0,5 / 0,7 / 1,0 s et les cadences 24 / 25 / 30 / 60 i/s : le résidu de
-durée vaut 0,000 à 0,001 s et **ne croît ni avec l'offset ni avec la cadence**.
-C'est un arrondi de frontière. La tolérance du contrôle vaut donc **une image**,
+**Ce que la campagne du 20/09 a établi**, sur des bases à espacement régulier :
+16 sources croisant les offsets 0,3 / 0,5 / 0,7 / 1,0 s et les cadences
+24 / 25 / 30 / 60 i/s, plus le cas symétrique exact. Le résidu de durée vaut
+0,000 à 0,001 s et **ne croît ni avec l'offset ni avec la cadence**. C'est un
+arrondi de frontière. La tolérance du contrôle vaut donc **une image**,
 proportionnelle à la granularité du média, et non un seuil en secondes.
+
+⚠︎ **Ce que la campagne ne couvre PAS, et qui reste ouvert.** Un extrait pris en
+`-c copy` d'une vidéo réelle hérite de son espacement d'images irrégulier
+— images manquantes, ordre de décodage entrelacé. Sur une telle source,
+l'export rend une durée **supérieure de 0,1 s** à celle de l'entrée, à compte
+d'images pourtant identique, et **cela ne dépend d'aucun blanc de tête** : le
+même écart apparaît sur la source sans vide. Ce n'est donc pas un défaut de
+traitement du blanc, mais une dérive de durée sur sources irrégulières, que
+cette rubrique est seulement la première à rendre visible. **Non élucidé au
+20/09.** Ne pas fabriquer les vidéos de test par `-c copy` d'un extrait tant que
+ce point n'est pas tranché : on mesurerait deux choses à la fois.
 
 ## La règle du couple — profils d'exemple
 
