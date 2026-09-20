@@ -50,6 +50,9 @@ enum ControlesExport {
         r.section("Export — un blanc de tête ne rallonge pas la vidéo")
         blancDeTete(r, videoReelle: videoReelle)
 
+        r.section("Export — l'image ne dérive pas contre le son")
+        fideliteDuMontage(r, videoReelle: videoReelle)
+
         r.section("Export — les fichiers d'origine ne sont jamais remplacés")
         jamaisParDessusUneEntree(r, video: essai)
 
@@ -206,6 +209,115 @@ enum ControlesExport {
     /// `Passthrough`. Une `AVMutableComposition`, elle, en porte un vrai. Le
     /// bout en bout attend donc une vidéo réelle qui en ait un, et s'annonce
     /// non exécuté à défaut — jamais réussi par défaut.
+    /// **L'image ne dérive pas contre le son.** La promesse de l'application.
+    ///
+    /// Cette propriété a été trouvée PAR ACCIDENT le 20/09 : la rubrique du
+    /// blanc de tête comparait des durées, et sur un extrait malformé l'écart
+    /// de 0,1 s a fait craindre une dérive du montage. Elle n'en était pas une
+    /// — mais rien, dans le harnais, ne regardait la question. Une propriété
+    /// qu'aucun contrôle ne regarde se reperd ; celui-ci la regarde.
+    ///
+    /// Ce qui est vérifié, sur une vidéo RÉELLE exportée :
+    ///   · la première image part au même instant ;
+    ///   · la dernière image tombe au même instant ;
+    ///   · le son se termine au même instant ;
+    ///   · et surtout **l'écart image/son EN FIN de fichier est conservé** —
+    ///     c'est lui qui dirait une dérive, pas les durées déclarées.
+    ///
+    /// ⚠️ La DURÉE DÉCLARÉE par le conteneur n'est volontairement pas comparée.
+    /// Mesuré le 20/09 sur quatre sources réelles de provenances différentes
+    /// (téléchargement HandBrake, deux captures de diffusion, une vidéo
+    /// d'archive) : déclaration et fin réelle coïncident exactement, en entrée
+    /// comme en sortie. Mais sur un extrait pris en `-c copy` au milieu d'un
+    /// trou d'images, l'ENTRÉE se sous-déclare de 0,1 s — sa dernière image
+    /// tombe après ce qu'elle annonce. Comparer les déclarations ferait donc
+    /// échouer le contrôle sur un défaut du fichier d'entrée, pas du moteur.
+    private static func fideliteDuMontage(_ r: Rapport, videoReelle: URL?) {
+        guard let videoReelle else {
+            r.nonExecute("fidélité du montage",
+                         motif: "aucune vidéo réelle fournie — passer --video <fichier>")
+            return
+        }
+
+        /// Début et fin RÉELS de chaque piste, tels que le montage les pose.
+        func bornes(_ url: URL) -> (debutV: Double, finV: Double, finA: Double)? {
+            try? bloquant {
+                let asset = AVURLAsset(url: url)
+                guard let v = try await asset.loadTracks(withMediaType: .video).first
+                else { return nil }
+                let pv = try await v.load(.timeRange)
+                var finA = 0.0
+                if let a = try await asset.loadTracks(withMediaType: .audio).first {
+                    let pa = try await a.load(.timeRange)
+                    finA = (pa.start + pa.duration).seconds
+                }
+                return (pv.start.seconds, (pv.start + pv.duration).seconds, finA)
+            } ?? nil
+        }
+
+        guard let avant = bornes(videoReelle) else {
+            r.verifier("lecture des bornes de la source", false); return
+        }
+        let cadence = (try? bloquant {
+            guard let piste = try await AVURLAsset(url: videoReelle)
+                .loadTracks(withMediaType: .video).first else { return 0.0 }
+            return Double(try await piste.load(.nominalFrameRate))
+        }) ?? 0
+        let uneImage = cadence > 0 ? 1.0 / cadence : 0.05
+
+        let sortie = dossierTemporaire().appendingPathComponent("fidelite.mp4")
+        defer { try? FileManager.default.removeItem(at: sortie) }
+        do {
+            _ = try bloquant {
+                try await ExportateurVideo().exporter(
+                    video: videoReelle, sousTitres: nil, profil: .bandeauColore,
+                    vers: sortie, progression: { _ in })
+            }
+        } catch {
+            r.verifier("export de la source réelle — "
+                       + "\(CommandeExport.message(pour: error))", false)
+            return
+        }
+        guard let apres = bornes(sortie) else {
+            r.verifier("lecture des bornes de la sortie", false); return
+        }
+
+        r.verifier("la première image part au même instant "
+                   + "(\(String(format: "%.4f", avant.debutV)) → "
+                   + "\(String(format: "%.4f", apres.debutV)))",
+                   abs(apres.debutV - avant.debutV) < uneImage)
+        // ⚠️ Un blanc de tête est RETIRÉ à dessein : les bornes de fin se
+        // décalent alors de sa durée, et ce n'est pas une dérive. Le même
+        // min(vidéo, audio) que l'exportateur, pour la même raison.
+        let vide = (try? bloquant {
+            let asset = AVURLAsset(url: videoReelle)
+            guard let v = try await asset.loadTracks(withMediaType: .video).first
+            else { return 0.0 }
+            var d = try await ExportateurVideo.blancDeTete(v).seconds
+            if let a = try await asset.loadTracks(withMediaType: .audio).first {
+                d = min(d, try await ExportateurVideo.blancDeTete(a).seconds)
+            }
+            return d
+        }) ?? 0
+        r.verifier("la dernière image tombe au même instant, blanc de tête "
+                   + "retiré (\(String(format: "%.4f", avant.finV - vide)) → "
+                   + "\(String(format: "%.4f", apres.finV)))",
+                   abs(apres.finV - (avant.finV - vide)) < uneImage)
+        r.verifier("le son se termine au même instant, blanc de tête retiré "
+                   + "(\(String(format: "%.4f", avant.finA - vide)) → "
+                   + "\(String(format: "%.4f", apres.finA)))",
+                   abs(apres.finA - (avant.finA - vide)) < uneImage)
+
+        // LE contrôle qui dirait une dérive : l'écart image/son en fin.
+        let ecartAvant = avant.finV - avant.finA
+        let ecartApres = apres.finV - apres.finA
+        r.verifier("l'écart image/son en fin de fichier est conservé "
+                   + "(\(String(format: "%+.4f", ecartAvant)) s → "
+                   + "\(String(format: "%+.4f", ecartApres)) s, "
+                   + "tolérance 1 image = \(String(format: "%.3f", uneImage)) s)",
+                   abs(ecartApres - ecartAvant) < uneImage)
+    }
+
     private static func blancDeTete(_ r: Rapport, videoReelle: URL?) {
         let blanc = CMTime(seconds: 0.5, preferredTimescale: 600)
 
