@@ -571,14 +571,15 @@ libre au schéma ; seule la commande disparaît, comme pour la marge intérieure
 Trois retours issus d'exports réels. Aucun ne porte sur le rendu : tous portent
 sur ce qui l'entoure — le nom du fichier produit, et le retour à l'accueil.
 
-**§2 amendé — le nom proposé vient du fichier de sous-titres.** Il venait de la
-vidéo. Or une vidéo garde souvent le nom automatique que lui a donné son
-téléchargement (« 21 Atelier ORVA reunion publique extrait complet sans
-montage.mp4 ») quand le `.srt`, lui, porte un nom délibéré : celui de la personne
-filmée (« Atelier ORVA Exemple.srt »). **Quand les deux diffèrent, le second est
-presque toujours celui qu'on veut.** À défaut de sous-titres, la vidéo reprend
-la main. Une supposition inexacte ne coûte rien : le champ du panneau
-d'enregistrement reste libre, et il s'ouvre sur la proposition.
+**§2 amendé — le nom proposé vient du fichier de sous-titres.** Il venait de
+la vidéo. Or une vidéo garde souvent le nom **long et machinal** que lui a
+donné son téléchargement — « 21 Atelier ORVA reunion publique extrait complet
+sans montage.mp4 » — quand le `.srt`, lui, porte un nom **court et délibéré**,
+celui du sujet de la vidéo : « Atelier ORVA Exemple.srt ». *Les deux exemples
+sont fictifs.* **Quand les deux diffèrent, le second est presque toujours celui
+qu'on veut.** À défaut de sous-titres, la vidéo reprend la main. Une supposition
+inexacte ne coûte rien : le champ du panneau d'enregistrement reste libre, et il
+s'ouvre sur la proposition.
 
 Le **dossier**, lui, reste celui de la vidéo. Le retour ne porte que sur le nom,
 et le fichier de sous-titres vit souvent ailleurs que la vidéo : écrire dans son
