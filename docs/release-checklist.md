@@ -190,8 +190,14 @@ Ce qui se documente ici, c'est la MÉTHODE, jamais les unités :
   blobs de tous les commits ;
 - écartées si elles mordent un identifiant légitime, fût-ce une seule fois.
 
-- [ ] Avant toute poussée, rejouer le scan des trois surfaces avec le filet
-      complet, tenu hors dépôt, **commits du jour inclus**.
+- [ ] **AVANT CHAQUE POUSSÉE — pas seulement la première.** Rejouer le scan
+      des trois surfaces avec le filet complet, tenu hors dépôt, commits du
+      jour inclus. Le dépôt est public depuis le 2026-09-20 : une erreur qui y
+      arrive est définitive, et un `git push` ne se rattrape pas. Un force-push
+      ne suffit pas — l'objet reste servi par son empreinte jusqu'au ramassage
+      de GitHub, qu'on ne déclenche pas. Mesuré le 20/09 : après un force-push,
+      le commit retiré rendait encore 19 672 octets et trois noms lisibles. Il
+      a fallu supprimer le dépôt et le recréer.
 - [ ] Vérifier que le scan SAIT VOIR avant de croire ses zéros : planter une
       aiguille sur une branche jetable, la faire trouver, puis la retirer. Un
       « zéro » par environnement cassé est indiscernable d'un « zéro » par
