@@ -499,8 +499,9 @@ enum ControlesProfils {
     ///
     /// Ce qui se contrôle ici, c'est donc l'INVERSE de ce qu'on contrôlait :
     /// que l'app écrive bien du v2, et que l'avertissement d'enregistrement le
-    /// dise. La preuve que le prototype refuse, elle, se fait chez lui —
-    /// `Scripts/profils_python.py`.
+    /// dise. La preuve que le prototype refuse, elle, se faisait chez lui, par
+    /// l'outillage de la campagne de parité interne — hors dépôt public, voir
+    /// `docs/campagne-parite.md`.
     private static func ecritureEtroite(_ r: Rapport) {
         func champsEcrits(_ profil: ProfilHabillage) -> [String: Set<String>] {
             guard let d = try? ProfilJSON.encoder(profil, cheminLogo: "logo.png"),

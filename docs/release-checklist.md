@@ -53,7 +53,15 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
    compilé, jamais sur les sources.
 7. **Test du binaire compilé** : lancement, un export court, un export logo
    seul, un export sous-titres seuls.
-8. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
+8. **Le jour du tag, juste avant de le poser** — deux textes datent, et ils ne
+   peuvent pas être justes avant ce moment :
+   - **La date de l'entrée `[1.0.0]` du `CHANGELOG.md`** se fixe ici. Elle y est
+     posée à titre indicatif et porte son propre avertissement ; une date de
+     journal qui ne tombe pas le jour du tag fait mentir les deux.
+   - **La phrase « Rien n'est encore publié »** du bloc « État du projet » du
+     `README.md` est remplacée par l'état réel de la release. Vraie jusqu'ici,
+     elle devient fausse à la seconde où le tag est poussé.
+9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
 
 ## Vérification du `.app` compilé (avant le tag)
@@ -74,6 +82,34 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
       « Distribution ».
 - [ ] Commit ayant produit le binaire identifié sans ambiguïté, et tag posé
       exactement dessus.
+
+## La règle du couple — profils d'exemple
+
+> **Gelés pour la 1.0.0.** Aucun changement de valeurs, de noms de fichiers, de
+> noms de profils ni de `schema_version` pendant la préparation.
+
+`Resources/profils-exemples/nonp.json` et `bandeau-colore.json` ne se modifient
+jamais seuls. Toute modification de leur contenu engage **quatre choses
+ensemble** :
+
+- [ ] les deux fichiers eux-mêmes ;
+- [ ] le préréglage en code `ProfilHabillage.bandeauColore` — `ControlesProfils`
+      vérifie que chaque valeur des fichiers lui est identique, seuls le nom et
+      l'absence de logo les distinguant ;
+- [ ] les **images de référence**, que `ProductionImages` produit à partir de ce
+      même préréglage en trois endroits ;
+- [ ] `Resources/profils-exemples/LISEZ-MOI.md`, qui **décrit les valeurs en
+      prose** — « bandeau bleu opaque qui épouse chaque ligne, texte blanc,
+      contour noir, Arial ».
+
+Les trois premiers points, un contrôle les rattrape. **Le quatrième, aucun.**
+Le LISEZ-MOI ment en silence dès que les fichiers changent sans lui : c'est la
+raison d'être de cette règle.
+
+Sont figés au même titre : les deux noms de fichiers, les deux noms de profils
+(`NONP` et `Bandeau coloré`), l'absence de logo, et le fait que les fichiers
+soient déjà au schéma courant — une conversion détectée fait échouer le
+contrôle.
 
 ## Ce qui se contrôle à la main, une fois par release
 

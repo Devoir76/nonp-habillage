@@ -27,11 +27,14 @@ acceptés : PNG, JPEG, HEIC, TIFF.
 valide, et l'inverse aussi.
 
 **Aperçu en direct** sur une image de la vidéo, avec le choix du plan — du plus
-sombre au plus clair — pour vérifier que le texte reste lisible partout. Les
-avertissements de placement (logo empiétant sur la zone des sous-titres, logo
-hors des marges sûres) s'affichent avant l'encodage, et chaque conseil est
-simulé avant d'être donné : l'application ne propose jamais une action qui ne
-lèverait pas l'avertissement.
+sombre au plus clair — pour vérifier que le texte reste lisible partout. Deux
+avertissements de placement s'affichent avant l'encodage. Le premier — le logo
+empiète sur la zone des sous-titres — peut s'accompagner d'un conseil ; quand
+il y en a un, il a été simulé dans la vraie géométrie, et l'application ne
+propose donc jamais une action qui ne lèverait pas l'avertissement. Lorsque
+aucune action disponible n'y suffit, l'avertissement s'affiche sans conseil
+plutôt qu'avec un conseil inutile. Le second — le logo entre dans la marge de
+sécurité — est un constat, et ne propose rien.
 
 **Profils.** L'habillage complet s'enregistre dans un fichier `.json`
 échangeable — c'est ce qui permet à un groupe de figer son apparence et de la

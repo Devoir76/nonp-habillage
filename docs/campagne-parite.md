@@ -1,15 +1,22 @@
 # Campagne de parité — prototype Python contre app native
 
-L'invariant nº5 disait que le prototype fait foi **tant que l'app native n'a
-pas prouvé un rendu équivalent sur vidéos réelles**. Ce fichier est cette
-preuve : ce qui a été comparé, comment, et ce qui en est ressorti.
+> ⚠︎ **Ce document est une trace de validation, pas une procédure
+> reproductible.** Le dispositif de comparaison — les scripts de campagne et le
+> prototype Python auquel ils comparent — **ne fait pas partie du dépôt
+> public** : le prototype n'a jamais été publié, et les scripts pointent un
+> chemin de machine. Ce qui suit dit donc ce qui a été comparé, comment, et ce
+> qui en est ressorti — pas comment le refaire chez vous.
 
-> **L'invariant nº5 est levé depuis le 06/09.** L'app native est l'outil de
-> production ; le prototype reste installé comme filet, et jamais modifié.
-> Verdict et motif en fin de fichier.
+L'invariant nº5 disait que le prototype faisait foi **tant que l'app native
+n'aurait pas prouvé un rendu équivalent sur vidéos réelles**. Ce fichier est
+cette preuve.
 
-Tenu depuis le lot 7. Rejouable par `./Scripts/campagne_parite.sh` — la
-comparaison n'arbitre plus, mais elle reste l'outil du doute.
+> **L'invariant nº5 a été levé le 06/09.** L'app native est l'outil de
+> production ; le prototype est resté installé comme filet, et n'a jamais été
+> modifié. Verdict et motif en fin de fichier.
+
+La campagne a été tenue à partir du lot 7. Elle n'arbitrait plus au moment de
+sa clôture : elle était devenue l'outil du doute.
 
 ---
 
@@ -40,8 +47,10 @@ sous-titres réels du corpus :
 | répliques gravées, texte et minutages | 1 567, identiques |
 | contrôles du harnais, corpus et prototype compris | 831 réussis, aucun échec |
 
-Cette moitié-là est close, et elle se rejoue à chaque exécution de
-`./Scripts/verifier.sh --corpus <dossier> --prototype <nonp_habille.py>`.
+Cette moitié-là a été close. Elle se rejouait à chaque exécution de
+`./Scripts/verifier.sh --corpus <dossier> --prototype <nonp_habille.py>` ; sur
+une machine qui n'a ni le prototype ni les scripts de comparaison — le cas du
+dépôt public —, la rubrique s'annonce « non exécutée » et le harnais poursuit.
 
 ## Ce que la comparaison d'images a trouvé
 
@@ -142,7 +151,12 @@ harnais, non plus comme arbitrage mais comme contrôle de non-régression ; et l
 registre des divergences continue d'être tenu — une divergence qui n'y figure
 pas est un bug, règle qui a servi deux fois le 06/09.
 
-## Rejouer la campagne
+## Ce que la campagne produisait
+
+> Conservé pour dire ce qui a été regardé, et sur quoi le verdict s'appuie.
+> **La commande ci-dessous ne peut pas être exécutée depuis ce dépôt** : le
+> script et le prototype n'y sont pas.
+
 
 ```
 ./Scripts/campagne_parite.sh --sortie <dossier> \
@@ -152,12 +166,13 @@ pas est un bug, règle qui a servi deux fois le 06/09.
 Options : `--profil <fichier.json>` (défaut : celui du prototype),
 `--prototype <nonp_habille.py>`, `--images <n>` (défaut : 6).
 
-Chaque dossier produit contient `prototype.mp4`, `natif.mp4` et un dossier
-`images/` où chaque instant existe des deux côtés, plus le plan nu — pour voir
-sur quoi le texte se pose.
+Chaque dossier produit contenait `prototype.mp4`, `natif.mp4` et un dossier
+`images/` où chaque instant existait des deux côtés, plus le plan nu — pour
+voir sur quoi le texte se posait.
 
-Le script a besoin d'un ffmpeg avec libass : c'est le moteur du prototype, et
-il sert aussi à extraire les images **des deux côtés**, un extracteur par
-moteur introduisant une différence qui n'est pas celle qu'on mesure.
+Le script avait besoin d'un ffmpeg avec libass : c'était le moteur du
+prototype, et il servait aussi à extraire les images **des deux côtés**, un
+extracteur par moteur introduisant une différence qui n'est pas celle qu'on
+mesurait.
 L'invariant nº3 vise l'application, pas l'outillage qui fait tourner le
 prototype.

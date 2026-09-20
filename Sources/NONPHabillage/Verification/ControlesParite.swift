@@ -14,12 +14,15 @@
 // avait posé le précédent côté profils, avec 30 contrôles octet à octet ; c'est
 // la même exigence ici, appliquée aux cues.
 //
-// Le fichier de référence est produit par `Scripts/parite_python.py`, qui
-// IMPORTE `nonp_habille.py` depuis le prototype et l'exécute sans le modifier
-// (invariant nº5 : ce dépôt ne touche jamais au prototype). Il n'est jamais
-// versionné : il contient le texte des sous-titres, et le `.gitignore` du dépôt
-// exclut ce contenu par principe. Il vit le temps d'une vérification, dans un
-// dossier temporaire.
+// Le fichier de référence est produit par l'outillage de la campagne de parité
+// interne — voir `docs/campagne-parite.md`. Cet outillage ne fait pas partie du
+// dépôt public : il exécute un prototype Python non publié, sans le modifier
+// (invariant nº5 : ce dépôt ne touche jamais au prototype). En son absence, la
+// rubrique s'annonce « non exécutée ».
+//
+// La référence n'est jamais versionnée : elle contient le texte des
+// sous-titres, et le `.gitignore` du dépôt exclut ce contenu par principe. Elle
+// vit le temps d'une vérification, dans un dossier temporaire.
 //
 // Ce qui est comparé, fichier par fichier :
 //   1. les cues LUES — début, fin, texte brut ;
@@ -31,7 +34,8 @@
 
 import Foundation
 
-/// Miroir du JSON écrit par `Scripts/parite_python.py`.
+/// Miroir du JSON écrit par l'outillage de la campagne de parité interne
+/// (hors dépôt public — voir `docs/campagne-parite.md`).
 private struct ReferencePython: Decodable {
     struct Prototype: Decodable {
         let chemin: String
