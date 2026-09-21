@@ -38,16 +38,6 @@ c'est vérifié à chaque compilation sur un corpus réel.
 Les blocs trop longs pour tenir à l'écran sont redécoupés **pour l'affichage
 seulement**, et les minutages recalculés au prorata ne sortent jamais du rendu.
 
-## Télécharger
-
-> **La première version n'est pas encore publiée.** Le lien ci-dessous sera
-> actif dès sa sortie.
-
-La dernière version publiée, avec son archive et son empreinte :
-**[github.com/Devoir76/nonp-habillage/releases/latest](https://github.com/Devoir76/nonp-habillage/releases/latest)**
-
-Ce que chaque version apporte : [`CHANGELOG.md`](CHANGELOG.md).
-
 ## Ce qu'il faut
 
 - macOS 14 (Sonoma) ou plus récent
@@ -60,9 +50,19 @@ indique « Apple M… », c'est bon.
 Rien d'autre. Pas de FFmpeg à installer, pas de bibliothèque tierce : tout
 passe par AVFoundation, Core Text et VideoToolbox, livrés avec macOS.
 
-L'application n'est pas certifiée par Apple — c'est un choix, expliqué
-plus bas. Au premier lancement, macOS affiche un avertissement. Il se
-lève en deux clics, la marche à suivre est juste en dessous.
+L'application n'est pas certifiée par Apple — c'est un choix, expliqué plus
+bas. Au premier lancement, macOS affiche un avertissement. Il se lève en
+quelques clics, la marche à suivre suit le lien de téléchargement.
+
+## Télécharger
+
+> **La première version n'est pas encore publiée.** Le lien ci-dessous sera
+> actif dès sa sortie.
+
+La dernière version publiée, avec son archive et son empreinte :
+**[github.com/Devoir76/nonp-habillage/releases/latest](https://github.com/Devoir76/nonp-habillage/releases/latest)**
+
+Ce que chaque version apporte : [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Ouvrir l'application la première fois
 
@@ -73,11 +73,13 @@ mais Apple ne l'a pas contresigné.
 
 Sur macOS 15 et plus récent :
 1. Double-cliquez l'application. Un message dit qu'elle n'a pas pu être
-   vérifiée. Cliquez « Terminé ».
+   vérifiée. Cliquez « Terminé » — pas « Placer dans la corbeille ».
 2. Ouvrez Réglages Système → Confidentialité et sécurité.
 3. Descendez jusqu'à la ligne mentionnant NONP Habillage et cliquez
    « Ouvrir quand même ».
-4. Confirmez avec votre mot de passe ou Touch ID.
+4. Une fenêtre demande confirmation : cliquez de nouveau
+   « Ouvrir quand même ».
+5. Confirmez avec votre mot de passe ou Touch ID.
 
 Sur macOS 14 :
 Clic droit sur l'application → Ouvrir → Ouvrir dans la fenêtre suivante.
