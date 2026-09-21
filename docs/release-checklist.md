@@ -206,6 +206,45 @@ Ce qui se documente ici, c'est la MÉTHODE, jamais les unités :
   blobs de tous les commits ;
 - écartées si elles mordent un identifiant légitime, fût-ce une seule fois.
 
+### Comment lancer le scan — trois pièges mesurés le 21/09
+
+Chacun de ces trois points a produit, ce jour-là, un résultat qui paraissait
+bon et ne l'était pas. Ils ne sont pas des précautions de style.
+
+- [ ] **Construire les motifs en filtrant commentaires et lignes vides**, et
+      **afficher le compte obtenu**. Le fichier du filet est commenté ; passé
+      tel quel à `grep -F -f`, **une ligne vide est un motif qui correspond à
+      tout** — le scan remonte alors chaque ligne de chaque blob, et aucun zéro
+      honnête n'est possible. Le 21/09 : 51 lignes dans le fichier, 26
+      commentaires, 4 vides, **21 motifs effectifs**.
+
+      ```
+      /usr/bin/grep -v '^#' "$FILET" | /usr/bin/grep '[^[:space:]]' > motifs
+      ```
+
+- [ ] **Employer `/usr/bin/grep` en chemin absolu**, et **afficher `type grep`
+      en tête de scan**. Le `grep` de l'environnement peut être une fonction
+      qui enveloppe un autre binaire : celle rencontrée le 21/09 ajoutait
+      `--ignore-files --exclude-dir=.git -I`, donc elle sautait les fichiers
+      ignorés, **ne pouvait pas lire les objets git**, et passait les binaires.
+      Un scan lancé avec elle rend un zéro qui ne veut rien dire.
+
+- [ ] **Prouver le matcher ET l'énumérateur, séparément.**
+      - *Matcher* : cycle **0 → 1 → 0** sur un faux texte réaliste, écrit hors
+        du dépôt — sans aiguille, avec, puis sans. Injecter l'aiguille **octet
+        pour octet** : le 21/09, un `awk -v` a altéré une unité accentuée en la
+        recopiant, et le témoin a échoué en accusant le filet.
+      - *Énumérateur* : afficher les comptes — commits, blobs uniques, chemins
+        uniques, octets de messages. Un énumérateur vide rend lui aussi zéro.
+
+⛔ **L'aiguille du témoin n'entre JAMAIS dans un objet git** — ni sur une
+branche jetable, ni dans un commit défait ensuite. Un objet git écrit reste
+servi par son empreinte jusqu'à un ramassage qu'on ne déclenche pas : c'est
+ce qui a coûté la suppression et la recréation du dépôt le 20/09. Le témoin
+se fait sur un fichier hors dépôt, supprimé après usage. *(Cette règle
+remplace la consigne de « branche jetable » : elle demandait précisément le
+geste que l'invariant interdit.)*
+
 - [ ] **AVANT CHAQUE POUSSÉE — pas seulement la première.** Rejouer le scan
       des trois surfaces avec le filet complet, tenu hors dépôt, commits du
       jour inclus. Le dépôt est public depuis le 2026-09-20 : une erreur qui y
@@ -214,11 +253,12 @@ Ce qui se documente ici, c'est la MÉTHODE, jamais les unités :
       de GitHub, qu'on ne déclenche pas. Mesuré le 20/09 : après un force-push,
       le commit retiré rendait encore 19 672 octets et trois noms lisibles. Il
       a fallu supprimer le dépôt et le recréer.
-- [ ] Vérifier que le scan SAIT VOIR avant de croire ses zéros : planter une
-      aiguille sur une branche jetable, la faire trouver, puis la retirer. Un
-      « zéro » par environnement cassé est indiscernable d'un « zéro » par
-      absence — c'est arrivé le 20/09, une variable `path` écrasée en zsh ayant
-      vidé le `PATH` au milieu d'un scan.
+- [ ] Vérifier que le scan SAIT VOIR avant de croire ses zéros — par le témoin
+      décrit plus haut, **hors du dépôt**. Un « zéro » par environnement cassé
+      est indiscernable d'un « zéro » par absence : c'est arrivé le 20/09, une
+      variable `path` écrasée en zsh ayant vidé le `PATH` au milieu d'un scan,
+      et de nouveau le 21/09, deux fois, par un `grep` détourné puis par un
+      fichier de motifs mal construit.
 
 **Vérifié le 2026-09-20**, filet élargi aux quatre sources du banc de mesure :
 zéro occurrence sur les trois surfaces. Les noms n'étaient jamais entrés — les
@@ -387,8 +427,10 @@ un double-clic détourné vers une autre copie du même identifiant. Les règles
 qui suivent viennent de là.
 
 - [ ] **L'exemplaire testé est NEUF** : jamais lancé, portant sa propre marque
-      de quarantaine. Un exemplaire déjà ouvert une fois ne redemandera rien,
-      et **une copie faite à partir de lui non plus**.
+      de quarantaine. Un exemplaire déjà ouvert une fois ne redemandera rien.
+      **Ne jamais tester une copie faite à partir d'un exemplaire déjà ouvert**
+      — elle pourrait hériter de son accord, ce qui n'est pas mesuré. Un doute
+      non levé se traite comme un refus, pas comme une permission.
       - ZIP publié : **téléchargé par un navigateur** — `curl` ne pose pas la
         marque de quarantaine, donc un ZIP récupéré en ligne de commande ne
         teste pas ce que vit l'utilisateur — puis **extrait par double-clic
