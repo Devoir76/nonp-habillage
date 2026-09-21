@@ -147,12 +147,58 @@ mkdir -p "$APP_BUNDLE/Contents/Resources/Licenses"
 cp "$PROJECT_ROOT/LICENSE" "$APP_BUNDLE/Contents/Resources/Licenses/LICENSE"
 echo "  ✓ MPL-2.0 embarquée"
 
-# --- 5) Signature ad-hoc --------------------------------------------------
+# --- 5) Table de débogage : extraite, puis RETIRÉE du binaire --------------
+# Mesuré le 21/09/2026 : le binaire livré portait 53 entrées de débogage
+# « N_OSO », chacune un chemin absolu de la machine de compilation, avec le nom
+# d'utilisateur et le dossier personnel. 109 occurrences de « /Users/ » au
+# total, dont 106 porteuses du nom d'utilisateur. Rien dans le dépôt ne fuyait :
+# la fuite était dans la FABRICATION, sur une surface que personne ne scannait.
+#
+# L'ordre compte, et il n'est pas interchangeable :
+#   1. dsymutil  — extrait la table AVANT de la détruire, sinon elle est perdue
+#   2. strip -S  — retire la table du binaire (mesuré : 109 → 3 « /Users/ »,
+#                  53 → 0 entrées OSO, et les 3 restants sont des chemins
+#                  d'exemple présents tels quels dans les sources publiques)
+#   3. codesign  — EN DERNIER : strip invalide la signature, il le dit lui-même
+#                  en avertissement. Signer avant, c'est livrer un bundle que
+#                  macOS déclare « endommagé ».
+#
+# Le dSYM ne va NI dans dist/ NI dans le ZIP : il porte les mêmes chemins. Il
+# vit hors dépôt, à côté des traces de session, pour pouvoir symboliser un
+# rapport de plantage après coup.
+DSYM_DIR="${NONP_DSYM_DIR:-$HOME/Developer/NONP-traces/dsym}"
+BIN_APP="$APP_BUNDLE/Contents/MacOS/$EXECUTABLE_NAME"
+
+echo "▸ Extraction de la table de débogage…"
+mkdir -p "$DSYM_DIR"
+if dsymutil "$BIN_APP" -o "$DSYM_DIR/$EXECUTABLE_NAME-$FLAVOR.dSYM" 2>/dev/null; then
+    echo "  ✓ dSYM conservé hors dépôt"
+else
+    echo "  ⚠️  dsymutil n'a rien produit — poursuite, le strip reste nécessaire"
+fi
+
+echo "▸ Retrait de la table de débogage…"
+AVANT=$(LC_ALL=C grep -c '/Users/' "$BIN_APP" 2>/dev/null || echo 0)
+strip -S "$BIN_APP"
+APRES=$(LC_ALL=C grep -c '/Users/' "$BIN_APP" 2>/dev/null || echo 0)
+OSO=$(nm -ap "$BIN_APP" 2>/dev/null | grep -c ' OSO ' || true)
+echo "  ✓ lignes contenant « /Users/ » : $AVANT → $APRES · entrées OSO restantes : $OSO"
+if [[ "$OSO" -ne 0 ]]; then
+    echo "✗ La table de débogage n'a pas été retirée — build interrompue." >&2
+    exit 1
+fi
+
+# --- 6) Signature ad-hoc --------------------------------------------------
 # Signature locale « ad-hoc » : suffisante pour un usage personnel quotidien,
 # évite les blocages Gatekeeper au lancement local. (Pas de compte développeur requis.)
+# APRÈS le strip, jamais avant : voir l'ordre ci-dessus.
 echo "▸ Signature ad-hoc…"
 codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || {
     echo "  (signature ad-hoc ignorée — non bloquant en local)"
+}
+codesign --verify --deep --strict "$APP_BUNDLE" 2>/dev/null || {
+    echo "✗ Signature invalide après strip — build interrompue." >&2
+    exit 1
 }
 
 VERSION=$(plutil -extract CFBundleShortVersionString raw "$APP_BUNDLE/Contents/Info.plist")
