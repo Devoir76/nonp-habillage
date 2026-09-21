@@ -85,6 +85,31 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
 9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
 
+## La fabrication — trois gestes, dans cet ordre
+
+Mesuré le 21/09 : le binaire d'une build ordinaire portait **53 entrées de
+débogage `N_OSO`**, chacune un chemin absolu de la machine, et **109
+occurrences de `/Users/`** dont 106 nommaient le dossier personnel. Rien dans
+le dépôt ne fuyait.
+
+1. **`dsymutil`** — extrait la table de débogage **avant** de la détruire.
+   Après le strip elle est perdue, et aucun rapport de plantage ne sera plus
+   symbolisable. Le dSYM va **hors dépôt**, jamais dans `dist/`, jamais dans
+   le ZIP : il porte exactement les mêmes chemins.
+2. **`strip -S`** — retire la table du binaire. Mesuré : 109 → 3 occurrences
+   de `/Users/`, 53 → 0 entrées OSO, **212 → 0 motifs**. Le `strip` complet
+   ne retire rien de plus côté fuite.
+3. **`codesign` EN DERNIER** — `strip` invalide la signature et le dit
+   lui-même en avertissement. Signer avant le strip, c'est livrer un bundle
+   que macOS déclare « endommagé ».
+
+- [ ] Le script s'arrête si des entrées OSO subsistent, et si la signature ne
+      vérifie pas après le strip. Un contrôle qui ne peut pas échouer n'en est
+      pas un.
+- [ ] **Les chemins `/Users/` résiduels sont présents tels quels dans les
+      sources publiques** — vérifié le 21/09 pour les trois : le binaire
+      n'expose rien de plus que le dépôt.
+
 ## Vérification du `.app` compilé (avant le tag)
 
 - [ ] Version affichée (`CFBundleShortVersionString`) = la version cible.
@@ -237,6 +262,35 @@ bon et ne l'était pas. Ils ne sont pas des précautions de style.
       - *Énumérateur* : afficher les comptes — commits, blobs uniques, chemins
         uniques, octets de messages. Un énumérateur vide rend lui aussi zéro.
 
+- [ ] **Casse, Unicode, coupures — trois façons de rater un nom présent.**
+      Mesuré le 21/09 : la méthode d'alors ratait les deux premières.
+      - *Casse* : `grep -F` compare des octets. Chaque unité se décline en
+        minuscules et capitales, et la recherche est insensible à la casse.
+      - *Unicode* : le corpus vient de noms de fichiers macOS, qui arrivent en
+        **NFD**. Chaque unité accentuée se décline en NFC **et** NFD.
+      - *Coupures* : un nom long est coupé par les retours à la ligne — le nom
+        civil l'était à **trois endroits différents, jamais les mêmes**. D'où
+        une passe sur le **texte aplati** (blancs et retours réduits à une
+        espace, marques de citation et césures retirées), et la recherche du
+        **nom de famille seul**.
+- [ ] **Unités de moins de 6 caractères : mot entier.** Insensible à la casse,
+      une unité de 4 caractères mord du texte anglais ordinaire — mesuré : 2
+      occurrences dans le texte de la MPL, 0 en casse exacte, 0 en mot entier.
+      Le mot entier supprime le faux positif **sans** rendre la casse.
+- [ ] **Unités marquées « casse-exacte ».** Une unité qui ne collisionne qu'en
+      casse pliée se marque ainsi et n'est plus cherchée qu'en forme d'origine
+      et en capitales exactes. On ne la retire pas : on la contraint.
+- [ ] **Registre des collisions connues**, hors dépôt, à côté du filet. Une
+      collision est une occurrence mesurée qui n'est pas une fuite — chaîne
+      amont, texte de licence. **La règle est le COMPTE, pas la présence** :
+      un compte différent de celui inscrit redevient une alerte, sinon une
+      vraie fuite se cacherait derrière une collision connue.
+- [ ] **La méthode vit dans un script hors dépôt**, pas dans des commandes
+      retapées à chaque fois. Il porte tout : `type grep` affiché,
+      `/usr/bin/grep`, motifs filtrés et comptés, règles de casse, NFC/NFD,
+      texte aplati, registre des collisions, témoins, comptes par surface. Il
+      refuse de scanner si un témoin est rouge.
+
 ⛔ **L'aiguille du témoin n'entre JAMAIS dans un objet git** — ni sur une
 branche jetable, ni dans un commit défait ensuite. Un objet git écrit reste
 servi par son empreinte jusqu'à un ramassage qu'on ne déclenche pas : c'est
@@ -245,6 +299,22 @@ se fait sur un fichier hors dépôt, supprimé après usage. *(Cette règle
 remplace la consigne de « branche jetable » : elle demandait précisément le
 geste que l'invariant interdit.)*
 
+- [ ] **AVANT CHAQUE PUBLICATION — le binaire et TOUT le contenu du ZIP.**
+      Trois surfaces suffisaient tant qu'on ne regardait que le dépôt ; elles
+      ne suffisent plus dès qu'on distribue. **Mesuré le 21/09 : le binaire
+      livré portait 53 entrées de débogage, 106 chemins absolus nommant le
+      dossier personnel — alors que les 414 blobs de l'historique étaient
+      propres.** La fuite n'était pas dans le code, elle était dans la
+      fabrication. Scanner : chaque fichier du bundle, Mach-O compris, sur les
+      octets bruts ; puis le ZIP extrait, chaque fichier.
+- [ ] **AUCUN document sensible dans l'arbre d'un dépôt.** Un fichier non suivi
+      n'est pas protégé : s'il n'est pas ignoré, il apparaît dans
+      `git status` et part avec un `git add -A`. Le 21/09, trois documents
+      traînaient ainsi dans un dépôt public, dont celui qui contient la table
+      d'identité en clair. Ils vivent hors dépôt, en droits 600.
+- [ ] **La sortie du harnais ne se colle nulle part.** `verifier.sh` imprime
+      les **noms de fichiers du corpus** quand on lui en passe un : elle n'a
+      sa place ni dans un dépôt, ni dans un rapport, ni dans un ticket.
 - [ ] **AVANT CHAQUE POUSSÉE — pas seulement la première.** Rejouer le scan
       des trois surfaces avec le filet complet, tenu hors dépôt, commits du
       jour inclus. Le dépôt est public depuis le 2026-09-20 : une erreur qui y
