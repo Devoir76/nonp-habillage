@@ -340,31 +340,100 @@ coûté un incident.
       L'utilisateur qui l'essaie n'obtient rien, et conclut lui aussi que
       l'app est cassée. Le repli reste valide — et documenté — pour macOS 14.
 - [ ] Libellés Gatekeeper vérifiés **en déroulant le parcours réel** avec le ZIP
-      téléchargé depuis le site — jamais de mémoire : texte du premier
-      avertissement, « Déplacer vers la corbeille », « Ouvrir quand même ».
+      téléchargé depuis le site — jamais de mémoire. Les libellés relevés sur
+      macOS 27.0 sont consignés ci-dessous ; ils se recontrôlent à chaque
+      version, Apple les ayant déjà changés une fois.
 
-> ### ⚖️ Arbitrage en attente — le libellé Gatekeeper concerne DEUX pages
+> ### ⚖️ Arbitrage TRANCHÉ le 21/09 — le libellé Gatekeeper concerne DEUX pages
 >
-> Les deux applications voisineront sur le même site, et elles ne citent pas le
-> même message système.
+> Les deux applications voisinent sur le même site, et elles ne citaient pas le
+> même message système. Éric a déroulé le parcours réel le 21/09, sur une copie
+> neuve mise en quarantaine, et relevé les quatre fenêtres.
 >
-> - `/transcription`, **déjà publiée**, écrit : « macOS affiche *…ne peut pas
->   être ouverte car Apple ne peut pas vérifier…* ».
-> - Le texte d'Habillage écrit : « un message dit qu'elle n'a pas pu être
->   vérifiée ».
+> **Ce que `/transcription` écrivait — « *…ne peut pas être ouverte car Apple ne
+> peut pas vérifier…* » — est l'ANCIEN libellé d'Apple.** Le texte d'Habillage,
+> « un message dit qu'elle n'a pas pu être vérifiée », correspond au dialogue
+> actuel. La vérité mesurée s'applique **aux deux pages** : `/transcription` se
+> corrige au même moment, bien qu'elle soit déjà en ligne — deux pages du même
+> site qui décrivent différemment le même écran d'Apple, c'est l'une des deux
+> qui se trompe.
 >
-> Les deux disent la même chose ; un seul peut être le libellé réel. Une copie
-> de l'application a reçu l'attribut `com.apple.quarantine` le 20/09 pour qu'Éric
-> déroule le vrai parcours et relève les mots exacts — c'est le contrôle nº 7 de
-> la fiche de test.
+> #### Les quatre fenêtres, relevées sur macOS 27.0 (build 26A428)
 >
-> **Quand ce relevé existera, la vérité mesurée s'appliquera AUX DEUX PAGES.**
-> Si `/transcription` s'écarte du dialogue réel, elle se corrige au même moment,
-> bien qu'elle soit déjà en ligne : deux pages du même site qui décrivent
-> différemment le même écran d'Apple, c'est l'une des deux qui se trompe.
+> 1. **« Élément « NONP Habillage » non ouvert »** — deux boutons :
+>    **« Terminé »** et **« Placer dans la corbeille »**. C'est « Terminé »
+>    qu'il faut cliquer ; le texte le dit, parce que l'autre bouton est le
+>    geste qu'un utilisateur inquiet fera spontanément.
+> 2. **Réglages Système → Confidentialité et sécurité** — une ligne mentionne
+>    NONP Habillage, avec le bouton **« Ouvrir quand même »**.
+> 3. **« Ouvrir « NONP Habillage » ? »** — une confirmation, avec de nouveau
+>    **« Ouvrir quand même »**. Cette fenêtre-là manquait au texte : c'est
+>    l'écart que le relevé a trouvé.
+> 4. **Authentification** — mot de passe ou Touch ID.
 >
-> **Aucun des deux textes n'a été modifié** — ce sont ceux d'Éric. La correction
-> lui sera proposée, il tranchera.
+> L'ordre est établi : la confirmation **précède** Touch ID.
+>
+> ⚠️ **Mesuré sur macOS 27.0 seulement.** macOS 15 et macOS 26 ne sont pas
+> mesurés, et le texte publié les couvre pourtant. Tant que personne n'a
+> déroulé le parcours sur l'un des deux, la branche « macOS 15 et plus récent »
+> repose sur une extrapolation — à dire, pas à oublier.
+
+### Le contrôle Gatekeeper — comment le rendre concluant
+
+Ce contrôle a une façon particulière d'échouer : **il réussit en silence.** Le
+21/09, deux tentatives de suite ont paru prouver quelque chose et ne prouvaient
+rien — une application déjà lancée qu'un double-clic ramène au premier plan, et
+un double-clic détourné vers une autre copie du même identifiant. Les règles
+qui suivent viennent de là.
+
+- [ ] **L'exemplaire testé est NEUF** : jamais lancé, portant sa propre marque
+      de quarantaine. Un exemplaire déjà ouvert une fois ne redemandera rien,
+      et **une copie faite à partir de lui non plus**.
+      - ZIP publié : **téléchargé par un navigateur** — `curl` ne pose pas la
+        marque de quarantaine, donc un ZIP récupéré en ligne de commande ne
+        teste pas ce que vit l'utilisateur — puis **extrait par double-clic
+        dans le Finder**.
+      - Avant publication, quand le ZIP n'existe pas encore : une copie fraîche
+        de `dist/` avec une quarantaine posée à la main suffit. Mesuré le
+        21/09 — le parcours obtenu est le même.
+- [ ] **Aucune empreinte modifiée n'est nécessaire.** Mesuré le 21/09 :
+      l'accord donné à une application **ne suit pas son empreinte de code**.
+      Un exemplaire neuf du même binaire, avec une marque de quarantaine
+      neuve, est réévalué de zéro et redéclenche le dialogue. Inutile donc de
+      fabriquer un bundle à signature altérée : le binaire publié, tel quel,
+      fait l'affaire. (Ce qui porte l'accord — le fichier lui-même, ou le
+      couple chemin + empreinte — n'est pas tranché ; ce qui est établi, c'est
+      que l'empreinte seule ne suffit pas.)
+- [ ] **Le geste testé est celui des textes publiés** : glisser l'application
+      dans `/Applications`, puis double-cliquer. Pas `open`, pas un lancement
+      depuis le dossier de téléchargement — le texte décrit un geste, c'est ce
+      geste qu'on vérifie.
+- [ ] **Verdict.** La fenêtre « … non ouvert » apparaît → **conforme**.
+      **Une ouverture silencieuse n'est JAMAIS un succès.** Sur un Mac où cette
+      empreinte a déjà été approuvée à cet emplacement, elle est **non
+      concluante** : refaire ailleurs, ou sur un autre Mac.
+
+**Préconditions et preuves** — chacune répond à une façon de se tromper qui
+s'est produite :
+
+- [ ] **Application quittée avant le test** : `pgrep -x NONPHabillage` vide,
+      **code de sortie montré**. Un double-clic sur une application qui tourne
+      ne fait que l'activer — aucune évaluation, aucun dialogue.
+- [ ] **Une capture avant chaque clic.** Les libellés se relèvent à l'écran,
+      pas de mémoire, et une fenêtre non capturée est une fenêtre perdue.
+- [ ] **Jamais la touche Entrée** dans ces dialogues : le bouton par défaut
+      n'est pas toujours celui qu'on croit, et valider au clavier peut
+      déclencher « Placer dans la corbeille ».
+- [ ] **Le lancement se prouve par `lsof`** : l'inode de l'exécutable réellement
+      exécuté, comparé à celui de l'exemplaire testé. Le chemin affiché par
+      `ps` peut désigner un fichier qui a changé de place depuis.
+- [ ] **Le refus se prouve par le journal du noyau** :
+      `log show --predicate 'eventMessage CONTAINS "Security policy"'` →
+      la ligne `ASP: Security policy would not allow process: <pid>, <chemin>`,
+      **avec le chemin complet**, qui nomme l'exemplaire évalué.
+      `spctl --assess` ne sert à rien ici : il répond `rejected` aussi bien sur
+      une copie approuvée que sur une copie bloquée — il ne voit pas les
+      accords donnés par l'utilisateur.
 
 ### Release GitHub (après le tag)
 
