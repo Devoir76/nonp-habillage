@@ -79,16 +79,34 @@ struct ZoneDepotView: View {
 
     private func recevoir(_ fournisseurs: [NSItemProvider]) -> Bool {
         guard let fournisseur = fournisseurs.first else { return false }
+        let types = typesAcceptes
+        let transmettreA = onFichier
         _ = fournisseur.loadObject(ofClass: URL.self) { url, _ in
             guard let url else { return }
-            // Le type est vérifié ici, pas au moment de graver : refuser un MKV
-            // après cinq minutes d'attente serait inutilement cruel.
-            guard let type = UTType(filenameExtension: url.pathExtension.lowercased()),
-                  typesAcceptes.contains(where: { type.conforms(to: $0) || type == $0 })
-            else { return }
-            Task { @MainActor in onFichier(url) }
+            Task { @MainActor in
+                Self.transmettre(url, typesAcceptes: types, onFichier: transmettreA)
+            }
         }
         return true
+    }
+
+    /// Ce que la zone fait d'un fichier reçu — isolé de SwiftUI pour que le
+    /// harnais le traverse : un glisser-déposer ne se simule pas sans écran.
+    ///
+    /// La zone ne décide RIEN : elle transmet tout. Mesuré le 22/09 — elle
+    /// écartait elle-même ce qui n'avait pas la bonne extension, par un
+    /// `return` silencieux, et un dossier ou un `.mkv` déposés ne produisaient
+    /// aucun message. Les bons messages existaient pourtant, dans le chargeur,
+    /// que la zone court-circuitait. Refuser n'est pas le rôle de la vue ;
+    /// c'est celui du chargeur, qui SAIT dire pourquoi.
+    ///
+    /// Le refus reste immédiat : `chargerVideo` refuse avant tout chargement,
+    /// personne n'attend cinq minutes pour apprendre qu'un MKV est refusé.
+    /// `typesAcceptes` ne sert plus qu'au sélecteur de fichiers, qui grise.
+    @MainActor
+    static func transmettre(_ url: URL, typesAcceptes: [UTType],
+                            onFichier: (URL) -> Void) {
+        onFichier(url)
     }
 
     private func choisir() {

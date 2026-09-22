@@ -12,6 +12,7 @@
 // ce qu'on obtiendra.
 
 import Foundation
+import UniformTypeIdentifiers
 import SwiftUI
 import CoreGraphics
 
@@ -269,6 +270,22 @@ final class AppState: ObservableObject {
     }
 
     func chargerSousTitres(_ url: URL) {
+        // Depuis le 22/09, la zone de dépôt transmet TOUT : c'est ici que se
+        // dit la vraie cause d'un refus. Le disque d'abord — un dossier reste
+        // un dossier —, puis l'extension. Le texte brut passe : un `.txt` au
+        // format SRT est lisible, et le refuser serait une régression.
+        var estDossier: ObjCBool = false
+        if FileManager.default.fileExists(atPath: url.path, isDirectory: &estDossier),
+           estDossier.boolValue {
+            erreur = Textes.SousTitres.pasUnFichier(url.lastPathComponent)
+            return
+        }
+        let type = UTType(filenameExtension: url.pathExtension.lowercased())
+        guard let type, UTType.sousTitresAcceptes.contains(where: {
+            type.conforms(to: $0) || type == $0 }) else {
+            erreur = Textes.SousTitres.pasDesSousTitres(url.lastPathComponent)
+            return
+        }
         do {
             let lues = try ParseurSousTitres.analyser(fichier: url)
             sousTitres = url

@@ -101,6 +101,9 @@ enum ControlesInterface {
         r.section("Interface — fond de l'aperçu : le contrôle se dit lui-même")
         fondDeLApercu(r)
         MainActor.assumeIsolated { dispositionBarreDeChoix(r) }
+
+        r.section("Interface — un fichier refusé au dépôt le DIT")
+        MainActor.assumeIsolated { depotRefuseLeDit(r) }
     }
 
     // MARK: - La marge du texte, unique commande de la colonne (schéma v2)
@@ -2702,5 +2705,75 @@ enum ControlesInterface {
         r.egal("l'usage vide est nommé",
                CommandeExport.usage(sousTitres: nil, profil: avecLogo),
                "ni sous-titres ni logo — rien à graver")
+    }
+
+    // MARK: - Un fichier refusé au dépôt le DIT
+
+    /// Mesuré le 22/09, à la main : un dossier et un `.mkv` lâchés sur la zone
+    /// de dépôt ne produisaient RIEN — ni message, ni erreur. La zone écartait
+    /// elle-même tout ce qui n'avait pas la bonne extension, par un `return`
+    /// silencieux, AVANT que `chargerVideo` puisse dire la vraie cause.
+    ///
+    /// Le harnais était vert : il testait le refus dans le MOTEUR, jamais la
+    /// zone. Ce contrôle passe par `ZoneDepotView.transmettre`, la décision
+    /// même de la zone, pour que le défaut ne puisse plus se cacher dans la vue.
+    @MainActor
+    private static func depotRefuseLeDit(_ r: Rapport) {
+        let fm = FileManager.default
+        let bac = fm.temporaryDirectory
+            .appendingPathComponent("depot-refuse-\(UUID().uuidString)")
+        try? fm.createDirectory(at: bac, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: bac) }
+
+        let dossier = bac.appendingPathComponent("un-dossier")
+        try? fm.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let mkv = bac.appendingPathComponent("video.mkv")
+        let mp4 = bac.appendingPathComponent("video.mp4")
+        let txt = bac.appendingPathComponent("sous-titres.txt")
+        try? Data("contenu quelconque".utf8).write(to: mkv)
+        try? Data("contenu quelconque".utf8).write(to: mp4)
+        try? Data("1\n00:00:01,000 --> 00:00:02,000\nBonjour.\n".utf8).write(to: txt)
+
+        // ── Par la zone de dépôt ──────────────────────────────────────────
+        func parLaZoneVideo(_ url: URL) -> String? {
+            let etat = AppState(memoire: false)
+            ZoneDepotView.transmettre(url, typesAcceptes: UTType.videosAcceptees,
+                                      onFichier: { etat.chargerVideo($0) })
+            return etat.erreur
+        }
+        func parLaZoneSousTitres(_ url: URL) -> String? {
+            let etat = AppState(memoire: false)
+            ZoneDepotView.transmettre(url, typesAcceptes: UTType.sousTitresAcceptes,
+                                      onFichier: { etat.chargerSousTitres($0) })
+            return etat.erreur
+        }
+
+        let zDossier = parLaZoneVideo(dossier)
+        r.verifier("zone vidéo : un dossier déposé reçoit un message", zDossier != nil)
+        r.verifier("zone vidéo : ce message dit que c'est un dossier",
+                   zDossier?.contains("est un dossier") == true)
+
+        let zMkv = parLaZoneVideo(mkv)
+        r.verifier("zone vidéo : un .mkv déposé reçoit un message", zMkv != nil)
+        r.verifier("zone vidéo : ce message dit que le format n'est pas pris en charge",
+                   zMkv?.contains("n'est pas pris en charge") == true)
+
+        let zsDossier = parLaZoneSousTitres(dossier)
+        r.verifier("zone sous-titres : un dossier déposé reçoit un message", zsDossier != nil)
+        r.verifier("zone sous-titres : ce message dit que c'est un dossier",
+                   zsDossier?.contains("est un dossier") == true)
+
+        let zsMp4 = parLaZoneSousTitres(mp4)
+        r.verifier("zone sous-titres : une vidéo déposée reçoit un message", zsMp4 != nil)
+        r.verifier("zone sous-titres : ce message nomme SRT et VTT, pas l'encodage",
+                   zsMp4?.contains("SRT et VTT") == true
+                   && zsMp4?.contains("UTF-8") == false)
+
+        // ── Directement, par les chargeurs ────────────────────────────────
+        // Le revers : ce que la garde des sous-titres ne doit PAS refuser.
+        let etatTxt = AppState(memoire: false)
+        etatTxt.chargerSousTitres(txt)
+        r.verifier("chargeur de sous-titres : un texte brut lisible reste accepté",
+                   etatTxt.erreur == nil && etatTxt.sousTitres != nil)
     }
 }

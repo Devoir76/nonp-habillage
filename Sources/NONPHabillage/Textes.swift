@@ -32,6 +32,23 @@ enum Textes {
     /// « parse error ». Le prototype, lui, laissait remonter une trace Python.
     enum SousTitres {
 
+        /// Un dossier n'a rien à lire. Sans ce message, le parseur l'annonçait
+        /// « illisible » — exact, et inutile : même défaut que celui que
+        /// `FormatsVideo` a corrigé pour la vidéo le 06/09.
+        static func pasUnFichier(_ nom: String) -> String {
+            "« \(nom) » est un dossier, pas un fichier de sous-titres. "
+            + "Ouvrez-le et choisissez le fichier .srt ou .vtt."
+        }
+
+        /// Une vidéo — ou tout autre fichier — déposée à la place des
+        /// sous-titres. Sans ce message, le parseur l'annonçait comme un
+        /// problème d'ENCODAGE, et conseillait de la réenregistrer en UTF-8.
+        static func pasDesSousTitres(_ nom: String) -> String {
+            "Le fichier « \(nom) » n'est pas un fichier de sous-titres : "
+            + "l'application lit les formats SRT et VTT. S'il s'agit de la "
+            + "vidéo, déposez-la dans la zone « Déposez votre vidéo ici »."
+        }
+
         static func fichierIllisible(_ nom: String) -> String {
             "Impossible de lire le fichier de sous-titres « \(nom) ». "
             + "Vérifiez qu'il existe toujours et qu'il n'est pas ouvert dans un autre logiciel."
