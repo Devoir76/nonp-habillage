@@ -47,6 +47,12 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
    **aucune rubrique non exécutée** ; une rubrique sautée n'est pas une
    rubrique réussie, et le rapport le dit lui-même.
 3. **Compilation sans un seul avertissement**, depuis un `.build` effacé.
+   **Exception nommée, acceptée pour la 1.0 seulement** (décision du 22/09) :
+   l'avertissement de SwiftPM « `--build-system native` has been deprecated ».
+   Il ne vient pas du code mais de l'option que pose `Scripts/sdk_macos.sh`
+   pour contourner le SDK par défaut ; il disparaîtra avec ce contournement.
+   Tout AUTRE avertissement reste bloquant, et celui-ci ne l'est plus à la
+   version suivante.
 4. **Fusion** de la branche dans `main`.
 5. **Compilation propre depuis `main`** : `./Scripts/build_app.sh --release`.
 6. **Vérification du `.app` final** (ci-dessous), sur le bundle réellement
@@ -84,6 +90,18 @@ n'y a pas de release publique.** Les trois sont tombés le 06/09.
      suit le code.**
 9. **Tag de version** posé **exactement sur le commit** ayant produit le binaire
    vérifié — jamais en amont de la compilation depuis `main`.
+
+   **Le ZIP publié est celui du binaire testé, et sa reproduction se prouve**
+   (décision du 22/09). Les textes datés de l'étape 8 se retirent dans un
+   commit POSTÉRIEUR à celui qui a produit le binaire testé ; aucun d'eux
+   n'entre dans le bundle (mesuré le 21/09 : les commentaires de l'Info.plist
+   ne passent pas la fabrication, et README / CHANGELOG n'y sont pas). Donc :
+   - le ZIP est fabriqué **une fois**, depuis le binaire exact que la fiche de
+     test a éprouvé, et c'est lui qui est publié ;
+   - **au jour du tag**, fabrication propre (`.build` effacé) depuis le commit
+     tagué : **son CDHash doit être identique** à celui du binaire testé ;
+   - **s'il diffère**, on ne publie pas ce ZIP : on refait le ZIP depuis le
+     commit tagué, et les tests avec — fiche comprise.
 
 ## La fabrication — trois gestes, dans cet ordre
 
@@ -429,13 +447,29 @@ coûté un incident.
       `zip -r` : il casse liens symboliques et métadonnées, donc la signature du
       bundle, et l'utilisateur reçoit « l'application est endommagée ».
 - [ ] **Une copie de `LICENSE` à la racine du ZIP**, en plus de celle déjà
-      présente dans le bundle (`Contents/Resources/Licenses/LICENSE`) — par
-      cohérence avec l'archive de NONP Transcription. Le point s'exécute à
-      l'empaquetage : il ne modifie pas le bundle, donc pas `build_app.sh`.
+      présente dans le bundle (`Contents/Resources/Licenses/LICENSE`) : la
+      licence se lit sans ouvrir le paquet de l'application. Le point
+      s'exécute à l'empaquetage : il ne modifie pas le bundle, donc pas
+      `build_app.sh`. *Corrigé le 22/09 : cette ligne invoquait « la cohérence
+      avec l'archive de NONP Transcription » — or, mesuré, le ZIP de
+      Transcription 1.2.3 publié n'a pas de `LICENSE` à sa racine (seulement
+      `NONP Transcription.app` et `__MACOSX`). C'est Transcription qui devra
+      s'aligner, à sa prochaine version.*
+- [ ] **Attributs étendus retirés de la copie de préparation — jamais de
+      `dist/`** (`xattr -cr` sur le dossier préparé, avant `ditto -c`). Le
+      bundle de `dist/` porte des métadonnées de CETTE machine : mesuré le
+      22/09, `com.apple.lastuseddate#PS` sur deux fichiers des profils
+      d'exemple — la date à laquelle le panneau d'import les avait ouverts.
+      Avec `--sequesterRsrc`, elles partiraient dans le ZIP, sous `__MACOSX/`.
+      Ce ne sont pas des données de l'application, et la signature ne les
+      couvre pas : les retirer ne change ni le contenu (`diff -r` vide) ni le
+      CDHash. `dist/` reste intact, parce qu'il est la référence des tests.
 - [ ] **Vérification aller-retour sur l'archive réellement produite** :
       décompresser le ZIP final, puis `codesign -v --deep --strict` **et** le
       Designated Requirement sur l'app **extraite**. Vérifier le bundle avant
       compression ne prouve rien sur l'archive.
+      Et **aucun attribut étendu sur les fichiers extraits** : c'est la preuve
+      que le retrait ci-dessus a bien eu lieu sur ce qui part.
 
 ### Texte de la page / README
 
