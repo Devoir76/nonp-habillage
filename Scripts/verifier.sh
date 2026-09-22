@@ -15,6 +15,7 @@
 #                                               corpus de sous-titres réels
 #   ./Scripts/verifier.sh --video <fichier.mp4> + recopie de l'audio à l'export
 #   ./Scripts/verifier.sh --corpus <d> --prototype <nonp_habille.py>
+#   ./Scripts/verifier.sh --bundle <chemin.app> bundle à contrôler (défaut : dist/)
 #
 # La parité exige les deux : un corpus ET le prototype Python. Sans corpus, les
 # rubriques concernées sont annoncées « non exécutées » — jamais passées sous
@@ -31,6 +32,7 @@ VIDEO=""
 PROTOTYPE="$HOME/Developer/NONP-Habillage/nonp_habille.py"
 LARGEUR=1920
 HAUTEUR=1080
+BUNDLE="$PROJECT_ROOT/dist/NONP Habillage.app"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -39,6 +41,7 @@ while [[ $# -gt 0 ]]; do
         --prototype) PROTOTYPE="$2"; shift 2 ;;
         --largeur)   LARGEUR="$2"; shift 2 ;;
         --hauteur)   HAUTEUR="$2"; shift 2 ;;
+        --bundle)    BUNDLE="$2"; shift 2 ;;
         *) echo "Option inconnue : $1" >&2; exit 1 ;;
     esac
 done
@@ -129,4 +132,48 @@ else
 fi
 
 echo
-"$BINAIRE" "${ARGS[@]}"
+SORTIE_SWIFT="$(mktemp -t nonp-habillage-harnais)"
+set +e
+"$BINAIRE" "${ARGS[@]}" | tee "$SORTIE_SWIFT"
+CODE_SWIFT=${PIPESTATUS[0]}
+set -e
+
+# ── Contrôles du SCRIPT, sur le bundle assemblé ─────────────────────────────
+#
+# Le binaire nu ne voit pas son bundle : ce qui ne vit que dans le bundle se
+# contrôle ici. Mesuré le 22/09 au contrôle 6 — sans langue déclarée dans
+# l'Info.plist, macOS affichait en anglais les menus qu'il fournit, et le
+# harnais était vert. Ces contrôles COMPTENT dans le total, comme les autres.
+REUSSIS_SCRIPT=0; ECHECS_SCRIPT=0; NON_EXEC_SCRIPT=0
+echo
+echo "▸ Bundle — la langue déclarée est le français"
+if [[ -f "$BUNDLE/Contents/Info.plist" ]]; then
+    REGION=$(plutil -extract CFBundleDevelopmentRegion raw "$BUNDLE/Contents/Info.plist" 2>/dev/null || true)
+    LANGUES=$(plutil -extract CFBundleLocalizations json -o - "$BUNDLE/Contents/Info.plist" 2>/dev/null || true)
+    if [[ "$REGION" == "fr" ]] && grep -q '"fr"' <<< "$LANGUES"; then
+        echo "  ✓ l'Info.plist du bundle déclare le français (région et langues)"
+        REUSSIS_SCRIPT=$((REUSSIS_SCRIPT + 1))
+    else
+        echo "  ✗ l'Info.plist du bundle ne déclare pas le français" \
+             "(région « ${REGION:-absente} », langues ${LANGUES:-absentes})"
+        ECHECS_SCRIPT=$((ECHECS_SCRIPT + 1))
+    fi
+else
+    echo "  — non exécuté : aucun bundle à $BUNDLE (lancer ./Scripts/build_app.sh)"
+    NON_EXEC_SCRIPT=$((NON_EXEC_SCRIPT + 1))
+fi
+
+# ── Un seul total ───────────────────────────────────────────────────────────
+TOTAL_SWIFT=$(grep -oE '[0-9]+ contrôles réussis|sur [0-9]+ contrôles' "$SORTIE_SWIFT" \
+              | grep -oE '[0-9]+' | tail -1 || true)
+ECHECS_SWIFT=$(grep -oE '[0-9]+ échec\(s\) sur' "$SORTIE_SWIFT" | grep -oE '^[0-9]+' | tail -1 || true)
+NON_EXEC_SWIFT=$(grep -oE '[0-9]+ rubrique\(s\) non exécutée' "$SORTIE_SWIFT" | grep -oE '^[0-9]+' | tail -1 || true)
+rm -f "$SORTIE_SWIFT"
+TOTAL_SWIFT=${TOTAL_SWIFT:-0}; ECHECS_SWIFT=${ECHECS_SWIFT:-0}; NON_EXEC_SWIFT=${NON_EXEC_SWIFT:-0}
+REUSSIS=$(( TOTAL_SWIFT - ECHECS_SWIFT + REUSSIS_SCRIPT ))
+ECHECS=$(( ECHECS_SWIFT + ECHECS_SCRIPT ))
+NON_EXEC=$(( NON_EXEC_SWIFT + NON_EXEC_SCRIPT ))
+echo
+echo "══════════════════════════════════════════════════════════════════"
+echo "Total, contrôles du script compris : $REUSSIS réussi(s) · $ECHECS échec(s) · $NON_EXEC non exécuté(s)"
+if [[ "$CODE_SWIFT" -ne 0 || "$ECHECS" -ne 0 ]]; then exit 1; fi

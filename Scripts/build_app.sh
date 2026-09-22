@@ -113,6 +113,28 @@ cp "$PROJECT_ROOT/Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 # Applique l'identifiant correspondant au type de build (avant signature).
 plutil -replace CFBundleIdentifier -string "$BUNDLE_ID" "$APP_BUNDLE/Contents/Info.plist"
 
+# --- Garde de langue --------------------------------------------------------
+# Mesuré le 22/09 au contrôle 6 : sans langue déclarée, macOS tient
+# l'application pour anglaise et affiche en anglais les menus qu'il fournit —
+# File, Edit, Window, Help. Aucun contrôle ne le voyait : le harnais tourne sur
+# le binaire nu, jamais sur le bundle. La garde porte donc sur l'Info.plist du
+# bundle ASSEMBLÉ, celui qui part dans le ZIP, et arrête la fabrication.
+verifier_langue_francaise() {
+    local plist="$1" region langues
+    region=$(plutil -extract CFBundleDevelopmentRegion raw "$plist" 2>/dev/null || true)
+    langues=$(plutil -extract CFBundleLocalizations json -o - "$plist" 2>/dev/null || true)
+    if [[ "$region" != "fr" ]] || ! grep -q '"fr"' <<< "$langues"; then
+        echo "✗ L'Info.plist du bundle ne déclare pas le français" >&2
+        echo "  (CFBundleDevelopmentRegion = « ${region:-absent} »," \
+             "CFBundleLocalizations = ${langues:-absent}) — build interrompue." >&2
+        echo "  Sans cette déclaration, les menus fournis par macOS s'affichent" \
+             "en anglais." >&2
+        return 1
+    fi
+    echo "  ✓ langue déclarée : français (menus de macOS en français)"
+}
+verifier_langue_francaise "$APP_BUNDLE/Contents/Info.plist" || exit 1
+
 # Icône de l'application. Elle reste à produire (décision d'Éric) : son absence
 # ne doit pas casser la build, macOS affiche alors l'icône générique.
 if [[ -f "$PROJECT_ROOT/Resources/AppIcon.icns" ]]; then
